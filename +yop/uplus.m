@@ -4,6 +4,7 @@ classdef uplus < yop.unary_expression
         
         function obj = uplus(expr)
             obj@yop.unary_expression(expr);
+            obj.dim = size(expr);
         end
         
     end

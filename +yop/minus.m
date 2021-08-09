@@ -3,6 +3,7 @@ classdef minus < yop.binary_expression
     methods
         function obj = minus(lhs, rhs)
             obj@yop.binary_expression(lhs, rhs);
+            obj.dim = size( minus(ones(size(lhs)), ones(size(rhs))) );
         end
     end
     

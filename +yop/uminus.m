@@ -4,6 +4,7 @@ classdef uminus < yop.unary_expression
         
         function obj = uminus(expr)
             obj@yop.unary_expression(expr);
+            obj.dim = size(expr);
         end
         
     end

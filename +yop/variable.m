@@ -1,16 +1,13 @@
-classdef variable < handle & OOL
+classdef variable < yop.node
     
     methods
         
-        function obj = variable()
-        end
-        
-        function add = plus(lhs, rhs)
-            add = yop.add(lhs, rhs);
-        end
-        
-        function sub = minus(lhs, rhs)
-            sub = yop.sub(lhs, rhs);
+        function obj = variable(dim)
+            if nargin==0
+                obj.dim = [1, 1];
+            else
+                obj.dim = dim;
+            end
         end
         
         function print(obj)
