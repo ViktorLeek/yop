@@ -1,21 +1,21 @@
-classdef unary_expression < yop.node
+classdef ast_unary_expression < yop.ast_node
     
     properties
         expr
     end
     
     methods
-        function obj = binary_expression(expr)
+        function obj = ast_unary_expression(expr)
             obj.expr = expr;
         end
     end
     
     methods % Printing
         
-        function xprint(obj, s)
+        function xast(obj, s)
             fprintf([s, '\n']);
             last_child(obj);
-            yop.print(obj.expr);
+            ast(obj.expr);
             end_child(obj);
         end
         

@@ -1,4 +1,4 @@
-classdef binary_expression < yop.node
+classdef ast_binary_relation < yop.ast_node
     
     properties
         lhs
@@ -6,7 +6,7 @@ classdef binary_expression < yop.node
     end
     
     methods
-        function obj = binary_expression(lhs, rhs)
+        function obj = ast_binary_relation(lhs, rhs)
             obj.lhs = lhs;
             obj.rhs = rhs;
         end
@@ -14,15 +14,15 @@ classdef binary_expression < yop.node
     
     methods % Printing
         
-        function xprint(obj, s)
+        function xast(obj, s)
             fprintf([s, '\n']);
             
             begin_child(obj);
-            yop.print(obj.lhs);
+            ast(obj.lhs);
             end_child(obj);
             
             last_child(obj);
-            yop.print(obj.rhs);
+            ast(obj.rhs);
             end_child(obj);
         end
         

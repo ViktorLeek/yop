@@ -1,8 +1,8 @@
-classdef variable < yop.node
+classdef ast_variable < yop.ast_node
     
     methods
         
-        function obj = variable(dim)
+        function obj = ast_variable(dim)    
             if nargin==0
                 obj.dim = [1, 1];
             else
@@ -10,7 +10,7 @@ classdef variable < yop.node
             end
         end
         
-        function print(obj)
+        function ast(obj)
             fprintf('var\n');
         end
         
