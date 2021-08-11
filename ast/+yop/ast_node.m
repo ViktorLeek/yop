@@ -115,11 +115,12 @@ classdef ast_node < handle
             end
             % From this point length(s) == 1 && s.type == "()"
 
-            % Determine if subs contains only numeric elements
+            % Determine if subs contains only numeric elements or colon.
             % subs: {[s1], [s2], ..., [sN]}
             numeric = true;
             for k=1:length(s.subs)
-                numeric = isnumeric(s.subs{k}) && numeric;
+                numeric = (isnumeric(s.subs{k}) || s.subs{k}==":" ) ...
+                    && numeric;
             end
             
             if numeric
@@ -160,6 +161,42 @@ classdef ast_node < handle
                 
             end
             
+        end
+        
+        function node = transpose(obj)
+            node = yop.ast_transpose(obj);
+        end
+        
+        function node = ctranspose(obj)
+            node = yop.ast_ctranspose(obj);
+        end
+        
+        function node = cat(dim, varargin)
+            node = yop.ast_cat(dim, varargin{:});
+        end
+        
+        function node = horzcat(obj, varargin)
+            node = yop.ast_horzcat(obj, varargin{:});
+        end
+        
+        function node = vertcat(obj, varargin)
+            node = yop.ast_vertcat(obj, varargin{:});
+        end
+        
+        function node = reshape(obj, varargin)
+            node = yop.ast_reshape(obj, varargin{:});
+        end
+        
+        function node = repmat(obj, varargin)
+            node = yop.ast_repmat(obj, varargin{:});
+        end
+        
+        function idx = end(obj, k, n)
+            idx = builtin('end', ones(size(obj)), k, n);
+        end
+        
+        function node = heaviside(obj)
+            node = yop.ast_heaviside(obj);
         end
         
     end

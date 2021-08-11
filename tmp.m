@@ -1,4 +1,5 @@
 t = yop.ast_variable();
+v = yop.ast_variable([1, 10]);
 v1 = yop.ast_variable([5, 5]);
 v2 = yop.ast_variable([5, 5]);
 v3 = yop.ast_variable();

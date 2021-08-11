@@ -1,16 +1,16 @@
 # AST
 Är inte helt orimligt att tänka sig att kunna representera hela casadis matlab-interface.
-- `permute`
-- `transpose`
-- `ctranspose`
-- `reshape`
-- `repmat`
-- `cat`
-- `horzcat`
-- `vertcat`
-- `colon`
-- `end`
-- `empty`?
+-[ ] `permute` ?
+-[x] `transpose`
+-[x]`ctranspose`
+-[x] `reshape`
+-[x] `repmat`
+-[x] `cat`
+-[x] `horzcat`
+-[x] `vertcat`
+-[ ] `colon` - går ej att avgöra storlek, stödj ej heller i casadi. Ej impl.
+-[x] `end`
+-[] `empty`? - väntar med
 - `heaviside`
 - `and`
 - `or`
@@ -75,7 +75,3 @@
 # `ast_node`
 - `disp`
 - `display`
-- `isrow`
-- `iscolumn`
-- `isvector`
-- `isscalar`
