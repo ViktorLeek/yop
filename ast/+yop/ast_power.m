@@ -1,5 +1,9 @@
 classdef ast_power < yop.ast_binary_expression
     
+    properties (Constant)
+        name = 'power'
+    end
+    
     methods
         function obj = ast_power(lhs, rhs)
             obj@yop.ast_binary_expression(lhs, rhs);
@@ -7,9 +11,4 @@ classdef ast_power < yop.ast_binary_expression
         end
     end
     
-    methods % Printing
-        function ast(obj)
-            xast(obj, 'power(lhs, rhs)');
-        end
-    end
 end

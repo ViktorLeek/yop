@@ -14,8 +14,8 @@ classdef ast_binary_relation < yop.ast_node
     
     methods % Printing
         
-        function xast(obj, s)
-            fprintf([s, '\n']);
+        function ast(obj)
+            fprintf([obj.name, '(lhs, rhs)\n']);
             
             begin_child(obj);
             ast(obj.lhs);

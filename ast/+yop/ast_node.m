@@ -19,9 +19,10 @@ classdef ast_node < handle
             sz = size(ones(obj.dim), varargin{:});
         end
         
-        function ne = numel(obj)
-            ne = prod(size(obj));
-        end
+%         function ne = numel(obj)
+%             % Remove?
+%             ne = prod(size(obj));
+%         end
     end
     
     methods % AST
@@ -98,6 +99,194 @@ classdef ast_node < handle
             rel = yop.ast_eq(lhs, rhs);
         end
         
+        function node = transpose(obj)
+            node = yop.ast_transpose(obj);
+        end
+        
+        function node = ctranspose(obj)
+            node = yop.ast_ctranspose(obj);
+        end
+        
+        function node = cat(dim, varargin)
+            node = yop.ast_cat(dim, varargin{:});
+        end
+        
+        function node = horzcat(obj, varargin)
+            node = yop.ast_horzcat(obj, varargin{:});
+        end
+        
+        function node = vertcat(obj, varargin)
+            node = yop.ast_vertcat(obj, varargin{:});
+        end
+        
+        function node = reshape(obj, varargin)
+            node = yop.ast_reshape(obj, varargin{:});
+        end
+        
+        function node = repmat(obj, varargin)
+            node = yop.ast_repmat(obj, varargin{:});
+        end
+        
+        function idx = end(obj, k, n)
+            idx = builtin('end', ones(size(obj)), k, n);
+        end
+        
+        function node = heaviside(obj)
+            node = yop.ast_heaviside(obj);
+        end
+        
+        function node = abs(obj)
+            node = yop.ast_abs(obj);
+        end
+        
+        function node = sqrt(obj)
+            node = yop.ast_sqrt(obj);
+        end
+        
+        function node = sin(obj)
+            node = yop.ast_sin(obj);
+        end
+        
+        function node = cos(obj)
+            node = yop.ast_cos(obj);
+        end
+        
+        function node = tan(obj)
+            node = yop.ast_tan(obj);
+        end
+        
+        function node = asin(obj)
+            node = yop.ast_asin(obj);
+        end
+        
+        function node = acos(obj)
+            node = yop.ast_acos(obj);
+        end
+        
+        function node = atan(obj)
+            node = yop.ast_atan(obj);
+        end
+        
+        function node = sinh(obj)
+            node = yop.ast_sinh(obj);
+        end
+        
+        function node = cosh(obj)
+            node = yop.ast_cosh(obj);
+        end
+        
+        function node = tanh(obj)
+            node = yop.ast_tanh(obj);
+        end
+        
+        function node = asinh(obj)
+            node = yop.ast_asinh(obj);
+        end
+        
+        function node = acosh(obj)
+            node = yop.ast_acosh(obj);
+        end
+        
+        function node = atanh(obj)
+            node = yop.ast_atanh(obj);
+        end
+        
+        function node = exp(obj)
+            node = yop.ast_exp(obj);
+        end
+        
+        function node = log(obj)
+            node = yop.ast_log(obj);
+        end
+        
+        function node = log10(obj)
+            node = yop.ast_log10(obj);
+        end
+        
+        function node = floor(obj)
+            node = yop.ast_floor(obj);
+        end
+        
+        function node = ceil(obj)
+            node = yop.ast_ceil(obj);
+        end
+        
+        function node = erf(obj)
+            node = yop.ast_erf(obj);
+        end
+        
+        function node = erfinv(obj)
+            node = yop.ast_erfinv(obj);
+        end
+        
+        function node = sign(obj)
+            node = yop.ast_sign(obj);
+        end
+        
+        function node = mod(a, m)
+            node = yop.ast_mod(a, m);
+        end
+        
+        function node = atan2(y, x)
+            node = yop.ast_atan2(y, x);
+        end
+        
+        function node = trace(obj)
+            node = yop.ast_trace(obj);
+        end
+        
+        function node = sum(obj, varargin)
+            node = yop.ast_sum(obj, varargin{:});
+        end
+        
+        function node = norm(obj, varargin)
+            node = yop.ast_norm(obj, varargin{:});
+        end
+        
+        function node = min(obj, varargin)
+            node = yop.ast_min(obj, varargin{:});
+        end
+        
+        function node = max(obj, varargin)
+            node = yop.ast_max(obj, varargin{:});
+        end
+        
+        function node = sumsqr(obj)
+            node = yop.ast_sumsqr(obj);
+        end
+        
+        function node = linspace(x1, x2, n)
+            node = yop.ast_linspace(x1, x2, n);
+        end
+        
+        function node = cross(A, B, varargin)
+            node = yop.ast_cross(A, B, varargin{:});
+        end
+        
+        function node = det(obj)
+            node = yop.ast_det(obj);
+        end
+        
+        function node = inv(obj)
+            node = yop.ast_inv(obj);
+        end
+        
+        function node = pinv(obj)
+            node = yop.ast_pinv(obj);
+        end
+        
+        function node = dot(A, B, varargin)
+            node = yop.ast_dot(A, B, varargin{:});
+        end
+        
+        function node = expm(obj)
+            node = yop.ast_expm(obj);
+        end
+        
+        function node = cumsum(obj, varargin)
+            node = yop.ast_cumsum(obj, varargin{:});
+        end
+        
         function varargout = subsref(obj, s)
             % sr = subsref(obj, s)
             % The function is designed to enable two things.
@@ -110,6 +299,9 @@ classdef ast_node < handle
             % later.
             
             if length(s) > 1 || s(1).type ~= "()"
+                % This needs to be revised because it only works with
+                % objects of size [1, 1]. Must overload 
+                % numArgumentsFromSubscript
                 [varargout{1:nargout}] = builtin('subsref',obj, s);
                 return;
             end
@@ -161,43 +353,7 @@ classdef ast_node < handle
                 
             end
             
-        end
-        
-        function node = transpose(obj)
-            node = yop.ast_transpose(obj);
-        end
-        
-        function node = ctranspose(obj)
-            node = yop.ast_ctranspose(obj);
-        end
-        
-        function node = cat(dim, varargin)
-            node = yop.ast_cat(dim, varargin{:});
-        end
-        
-        function node = horzcat(obj, varargin)
-            node = yop.ast_horzcat(obj, varargin{:});
-        end
-        
-        function node = vertcat(obj, varargin)
-            node = yop.ast_vertcat(obj, varargin{:});
-        end
-        
-        function node = reshape(obj, varargin)
-            node = yop.ast_reshape(obj, varargin{:});
-        end
-        
-        function node = repmat(obj, varargin)
-            node = yop.ast_repmat(obj, varargin{:});
-        end
-        
-        function idx = end(obj, k, n)
-            idx = builtin('end', ones(size(obj)), k, n);
-        end
-        
-        function node = heaviside(obj)
-            node = yop.ast_heaviside(obj);
-        end
+        end        
         
     end
     

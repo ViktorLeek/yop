@@ -1,14 +1,14 @@
-classdef ast_heaviside < yop.ast_node
+classdef ast_log < yop.ast_node
     properties
         expr
     end
     methods
-        function obj = ast_heaviside(expr)
+        function obj = ast_log(expr)
             obj.expr = expr;
             obj.dim = size(expr);
         end
         function ast(obj)
-            fprintf('heaviside(expr)\n');
+            fprintf('log(expr)\n');
             last_child(obj);
             ast(obj.expr);
             end_child(obj);

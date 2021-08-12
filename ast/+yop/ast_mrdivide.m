@@ -1,5 +1,9 @@
 classdef ast_mrdivide < yop.ast_binary_expression
     
+    properties (Constant)
+        name = 'mrdivide'
+    end
+    
     methods
         function obj = ast_mrdivide(lhs, rhs)
             obj@yop.ast_binary_expression(lhs, rhs);
@@ -7,9 +11,4 @@ classdef ast_mrdivide < yop.ast_binary_expression
         end
     end
     
-    methods % Printing
-        function ast(obj)
-            xast(obj, 'mrdivide(lhs, rhs)');
-        end
-    end
 end

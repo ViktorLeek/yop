@@ -6,7 +6,7 @@ function ast(obj)
 % package in order to be polymorphic.
 
 if isempty(obj)
-    fprintf('[]');
+    fprintf('[]\n');
     
 elseif isnumeric(obj)
     % By making several calls to fprintf, potential dimensionality problems
@@ -14,6 +14,14 @@ elseif isnumeric(obj)
     fprintf('[');
     fprintf(num2str(obj)); 
     fprintf(']\n');
+    
+elseif isstring(obj)
+    fprintf('\"');
+    fprintf(obj);
+    fprintf('\"\n');
+    
+elseif ischar(obj)
+    fprintf([char(39), obj, char(39), '\n']);
     
 else
     % Unknown type, try to print.

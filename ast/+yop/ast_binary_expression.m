@@ -14,11 +14,8 @@ classdef ast_binary_expression < yop.ast_node
     
     methods % Printing
         
-        function xast(obj, s)
-            % xast - print with string s as name
-            
-            
-            fprintf([s, '\n']);
+        function ast(obj)
+            fprintf([obj.name, '(lhs, rhs)\n']);
             
             begin_child(obj);
             ast(obj.lhs);

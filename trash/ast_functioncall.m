@@ -1,6 +1,7 @@
-classdef ast_functioncall < yop.node
+classdef ast_functioncall < yop.ast_node
     properties
         args
+        dim
     end
     methods
         function obj = ast_functioncall(varargin)
