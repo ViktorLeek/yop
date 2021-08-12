@@ -287,6 +287,14 @@ classdef ast_node < handle
             node = yop.ast_cumsum(obj, varargin{:});
         end
         
+        function node = der(obj)
+            node = yop.ast_der(obj);
+        end
+        
+        function node = alg(obj)
+            node = yop.ast_alg(obj);
+        end
+        
         function varargout = subsref(obj, s)
             % sr = subsref(obj, s)
             % The function is designed to enable two things.
@@ -311,7 +319,7 @@ classdef ast_node < handle
             % subs: {[s1], [s2], ..., [sN]}
             numeric = true;
             for k=1:length(s.subs)
-                numeric = (isnumeric(s.subs{k}) || s.subs{k}==":" ) ...
+                numeric = (isnumeric(s.subs{k}) || ischar(s.subs{k}) ) ...
                     && numeric;
             end
             

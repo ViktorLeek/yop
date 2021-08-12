@@ -12,7 +12,7 @@ classdef ast_timepoint < yop.ast_node
     methods % Printing
         
         function ast(obj)
-            fprintf('timepoint(expr, timepoint)\n');
+            fprintf('timepoint(timepoint, expr)\n');
             
             begin_child(obj);
             ast(obj.timepoint);

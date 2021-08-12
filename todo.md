@@ -62,8 +62,8 @@
 -[ ] `polyval`
 
 # OCP
--[ ] `der`
--[ ] `alg`
+-[x] `der`
+-[x] `alg`
 
 # Modelleringsfunktioner
 -[ ] `if_else`
