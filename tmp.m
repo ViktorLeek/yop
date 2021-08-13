@@ -1,58 +1,41 @@
+%% LD2
 load('models/ld2/params.mat')
-t = yop.ast_variable();
-x = yop.ast_variable([1, 4]);
-u = yop.ast_variable([1, 3]);
+x = yop.ast_variable([4, 1]);
+u = yop.ast_variable([3, 1]);
 
-tic();
-[dX, y, h] = liu_diesel_2(x, u, 1200, ice_param);
-dX2 = liu_diesel_2(x+dX, u+1, 1200, ice_param);
-dX3 = liu_diesel_2(x+dX2, u+1, 1200, ice_param);
-dX4 = liu_diesel_2(x+dX3, u+1, 1200, ice_param);
-dX5 = liu_diesel_2(x+dX4, u+1, 1200, ice_param);
-dX6 = liu_diesel_2(x+dX5, u+1, 1200, ice_param);
-dX7 = liu_diesel_2(x+dX6, u+1, 1200, ice_param);
-toc();
-
-%%
 x0 = [2e5; 2e5; 2e5; 9000]; 
 u0 = [15; 1; 0];
 f = @(t, x) liu_diesel_2(x, u0, 1200, ice_param);
 [t_sim, x_sim] = ode15s(f, [0, 10], x0);
 x_num = x_sim(end,:)';
-tic
-dx_num = liu_diesel_2(x_num, u0, 1200, ice_param);
-toc
+dx_num = liu_diesel_2(x_num, u0, 1200, ice_param)
 
-%%
-t = yop.ast_variable();
-x = yop.ast_variable([4, 1]);
-u = yop.ast_variable([3, 1]);
 [dX, y, h] = liu_diesel_2(x, u, 1200, ice_param);
-
 x.value = x_num;
 u.value = u0;
-tic
-evaluate(dX);
-toc
+evaluate(dX)
 
-%%
-[dX, y, h] = liu_diesel_2(x, u, 1200, ice_param);
-dX2 = liu_diesel_2(x + 1e-4*dX, u, 1200, ice_param);
-dX3 = liu_diesel_2(x + 1e-4*dX2, u, 1200, ice_param);
-dX4 = liu_diesel_2(x + 1e-4*dX3, u, 1200, ice_param);
-dX5 = liu_diesel_2(x + 1e-4*dX4, u, 1200, ice_param);
-dX6 = liu_diesel_2(x + 1e-4*dX5, u, 1200, ice_param);
-dX7 = liu_diesel_2(x + 1e-4*dX6, u, 1200, ice_param);
-evaluate(dX3)
+%% LDE
+x = yop.ast_variable([5, 1]);
+u = yop.ast_variable([3, 1]);
 
-%%
-t = yop.ast_variable();
-t.value = 2;
-e = t + t;
-evaluate(e)
+x0 = [83.7758; 1.0143e+05; 1.0975e+05; 2.0502e+03; 0];
+u0 = [15; 0; 0];
+gensetModel(x0, u0)
 
+dx = gensetModel(x, u);
+x.value = x0;
+u.value = u0;
+evaluate(dx)
 
+%% Goddard's rocket problem
+x = yop.ast_variable([3, 1]);
+u = yop.ast_variable();
 
-
-
-
+x0 = [100; 1000; 200];
+u0 = 8;
+rocket_model(x0, u0)
+dx = rocket_model(x, u);
+x.value = x0;
+u.value = u0;
+evaluate(dx)

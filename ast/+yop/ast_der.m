@@ -7,6 +7,11 @@ classdef ast_der < yop.ast_node
             obj.var = var;
             obj.dim = size(var);
         end
+        
+        function value = evaluate(obj)
+            value = evaluate(obj.var);
+        end
+        
         function ast(obj)
             fprintf('der(var)\n');
             last_child(obj);
