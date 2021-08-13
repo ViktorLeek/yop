@@ -7,6 +7,11 @@ classdef ast_log10 < yop.ast_node
             obj.expr = expr;
             obj.dim = size(expr);
         end
+        
+        function value = evaluate(obj)
+            value = log10(evaluate(obj.expr));
+        end
+        
         function ast(obj)
             fprintf('log10(expr)\n');
             last_child(obj);

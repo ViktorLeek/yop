@@ -8,6 +8,11 @@ classdef ast_floor < yop.ast_node
             obj.expr = expr;
             obj.dim = size(expr);
         end
+        
+        function value = evaluate(obj)
+            value = floor(evaluate(obj.expr));
+        end
+        
         function ast(obj)
             fprintf('floor(expr)\n');
             last_child(obj);

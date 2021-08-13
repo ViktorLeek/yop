@@ -13,8 +13,15 @@ classdef ast_cat < yop.ast_node
             end
             obj.dim = size(cat(d, tmp{:}));
         end
-    end
-    methods % printing
+        
+        function value = evaluate(obj)
+            tmp = cell(size(obj.args));
+            for k=1:length(tmp)
+                tmp{k} = evaluate(obj.args{k});
+            end
+            value = cat(evaluate(obj.d), tmp{:});
+        end
+        
         function ast(obj)
             % every vararg is enumerated: "a1, a2, ..., aN, "
             str = [];
@@ -35,5 +42,7 @@ classdef ast_cat < yop.ast_node
             ast(obj.args{end});
             end_child(obj);
         end
+        
+        
     end
 end

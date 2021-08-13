@@ -1,5 +1,9 @@
 classdef ast_variable < yop.ast_node
     
+    properties
+        value
+    end
+    
     methods
         
         function obj = ast_variable(dim)    
@@ -12,6 +16,10 @@ classdef ast_variable < yop.ast_node
         
         function ast(obj)
             fprintf('var\n');
+        end
+        
+        function value = evaluate(obj)
+            value = obj.value;
         end
         
     end

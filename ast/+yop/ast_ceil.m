@@ -7,6 +7,11 @@ classdef ast_ceil < yop.ast_node
             obj.expr = expr;
             obj.dim = size(expr);
         end
+        
+        function value = evaluate(obj)
+            value = ceil(evaluate(obj.expr));
+        end
+        
         function ast(obj)
             fprintf('ceil(expr)\n');
             last_child(obj);

@@ -7,6 +7,11 @@ classdef ast_sinh < yop.ast_node
             obj.expr = expr;
             obj.dim = size(expr);
         end
+        
+        function value = evaluate(obj)
+            value = sinh(evaluate(obj.expr));
+        end
+        
         function ast(obj)
             fprintf('sinh(expr)\n');
             last_child(obj);

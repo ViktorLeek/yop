@@ -7,6 +7,11 @@ classdef ast_heaviside < yop.ast_node
             obj.expr = expr;
             obj.dim = size(expr);
         end
+        
+        function value = evaluate(obj)
+            value = heaviside(evaluate(obj.expr));
+        end
+        
         function ast(obj)
             fprintf('heaviside(expr)\n');
             last_child(obj);

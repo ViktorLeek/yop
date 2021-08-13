@@ -7,6 +7,11 @@ classdef ast_trace < yop.ast_node
             obj.expr = expr;
             obj.dim = size(trace(ones(size(expr))));
         end
+        
+        function value = evaluate(obj)
+            value = trace(evaluate(obj.expr));
+        end
+        
         function ast(obj)
             fprintf('trace(expr)\n');
             last_child(obj);

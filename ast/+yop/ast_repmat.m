@@ -9,8 +9,15 @@ classdef ast_repmat < yop.ast_node
             obj.args = varargin;
             obj.dim = repmat(ones(size(expr)), varargin{:});
         end
-    end
-    methods % printing
+        
+        function value = evaluate(obj)
+            tmp = cell(size(obj.args));
+            for k=1:length(tmp)
+                tmp{k} = evaluate(obj.args{k});
+            end
+            value = repmat(evaluate(obj.expr), tmp{:});
+        end
+        
         function ast(obj)
             str = [];
             for k=1:length(obj.args)

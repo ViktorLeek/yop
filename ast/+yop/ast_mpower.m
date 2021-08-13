@@ -9,6 +9,10 @@ classdef ast_mpower < yop.ast_binary_expression
             obj@yop.ast_binary_expression(lhs, rhs);
             obj.dim = size( mpower(ones(size(lhs)), ones(size(rhs))) );
         end
+        
+        function value = evaluate(obj)
+            value = mpower(evaluate(obj.lhs), evaluate(obj.rhs));
+        end
     end
    
 end

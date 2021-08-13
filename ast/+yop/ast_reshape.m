@@ -9,8 +9,15 @@ classdef ast_reshape < yop.ast_node
             obj.szs = varargin;
             obj.dim = size(reshape(ones(size(expr)), varargin{:}));
         end
-    end
-    methods % printing
+        
+        function value = evaluate(obj)
+            tmp = cell(size(obj.szs));
+            for k=1:length(tmp)
+                tmp{k} = evaluate(obj.szs{k});
+            end
+            value = reshape(evaluate(obj.expr), tmp{:});
+        end
+        
         function ast(obj)
             str = [];
             for k=1:length(obj.szs)

@@ -7,6 +7,11 @@ classdef ast_cos < yop.ast_node
             obj.expr = expr;
             obj.dim = size(expr);
         end
+        
+        function value = evaluate(obj)
+            value = cos(evaluate(obj.expr));
+        end
+        
         function ast(obj)
             fprintf('cos(expr)\n');
             last_child(obj);

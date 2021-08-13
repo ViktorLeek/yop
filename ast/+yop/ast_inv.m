@@ -7,6 +7,11 @@ classdef ast_inv < yop.ast_node
             obj.A = A;
             obj.dim = size(inv(ones(size(A))));
         end
+        
+        function value = evaluate(obj)
+            value = inv(evaluate(obj.A));
+        end
+        
         function ast(obj)
             fprintf('inv(A)\n');
             last_child(obj);

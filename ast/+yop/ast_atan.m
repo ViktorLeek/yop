@@ -7,6 +7,11 @@ classdef ast_atan < yop.ast_node
             obj.expr = expr;
             obj.dim = size(expr);
         end
+        
+        function value = evaluate(obj)
+            value = atan(evaluate(obj.expr));
+        end
+        
         function ast(obj)
             fprintf('atan(expr)\n');
             last_child(obj);

@@ -11,9 +11,10 @@ classdef ast_subsref < yop.ast_node
             obj.s = s;
             obj.dim = size( subsref( ones(size(node)), s ) );
         end
-    end
-    
-    methods % Printing the ast
+        
+        function value = evaluate(obj)
+            value = subsref(evaluate(obj.node), obj.s);
+        end
         
         function ast(obj)
             fprintf('subsref(node, s)\n');

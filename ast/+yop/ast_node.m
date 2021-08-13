@@ -348,11 +348,13 @@ classdef ast_node < handle
             
             numeric = true;
             for k=1:length(s.subs)
-                numeric = isnumeric(s.subs{k}) && numeric;
+                numeric = (isnumeric(s.subs{k}) || ischar(s.subs{k}) ) ...
+                    && numeric;
             end
             
             if numeric
-                % Implement obj(indices) = varargin{:};
+                % here it is assumed that varargin{:} is simply a third
+                % argument 'b' (see docs).
                 obj = yop.ast_subsasgn(obj, s, varargin{:});
                 
             else

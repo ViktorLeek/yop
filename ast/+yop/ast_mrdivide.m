@@ -9,6 +9,10 @@ classdef ast_mrdivide < yop.ast_binary_expression
             obj@yop.ast_binary_expression(lhs, rhs);
             obj.dim = size( mrdivide(ones(size(lhs)), ones(size(rhs))) );
         end
+        
+        function value = evaluate(obj)
+            value = mrdivide(evaluate(obj.lhs), evaluate(obj.rhs));
+        end
     end
     
 end

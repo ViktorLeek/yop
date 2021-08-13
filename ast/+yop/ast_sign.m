@@ -7,6 +7,11 @@ classdef ast_sign < yop.ast_node
             obj.expr = expr;
             obj.dim = size(expr);
         end
+        
+        function value = evaluate(obj)
+            value = sign(evaluate(obj.expr));
+        end
+        
         function ast(obj)
             fprintf('sign(expr)\n');
             last_child(obj);

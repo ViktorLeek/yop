@@ -8,8 +8,6 @@ classdef ast_timepoint < yop.ast_node
             obj.timepoint = timepoint;
             obj.expr = expr;
         end
-    end
-    methods % Printing
         
         function ast(obj)
             fprintf('timepoint(timepoint, expr)\n');

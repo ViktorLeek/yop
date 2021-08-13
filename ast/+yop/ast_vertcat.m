@@ -11,8 +11,15 @@ classdef ast_vertcat < yop.ast_node
             end
             obj.dim = size(vertcat(tmp{:}));
         end
-    end
-    methods % printing
+        
+        function value = evaluate(obj)
+            tmp = cell(size(obj.args));
+            for k=1:length(tmp)
+                tmp{k} = evaluate(obj.args{k});
+            end
+            value = vertcat(tmp{:});
+        end
+
         function ast(obj)
             % every arg is enumerated: "a1, a2, ..., aN, "
             str = [];

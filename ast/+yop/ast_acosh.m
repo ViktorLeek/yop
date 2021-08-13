@@ -7,6 +7,11 @@ classdef ast_acosh < yop.ast_node
             obj.expr = expr;
             obj.dim = size(expr);
         end
+        
+        function value = evaluate(obj)
+            value = acosh(evaluate(obj.expr));
+        end
+        
         function ast(obj)
             fprintf('acosh(expr)\n');
             last_child(obj);

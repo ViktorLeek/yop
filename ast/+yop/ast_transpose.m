@@ -7,8 +7,11 @@ classdef ast_transpose < yop.ast_node
             obj.expr = expr;
             obj.dim = size(transpose(ones(size(expr))));
         end
-    end
-    methods % printing
+        
+        function value = evaluate(obj)
+            value = transpose(evaluate(obj.expr));
+        end
+    
         function ast(obj)
             fprintf('transpose(obj)\n');
             last_child(obj);

@@ -9,6 +9,10 @@ classdef ast_mtimes < yop.ast_binary_expression
             obj@yop.ast_binary_expression(lhs, rhs);
             obj.dim = size( mtimes(ones(size(lhs)), ones(size(rhs))) );
         end
+        
+        function value = evaluate(obj)
+            value = mtimes(evaluate(obj.lhs), evaluate(obj.rhs));
+        end
     end
     
 end

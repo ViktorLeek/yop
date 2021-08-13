@@ -11,6 +11,10 @@ classdef ast_uminus < yop.ast_unary_expression
             obj.dim = size(expr);
         end
         
+        function value = evaluate(obj)
+            value = uminus(evaluate(obj.expr));
+        end
+        
     end
     
 end

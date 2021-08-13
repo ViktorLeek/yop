@@ -2,20 +2,28 @@ classdef ast_norm < yop.ast_node
     properties
         expr
         p
-        n_args
+        nargs
     end
     methods
         function obj = ast_norm(expr, p)
             obj.expr = expr;
-            obj.n_args = 1;
+            obj.nargs = nargin;
             obj.dim = [1, 1];
             if nargin==2
                 obj.p = p;
-                obj.n_args = 2;
             end
         end
+        
+        function value = evaluate(obj)
+            if obj.nargs == 1
+                value = norm(evaluate(obj.expr));
+            else
+                value = norm(evaluate(obj.expr), evaluate(obj.p));
+            end
+        end
+        
         function ast(obj)
-            if obj.n_args == 1
+            if obj.nargs == 1
                 fprintf('norm(expr)\n');
                 last_child(obj);
                 ast(obj.expr);

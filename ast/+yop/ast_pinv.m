@@ -7,6 +7,11 @@ classdef ast_pinv < yop.ast_node
             obj.A = A;
             obj.dim = size(pinv(ones(size(A))));
         end
+        
+        function value = evaluate(obj)
+            value = pinv(evaluate(obj.A));
+        end
+        
         function ast(obj)
             fprintf('pinv(A)\n');
             last_child(obj);

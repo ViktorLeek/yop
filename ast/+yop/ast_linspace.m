@@ -11,6 +11,15 @@ classdef ast_linspace < yop.ast_node
             obj.n = n;
             obj.dim = [1, n];
         end
+        
+        function value = evaluate(obj)
+            value = linspace(...
+                evaluate(obj.x1), ...
+                evaluate(obj.x2), ...
+                evaluate(obj.n) ...
+                );
+        end
+        
         function ast(obj)
             fprintf('linspace(x1, x2, n)\n');
             

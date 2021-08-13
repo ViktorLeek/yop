@@ -6,24 +6,34 @@ classdef ast_cumsum < yop.ast_node
     end
     methods
         function obj = ast_dot(A, d)
+            obj.nargs = nargin;
             switch nargin
                 case 1
-                    obj.nargs = 1;
                     obj.A = A;
                     obj.dim = size(cumsum(ones(size(A))));
                     
                 case 2
-                    obj.nargs = 2;
                     obj.A = A;
                     obj.d = d;
                     obj.dim = size(cumsum(ones(size(A)), d));
                     
             end
         end
+        
+        function value = evaluate(obj)
+            switch obj.nargs
+                case 1
+                    value = cumsum(evaluate(obj.A));
+                    
+                case 2
+                    value = cumsum(evaluate(obj.A), evaluate(obj.d));
+            end
+        end
+        
         function ast(obj)
             switch obj.nargs
                 case 1
-                    fprintf('cumsum(A, B)\n');
+                    fprintf('cumsum(A)\n');
                     
                     last_child(obj);
                     ast(obj.A);

@@ -7,6 +7,11 @@ classdef ast_tanh < yop.ast_node
             obj.expr = expr;
             obj.dim = size(expr);
         end
+        
+        function value = evaluate(obj)
+            value = tanh(evaluate(obj.expr));
+        end
+        
         function ast(obj)
             fprintf('tanh(expr)\n');
             last_child(obj);

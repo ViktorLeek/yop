@@ -7,6 +7,11 @@ classdef ast_sin < yop.ast_node
             obj.expr = expr;
             obj.dim = size(expr);
         end
+        
+        function value = evaluate(obj)
+            value = sin(evaluate(obj.expr));
+        end
+        
         function ast(obj)
             fprintf('sin(expr)\n');
             last_child(obj);

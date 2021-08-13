@@ -9,6 +9,11 @@ classdef ast_mod < yop.ast_node
             obj.m = m;
             obj.dim = size(mod(ones(size(a)), ones(size(m))));
         end
+        
+        function value = evaluate(obj)
+            value = mod(evaluate(obj.a), evaluate(obj.m));
+        end
+        
         function ast(obj)
             fprintf('mod(a, m)\n');
             

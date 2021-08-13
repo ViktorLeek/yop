@@ -7,6 +7,11 @@ classdef ast_det < yop.ast_node
             obj.A = A;
             obj.dim = size(det(ones(size(A))));
         end
+        
+        function value = evaluate(obj)
+            value = det(evaluate(obj.A));
+        end
+        
         function ast(obj)
             fprintf('det(A)\n');
             last_child(obj);

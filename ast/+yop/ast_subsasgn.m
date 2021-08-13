@@ -13,9 +13,12 @@ classdef ast_subsasgn < yop.ast_node
             obj.b = b;
             obj.dim = size(node);
         end
-    end
-    
-    methods % Printing
+        
+        function value = evaluate(obj)
+            % Subsref are only created if indices are 's' are numerics, and
+            % so they can be passed as they are.
+            value = subsasgn(evaluate(obj.node), obj.s, evaluate(obj.b));
+        end        
         
         function ast(obj)
             fprintf('subsasgn(node, s, b)\n');
@@ -34,14 +37,7 @@ classdef ast_subsasgn < yop.ast_node
             end_child(obj);
             
             last_child(obj);
-            if isa(obj.b, 'yop.node')
-                ast(obj.node);
-            else
-                % Numeric
-                fprintf('[');
-                fprintf(num2str(obj.b));
-                fprintf(']\n');
-            end
+            ast(obj.node);
             end_child(obj);
         end
         

@@ -7,15 +7,14 @@ classdef ast_dot < yop.ast_node
     end
     methods
         function obj = ast_dot(A, B, d)
+            obj.nargs = nargin;
             switch nargin
                 case 2
-                    obj.nargs = 2;
                     obj.A = A;
                     obj.B = B;
                     obj.dim = size(dot(ones(size(A)), ones(size(B))));
                     
                 case 3
-                    obj.nargs = 3;
                     obj.A = A;
                     obj.B = B;
                     obj.d = d;
@@ -25,6 +24,22 @@ classdef ast_dot < yop.ast_node
                     error('Wrong number of arguments provided')
             end
         end
+        
+        function value = evaluate(obj)
+            switch obj.nargs
+                case 2
+                    value = dot(evaluate(obj.A), evaluate(obj.B));
+                    
+                case 3
+                    value = dot(...
+                        evaluate(obj.A), ...
+                        evaluate(obj.B), ...
+                        evaluate(obj.d) ...
+                        );
+            end
+        end
+        
+        
         function ast(obj)
             switch obj.nargs
                 case 2

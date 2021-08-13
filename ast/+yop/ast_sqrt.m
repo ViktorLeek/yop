@@ -7,6 +7,11 @@ classdef ast_sqrt < yop.ast_node
             obj.expr = expr;
             obj.dim = size(expr);
         end
+        
+        function value = evaluate(obj)
+            value = sqrt(evaluate(obj.expr));
+        end
+        
         function ast(obj)
             fprintf('sqrt(expr)\n');
             last_child(obj);

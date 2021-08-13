@@ -7,6 +7,11 @@ classdef ast_exp < yop.ast_node
             obj.expr = expr;
             obj.dim = size(expr);
         end
+        
+        function value = evaluate(obj)
+            value = exp(evaluate(obj.expr));
+        end
+        
         function ast(obj)
             fprintf('exp(expr)\n');
             last_child(obj);

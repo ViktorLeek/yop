@@ -7,6 +7,7 @@ classdef ast_alg < yop.ast_node
             obj.var = var;
             obj.dim = size(var);
         end
+        
         function ast(obj)
             fprintf('alg(var)\n');
             last_child(obj);

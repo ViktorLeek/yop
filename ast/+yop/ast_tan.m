@@ -7,6 +7,11 @@ classdef ast_tan < yop.ast_node
             obj.expr = expr;
             obj.dim = size(expr);
         end
+        
+        function value = evaluate(obj)
+            value = tan(evaluate(obj.expr));
+        end
+        
         function ast(obj)
             fprintf('tan(expr)\n');
             last_child(obj);

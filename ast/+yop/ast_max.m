@@ -4,19 +4,17 @@ classdef ast_max < yop.ast_node
         B
         d
         flag
-        n_args
+        nargs
     end
     methods
         function obj = ast_max(A, B, d, flag)
             obj.A = A;
-            
+            obj.nargs = nargin;
             switch nargin
                 case 1
-                    obj.n_args = 1;
                     obj.dim = size(max(ones(size(A))));
                     
                 case 2
-                    obj.n_args = 2;
                     obj.B = B;
                     if isa(B, 'yop.ast_node')
                         tmp = ones(size(B));
@@ -26,7 +24,6 @@ classdef ast_max < yop.ast_node
                     obj.dim = size(max(ones(size(A)), tmp));
                     
                 case 3
-                    obj.n_args = 3;
                     obj.B = B;
                     obj.d = d;
                     if isa(B, 'yop.ast_node')
@@ -37,7 +34,6 @@ classdef ast_max < yop.ast_node
                     obj.dim = size(max(ones(size(A)), tmp, d));
                     
                 case 4
-                    obj.n_args = 4;
                     obj.B = B;
                     obj.d = d;
                     obj.flag = flag;
@@ -50,8 +46,34 @@ classdef ast_max < yop.ast_node
             end
             
         end
+        
+        function value = evaluate(obj)
+            switch obj.nargs
+                case 1
+                    value = max(evaluate(obj.A));
+                    
+                case 2
+                    value = max(evaluate(obj.A), evaluate(obj.B));
+                    
+                case 3
+                    value = max(...
+                        evaluate(obj.A), ...
+                        evaluate(obj.B), ...
+                        evaluate(obj.d) ...
+                        );
+                    
+                case 4
+                    value = max(...
+                        evaluate(obj.A), ...
+                        evaluate(obj.B), ...
+                        evaluate(obj.d), ...
+                        evaluate(obj.flag) ...
+                        );
+            end
+        end
+        
         function ast(obj)
-            switch obj.n_args
+            switch obj.nargs
                 case 1
                     fprintf('max(A)\n');
                     last_child(obj);
