@@ -12,10 +12,10 @@ classdef ast_abs < yop.ast_expression
             value = abs(evaluate(obj.expr));
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('abs(expr)\n');
             last_child(obj);
-            ast(obj.expr);
+            draw(obj.expr);
             end_child(obj);
         end
     end

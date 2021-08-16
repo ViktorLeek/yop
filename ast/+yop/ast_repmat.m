@@ -18,7 +18,7 @@ classdef ast_repmat < yop.ast_expression
             value = repmat(evaluate(obj.expr), tmp{:});
         end
         
-        function ast(obj)
+        function draw(obj)
             str = [];
             for k=1:length(obj.args)
                 str = [str, 'a', num2str(k), ', '];
@@ -26,15 +26,15 @@ classdef ast_repmat < yop.ast_expression
             fprintf(['repmat(A, ', str(1:end-2), ')\n']);
             
             begin_child(obj);
-            ast(obj.expr);
+            draw(obj.expr);
             end_child(obj);
             for k=1:(length(obj.args)-1)
                 begin_child(obj);
-                ast(obj.args{k});
+                draw(obj.args{k});
                 end_child(obj);
             end
             last_child(obj);
-            ast(obj.args{end});
+            draw(obj.args{end});
             end_child(obj);
         end
     end

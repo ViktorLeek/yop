@@ -30,24 +30,24 @@ classdef ast_cumsum < yop.ast_expression
             end
         end
         
-        function ast(obj)
+        function draw(obj)
             switch obj.nargs
                 case 1
                     fprintf('cumsum(A)\n');
                     
                     last_child(obj);
-                    ast(obj.A);
+                    draw(obj.A);
                     end_child(obj);
                     
                 case 2
                     fprintf('cumsum(A, dim)\n');
                     
                     begin_child(obj);
-                    ast(obj.A);
+                    draw(obj.A);
                     end_child(obj);
                     
                     last_child(obj);
-                    ast(obj.d);
+                    draw(obj.d);
                     end_child(obj);
                     
             end

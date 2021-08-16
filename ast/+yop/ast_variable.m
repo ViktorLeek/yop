@@ -14,7 +14,7 @@ classdef ast_variable < yop.ast_expression
             end
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('var\n');
         end
         

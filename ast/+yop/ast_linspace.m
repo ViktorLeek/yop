@@ -20,19 +20,19 @@ classdef ast_linspace < yop.ast_expression
                 );
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('linspace(x1, x2, n)\n');
             
             begin_child(obj);
-            ast(obj.x1);
+            draw(obj.x1);
             end_child(obj);
             
             begin_child(obj);
-            ast(obj.x2);
+            draw(obj.x2);
             end_child(obj);
             
             last_child(obj);
-            ast(obj.n);
+            draw(obj.n);
             end_child(obj);
         end
     end

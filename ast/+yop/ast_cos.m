@@ -12,10 +12,10 @@ classdef ast_cos < yop.ast_expression
             value = cos(evaluate(obj.expr));
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('cos(expr)\n');
             last_child(obj);
-            ast(obj.expr);
+            draw(obj.expr);
             end_child(obj);
         end
     end

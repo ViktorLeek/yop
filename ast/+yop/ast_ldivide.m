@@ -1,5 +1,9 @@
 classdef ast_ldivide < yop.ast_binary_expression
     
+    properties (Constant)
+        name = 'rdivide'
+    end
+    
     methods
         function obj = ast_ldivide(lhs, rhs)
             obj@yop.ast_binary_expression(lhs, rhs);
@@ -8,10 +12,6 @@ classdef ast_ldivide < yop.ast_binary_expression
         
         function value = evaluate(obj)
             value = ldivide(evaluate(obj.lhs), evaluate(obj.rhs));
-        end
-
-        function ast(obj)
-            xast(obj, 'ldivide(lhs, rhs)');
         end
     end
 end

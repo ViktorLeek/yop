@@ -14,15 +14,15 @@ classdef ast_mod < yop.ast_expression
             value = mod(evaluate(obj.a), evaluate(obj.m));
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('mod(a, m)\n');
             
             begin_child(obj);
-            ast(obj.a);
+            draw(obj.a);
             end_child(obj);
             
             last_child(obj);
-            ast(obj.m);
+            draw(obj.m);
             end_child(obj);
         end
     end

@@ -12,10 +12,10 @@ classdef ast_inv < yop.ast_expression
             value = inv(evaluate(obj.A));
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('inv(A)\n');
             last_child(obj);
-            ast(obj.A);
+            draw(obj.A);
             end_child(obj);
         end
     end

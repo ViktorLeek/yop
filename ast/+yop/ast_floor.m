@@ -13,10 +13,10 @@ classdef ast_floor < yop.ast_expression
             value = floor(evaluate(obj.expr));
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('floor(expr)\n');
             last_child(obj);
-            ast(obj.expr);
+            draw(obj.expr);
             end_child(obj);
         end
     end

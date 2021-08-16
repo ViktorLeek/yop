@@ -9,15 +9,15 @@ classdef ast_timepoint < yop.ast_expression
             obj.expr = expr;
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('timepoint(timepoint, expr)\n');
             
             begin_child(obj);
-            ast(obj.timepoint);
+            draw(obj.timepoint);
             end_child(obj);
             
             last_child(obj);
-            ast(obj.expr);
+            draw(obj.expr);
             end_child(obj);
         end
         

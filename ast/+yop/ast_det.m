@@ -12,10 +12,10 @@ classdef ast_det < yop.ast_expression
             value = det(evaluate(obj.A));
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('det(A)\n');
             last_child(obj);
-            ast(obj.A);
+            draw(obj.A);
             end_child(obj);
         end
     end

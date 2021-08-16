@@ -12,10 +12,10 @@ classdef ast_transpose < yop.ast_expression
             value = transpose(evaluate(obj.expr));
         end
     
-        function ast(obj)
+        function draw(obj)
             fprintf('transpose(obj)\n');
             last_child(obj);
-            ast(obj.expr);
+            draw(obj.expr);
             end_child(obj);
         end
     end

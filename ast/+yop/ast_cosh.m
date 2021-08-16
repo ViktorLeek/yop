@@ -12,10 +12,10 @@ classdef ast_cosh < yop.ast_expression
             value = cosh(evaluate(obj.expr));
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('cosh(expr)\n');
             last_child(obj);
-            ast(obj.expr);
+            draw(obj.expr);
             end_child(obj);
         end
     end

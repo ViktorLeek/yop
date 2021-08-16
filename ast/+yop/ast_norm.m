@@ -22,19 +22,19 @@ classdef ast_norm < yop.ast_expression
             end
         end
         
-        function ast(obj)
+        function draw(obj)
             if obj.nargs == 1
                 fprintf('norm(expr)\n');
                 last_child(obj);
-                ast(obj.expr);
+                draw(obj.expr);
                 end_child(obj);
             else
                 fprintf('norm(expr, p)\n');
                 begin_child(obj);
-                ast(obj.expr);
+                draw(obj.expr);
                 end_child(obj);
                 last_child(obj);
-                ast(obj.p);
+                draw(obj.p);
                 end_child(obj);
             end
         end

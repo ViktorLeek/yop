@@ -12,10 +12,10 @@ classdef ast_sign < yop.ast_expression
             value = sign(evaluate(obj.expr));
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('sign(expr)\n');
             last_child(obj);
-            ast(obj.expr);
+            draw(obj.expr);
             end_child(obj);
         end
     end

@@ -12,7 +12,7 @@ classdef ocp < handle
         end
         
         function obj = max(obj, objective)
-            obj.objective = -objective; % negate to get min problem
+            obj.objective = -objective;  % negate to get min problem
         end
         
         function obj = st(obj, varargin)

@@ -14,5 +14,4 @@ classdef ast_rdivide < yop.ast_binary_expression
             value = rdivide(evaluate(obj.lhs), evaluate(obj.rhs));
         end
     end
-    
 end

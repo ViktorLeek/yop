@@ -18,7 +18,7 @@ classdef ast_reshape < yop.ast_expression
             value = reshape(evaluate(obj.expr), tmp{:});
         end
         
-        function ast(obj)
+        function draw(obj)
             str = [];
             for k=1:length(obj.szs)
                 str = [str, 'a', num2str(k), ', '];
@@ -26,15 +26,15 @@ classdef ast_reshape < yop.ast_expression
             fprintf(['reshape(expr, ', str(1:end-2), ')\n']);
             
             begin_child(obj);
-            ast(obj.expr);
+            draw(obj.expr);
             end_child(obj);
             for k=1:(length(obj.szs)-1)
                 begin_child(obj);
-                ast(obj.szs{k});
+                draw(obj.szs{k});
                 end_child(obj);
             end
             last_child(obj);
-            ast(obj.szs{end});
+            draw(obj.szs{end});
             end_child(obj);
         end
     end

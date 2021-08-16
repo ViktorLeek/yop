@@ -12,10 +12,10 @@ classdef ast_asin < yop.ast_expression
             value = asin(evaluate(obj.expr));
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('asin(expr)\n');
             last_child(obj);
-            ast(obj.expr);
+            draw(obj.expr);
             end_child(obj);
         end
     end

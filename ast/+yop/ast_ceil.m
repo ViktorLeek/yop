@@ -12,10 +12,10 @@ classdef ast_ceil < yop.ast_expression
             value = ceil(evaluate(obj.expr));
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('ceil(expr)\n');
             last_child(obj);
-            ast(obj.expr);
+            draw(obj.expr);
             end_child(obj);
         end
     end

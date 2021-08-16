@@ -12,10 +12,10 @@ classdef ast_log < yop.ast_expression
             value = log(evaluate(obj.expr));
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('log(expr)\n');
             last_child(obj);
-            ast(obj.expr);
+            draw(obj.expr);
             end_child(obj);
         end
     end

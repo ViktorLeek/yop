@@ -12,10 +12,10 @@ classdef ast_pinv < yop.ast_expression
             value = pinv(evaluate(obj.A));
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('pinv(A)\n');
             last_child(obj);
-            ast(obj.A);
+            draw(obj.A);
             end_child(obj);
         end
     end

@@ -12,10 +12,10 @@ classdef ast_der < yop.ast_expression
             value = evaluate(obj.var);
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('der(var)\n');
             last_child(obj);
-            ast(obj.var);
+            draw(obj.var);
             end_child(obj);
         end
     end

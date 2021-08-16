@@ -12,10 +12,10 @@ classdef ast_trace < yop.ast_expression
             value = trace(evaluate(obj.expr));
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('trace(expr)\n');
             last_child(obj);
-            ast(obj.expr);
+            draw(obj.expr);
             end_child(obj);
         end
     end

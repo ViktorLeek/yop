@@ -38,32 +38,32 @@ classdef ast_cross < yop.ast_expression
             end
         end
         
-        function ast(obj)
+        function draw(obj)
             switch obj.nargs
                 case 2
                     fprintf('cross(A, B)\n');
                     
                     begin_child(obj);
-                    ast(obj.A);
+                    draw(obj.A);
                     end_child(obj);
                     
                     last_child(obj);
-                    ast(obj.B);
+                    draw(obj.B);
                     end_child(obj);
                     
                 case 3
                     fprintf('cross(A, B, dim)\n');
                     
                     begin_child(obj);
-                    ast(obj.A);
+                    draw(obj.A);
                     end_child(obj);
                     
                     begin_child(obj);
-                    ast(obj.B);
+                    draw(obj.B);
                     end_child(obj);
                     
                     last_child(obj);
-                    ast(obj.d);
+                    draw(obj.d);
                     end_child(obj);
                     
             end

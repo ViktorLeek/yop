@@ -12,10 +12,10 @@ classdef ast_tan < yop.ast_expression
             value = tan(evaluate(obj.expr));
         end
         
-        function ast(obj)
+        function draw(obj)
             fprintf('tan(expr)\n');
             last_child(obj);
-            ast(obj.expr);
+            draw(obj.expr);
             end_child(obj);
         end
     end
