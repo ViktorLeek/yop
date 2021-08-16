@@ -14,6 +14,10 @@ classdef ast_variable < yop.ast_expression
             end
         end
         
+        function bool = isa_variable(obj)
+            bool = true;
+        end
+        
         function draw(obj)
             fprintf('var\n');
         end

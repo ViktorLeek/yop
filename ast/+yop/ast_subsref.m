@@ -16,6 +16,16 @@ classdef ast_subsref < yop.ast_expression
             value = subsref(evaluate(obj.node), obj.s);
         end
         
+        function bool = isa_variable(obj)
+            bool = isa_variable(obj.node);
+        end
+        
+%         function bool = isnumeric(obj)
+%             % It would be preferable to inspect the subindices and see if
+%             % any of those in obj.node isnumeric. That is however on the
+%             % wish list for now.
+%         end
+        
         function draw(obj)
             fprintf('subsref(node, s)\n');
             
