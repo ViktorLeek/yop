@@ -1,4 +1,4 @@
-classdef ast_le < yop.ast_binary_relation
+classdef ast_le < yop.ast_relation
     
     properties (Constant)
         name = 'le'
@@ -6,7 +6,7 @@ classdef ast_le < yop.ast_binary_relation
     
     methods
         function obj = ast_le(lhs, rhs)
-            obj@yop.ast_binary_relation(lhs, rhs);
+            obj@yop.ast_relation(lhs, rhs);
         end
         
         function value = evaluate(obj)

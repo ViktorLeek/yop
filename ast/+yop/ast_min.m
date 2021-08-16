@@ -1,4 +1,4 @@
-classdef ast_min < yop.ast_node
+classdef ast_min < yop.ast_expression
     properties
         A
         B

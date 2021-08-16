@@ -1,4 +1,4 @@
-classdef ast_vertcat < yop.ast_node
+classdef ast_vertcat < yop.ast_expression
     properties
         args
     end

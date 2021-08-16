@@ -1,4 +1,4 @@
-classdef ast_cumsum < yop.ast_node
+classdef ast_cumsum < yop.ast_expression
     properties
         A
         d

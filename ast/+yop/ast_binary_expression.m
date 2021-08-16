@@ -1,4 +1,4 @@
-classdef ast_binary_expression < yop.ast_node
+classdef ast_binary_expression < yop.ast_expression
     
     properties
         lhs
@@ -10,9 +10,6 @@ classdef ast_binary_expression < yop.ast_node
             obj.lhs = lhs;
             obj.rhs = rhs;
         end
-    end
-    
-    methods % Printing
         
         function ast(obj)
             fprintf([obj.name, '(lhs, rhs)\n']);

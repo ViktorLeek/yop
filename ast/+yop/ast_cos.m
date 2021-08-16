@@ -1,4 +1,4 @@
-classdef ast_cos < yop.ast_node
+classdef ast_cos < yop.ast_expression
     properties
         expr
     end

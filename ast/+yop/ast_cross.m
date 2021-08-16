@@ -1,4 +1,4 @@
-classdef ast_cross < yop.ast_node
+classdef ast_cross < yop.ast_expression
     properties
         A
         B

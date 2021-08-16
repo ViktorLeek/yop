@@ -1,4 +1,4 @@
-classdef ast_unary_expression < yop.ast_node
+classdef ast_unary_expression < yop.ast_expression
     
     properties
         expr
@@ -8,9 +8,6 @@ classdef ast_unary_expression < yop.ast_node
         function obj = ast_unary_expression(expr)
             obj.expr = expr;
         end
-    end
-    
-    methods % Printing
         
         function ast(obj)
             fprintf([obj.name, '(expr)\n']);

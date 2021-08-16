@@ -1,4 +1,4 @@
-classdef ast_linspace < yop.ast_node
+classdef ast_linspace < yop.ast_expression
     properties
         x1
         x2

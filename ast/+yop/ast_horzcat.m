@@ -1,4 +1,4 @@
-classdef ast_horzcat < yop.ast_node
+classdef ast_horzcat < yop.ast_expression
     properties
         args
     end

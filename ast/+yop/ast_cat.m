@@ -1,4 +1,4 @@
-classdef ast_cat < yop.ast_node
+classdef ast_cat < yop.ast_expression
     properties
         d
         args

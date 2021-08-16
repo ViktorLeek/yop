@@ -1,4 +1,4 @@
-classdef ast_reshape < yop.ast_node
+classdef ast_reshape < yop.ast_expression
     properties
         expr
         szs

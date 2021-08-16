@@ -1,4 +1,4 @@
-classdef ast_sumsqr < yop.ast_node
+classdef ast_sumsqr < yop.ast_expression
     properties
         expr
     end

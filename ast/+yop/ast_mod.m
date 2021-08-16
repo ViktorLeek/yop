@@ -1,4 +1,4 @@
-classdef ast_mod < yop.ast_node
+classdef ast_mod < yop.ast_expression
     properties
         a
         m

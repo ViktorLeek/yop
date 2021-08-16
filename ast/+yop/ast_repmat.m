@@ -1,4 +1,4 @@
-classdef ast_repmat < yop.ast_node
+classdef ast_repmat < yop.ast_expression
     properties
         expr
         args

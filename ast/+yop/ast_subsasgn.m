@@ -1,4 +1,4 @@
-classdef ast_subsasgn < yop.ast_node
+classdef ast_subsasgn < yop.ast_expression
     
     properties
         node

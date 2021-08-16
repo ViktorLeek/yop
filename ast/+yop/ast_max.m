@@ -1,4 +1,4 @@
-classdef ast_max < yop.ast_node
+classdef ast_max < yop.ast_expression
     properties
         A
         B

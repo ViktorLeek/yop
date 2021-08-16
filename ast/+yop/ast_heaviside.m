@@ -1,4 +1,4 @@
-classdef ast_heaviside < yop.ast_node
+classdef ast_heaviside < yop.ast_expression
     properties
         expr
     end

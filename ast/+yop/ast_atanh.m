@@ -1,4 +1,4 @@
-classdef ast_atanh < yop.ast_node
+classdef ast_atanh < yop.ast_expression
     properties
         expr
     end

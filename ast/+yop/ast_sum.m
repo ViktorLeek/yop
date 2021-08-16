@@ -1,4 +1,4 @@
-classdef ast_sum < yop.ast_node
+classdef ast_sum < yop.ast_expression
     properties
         expr
         opt1

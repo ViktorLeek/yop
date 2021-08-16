@@ -1,4 +1,4 @@
-classdef ast_sqrt < yop.ast_node
+classdef ast_sqrt < yop.ast_expression
     properties
         expr
     end

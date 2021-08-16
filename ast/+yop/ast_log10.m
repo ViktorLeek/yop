@@ -1,4 +1,4 @@
-classdef ast_log10 < yop.ast_node
+classdef ast_log10 < yop.ast_expression
     properties
         expr
     end

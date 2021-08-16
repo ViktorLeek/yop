@@ -1,4 +1,4 @@
-classdef ast_erf < yop.ast_node
+classdef ast_erf < yop.ast_expression
     properties
         expr
     end

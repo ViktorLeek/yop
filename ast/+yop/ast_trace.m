@@ -1,4 +1,4 @@
-classdef ast_trace < yop.ast_node
+classdef ast_trace < yop.ast_expression
     properties
         expr
     end

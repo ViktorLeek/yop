@@ -1,4 +1,4 @@
-classdef ast_timepoint < yop.ast_node
+classdef ast_timepoint < yop.ast_expression
     properties
         timepoint
         expr

@@ -1,4 +1,4 @@
-classdef ast_eq < yop.ast_binary_relation
+classdef ast_eq < yop.ast_relation
     
     properties (Constant)
         name = 'eq'
@@ -6,7 +6,7 @@ classdef ast_eq < yop.ast_binary_relation
     
     methods
         function obj = ast_eq(lhs, rhs)
-            obj@yop.ast_binary_relation(lhs, rhs);
+            obj@yop.ast_relation(lhs, rhs);
         end
         
         function value = evaluate(obj)

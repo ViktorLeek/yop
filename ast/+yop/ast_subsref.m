@@ -1,4 +1,4 @@
-classdef ast_subsref < yop.ast_node
+classdef ast_subsref < yop.ast_expression
     
     properties
         node

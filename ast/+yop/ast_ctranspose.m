@@ -1,4 +1,4 @@
-classdef ast_ctranspose < yop.ast_node
+classdef ast_ctranspose < yop.ast_expression
     properties
         expr
     end

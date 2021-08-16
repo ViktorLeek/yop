@@ -1,4 +1,4 @@
-classdef ast_variable < yop.ast_node
+classdef ast_variable < yop.ast_expression
     
     properties
         value
