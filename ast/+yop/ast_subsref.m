@@ -7,6 +7,7 @@ classdef ast_subsref < yop.ast_expression
     
     methods
         function obj = ast_subsref(node, s)
+            obj@yop.ast_expression();
             obj.node = node;
             obj.s = s;
             obj.dim = size( subsref( ones(size(node)), s ) );
@@ -18,6 +19,10 @@ classdef ast_subsref < yop.ast_expression
         
         function bool = isa_variable(obj)
             bool = isa_variable(obj.node);
+        end
+        
+        function bool = is_differential(obj)
+            bool = is_differential(obj.node);
         end
         
 %         function bool = isnumeric(obj)

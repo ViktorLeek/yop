@@ -1,4 +1,4 @@
-classdef (InferiorClasses = {?yop.ast_expression}) ast_relation < yop.ast_node & yop.ast_ool
+classdef (InferiorClasses = {?yop.ast_expression}) ast_relation < yop.node & yop.ast_ool
     % yop.ast_relation
     % yop.ast_expression is inferior in order to make it impossible to mix
     % expressions and relations in illegal ways, for instance:
@@ -10,6 +10,7 @@ classdef (InferiorClasses = {?yop.ast_expression}) ast_relation < yop.ast_node &
     
     methods
         function obj = ast_relation(lhs, rhs)
+            obj@yop.node();
             obj.lhs = lhs;
             obj.rhs = rhs;
         end

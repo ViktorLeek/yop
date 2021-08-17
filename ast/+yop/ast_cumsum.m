@@ -6,6 +6,7 @@ classdef ast_cumsum < yop.ast_expression
     end
     methods
         function obj = ast_dot(A, d)
+            obj@yop.ast_expression();
             obj.nargs = nargin;
             switch nargin
                 case 1

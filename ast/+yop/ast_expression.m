@@ -1,4 +1,4 @@
-classdef ast_expression < yop.ast_node & yop.ast_ool
+classdef ast_expression < yop.node & yop.ast_ool
     % ast_expression
     % The purpose of this class is to enable to right operator and function
     % overloads for expressions. This class is inferior to the
@@ -10,6 +10,10 @@ classdef ast_expression < yop.ast_node & yop.ast_ool
     end
     
     methods
+        
+        function obj = ast_expression()
+            obj@yop.node();
+        end
         
         function sz = size(obj, varargin)
             sz = size(ones(obj.dim), varargin{:});

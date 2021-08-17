@@ -5,6 +5,7 @@ classdef ast_atan2 < yop.ast_expression
     end
     methods
         function obj = ast_atan2(y, x)
+            obj@yop.ast_expression();
             obj.y = y;
             obj.x = x;
             obj.dim = size(atan2(ones(size(y)), ones(size(x))));

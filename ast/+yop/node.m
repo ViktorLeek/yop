@@ -1,5 +1,10 @@
-classdef ast_node < handle
-    % Implements the basic printing behaviour
+classdef node < handle
+    % Base class for all yop nodes. Primarily used for the AST class.
+    
+    properties 
+        id
+        value
+    end
     
     properties (Constant)
         % reference to handle is constant, but not the value itself.
@@ -8,6 +13,10 @@ classdef ast_node < handle
     end
     
     methods
+        
+        function obj = node()
+            obj.id = yop.node.get_id();
+        end
         
         function reset_stream(obj)
             reset(obj.stream);
@@ -55,4 +64,17 @@ classdef ast_node < handle
             indent_more(obj);
         end
     end
+    
+    methods (Static)
+        function id = get_id()
+            persistent ID
+            if isempty(ID)
+                ID = 1;
+            else
+                ID = ID + 1;
+            end
+            id = ID;
+        end
+    end
+    
 end

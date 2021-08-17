@@ -6,8 +6,8 @@ classdef box_upper < yop.box_constraint
     end
     
     methods
-        function obj = box_upper(variable, bound)
-            obj@yop.box_constraint(variable, bound);
+        function obj = box_upper(var, bnd)
+            obj@yop.box_constraint(var, bnd);
         end
     end
 end

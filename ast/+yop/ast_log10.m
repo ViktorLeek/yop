@@ -4,6 +4,7 @@ classdef ast_log10 < yop.ast_expression
     end
     methods
         function obj = ast_log10(expr)
+            obj@yop.ast_expression();
             obj.expr = expr;
             obj.dim = size(expr);
         end

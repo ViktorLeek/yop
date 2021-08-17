@@ -5,6 +5,7 @@ classdef ast_reshape < yop.ast_expression
     end
     methods
         function obj = ast_reshape(expr, varargin)
+            obj@yop.ast_expression();
             obj.expr = expr;
             obj.szs = varargin;
             obj.dim = size(reshape(ones(size(expr)), varargin{:}));

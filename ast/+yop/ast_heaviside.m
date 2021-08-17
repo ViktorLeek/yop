@@ -4,6 +4,7 @@ classdef ast_heaviside < yop.ast_expression
     end
     methods
         function obj = ast_heaviside(expr)
+            obj@yop.ast_expression();
             obj.expr = expr;
             obj.dim = size(expr);
         end

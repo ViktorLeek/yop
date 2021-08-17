@@ -4,6 +4,7 @@ classdef ast_det < yop.ast_expression
     end
     methods
         function obj = ast_det(A)
+            obj@yop.ast_expression();
             obj.A = A;
             obj.dim = size(det(ones(size(A))));
         end

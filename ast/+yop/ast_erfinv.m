@@ -4,6 +4,7 @@ classdef ast_erfinv < yop.ast_expression
     end
     methods
         function obj = ast_erfinv(expr)
+            obj@yop.ast_expression();
             obj.expr = expr;
             obj.dim = size(expr);
         end

@@ -4,6 +4,7 @@ classdef ast_horzcat < yop.ast_expression
     end
     methods
         function obj = ast_horzcat(varargin)
+            obj@yop.ast_expression();
             obj.args = varargin;
             tmp = cell(size(varargin));
             for k=1:length(varargin)

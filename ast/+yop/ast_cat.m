@@ -5,6 +5,7 @@ classdef ast_cat < yop.ast_expression
     end
     methods
         function obj = ast_cat(d, varargin)
+            obj@yop.ast_expression();
             obj.d = d;
             obj.args = varargin;
             tmp = cell(size(varargin));

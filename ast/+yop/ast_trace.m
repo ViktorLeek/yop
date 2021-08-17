@@ -4,6 +4,7 @@ classdef ast_trace < yop.ast_expression
     end
     methods
         function obj = ast_trace(expr)
+            obj@yop.ast_expression();
             obj.expr = expr;
             obj.dim = size(trace(ones(size(expr))));
         end

@@ -6,8 +6,8 @@ classdef box_lower < yop.box_constraint
     end
     
     methods
-        function obj = box_lower(variable, bound)
-            obj@yop.box_constraint(variable, bound);
+        function obj = box_lower(var, bnd)
+            obj@yop.box_constraint(var, bnd);
         end
     end
 end

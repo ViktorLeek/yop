@@ -1,7 +1,5 @@
-classdef srf < yop.ast_node
+classdef srf < yop.node
     % srf - single relation form
-    % It derives from ast_node in order to be draw()-able, otherwise
-    % intended to be separate from the ast-representation.
     properties
         lhs
         rhs

@@ -6,6 +6,7 @@ classdef ast_linspace < yop.ast_expression
     end
     methods
         function obj = ast_linspace(x1, x2, n)
+            obj@yop.ast_expression();
             obj.x1 = x1;
             obj.x2 = x2;
             obj.n = n;

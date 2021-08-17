@@ -5,8 +5,8 @@ classdef box_equality < yop.box_constraint
     end
     
     methods
-        function obj = box_equality(variable, bound)
-            obj@yop.box_constraint(variable, bound);
+        function obj = box_equality(var, bnd)
+            obj@yop.box_constraint(var, bnd);
         end
     end
 end

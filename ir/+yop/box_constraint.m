@@ -1,24 +1,23 @@
-classdef box_constraint < yop.ast_node
-    % just a ast_node to be able to draw. Should be changed!
+classdef box_constraint < yop.node
     properties
-        variable
-        bound
+        var
+        bnd
     end
     methods
-        function obj = box_constraint(variable, bound)
-            obj.variable = variable;
-            obj.bound = bound;
+        function obj = box_constraint(var, bnd)
+            obj.var = var;
+            obj.bnd = bnd;
         end
         
         function draw(obj)
-            fprintf([obj.name, '(variable, bound)\n']);
+            fprintf([obj.name, '(var, bnd)\n']);
             
             begin_child(obj);
-            draw(obj.variable);
+            draw(obj.var);
             end_child(obj);
             
             last_child(obj);
-            draw(obj.bound);
+            draw(obj.bnd);
             end_child(obj);
         end
     end

@@ -8,6 +8,7 @@ classdef ast_max < yop.ast_expression
     end
     methods
         function obj = ast_max(A, B, d, flag)
+            obj@yop.ast_expression();
             obj.A = A;
             obj.nargs = nargin;
             switch nargin
@@ -16,7 +17,7 @@ classdef ast_max < yop.ast_expression
                     
                 case 2
                     obj.B = B;
-                    if isa(B, 'yop.ast_node')
+                    if isa(B, 'yop.node')
                         tmp = ones(size(B));
                     else
                         tmp = B;
@@ -26,7 +27,7 @@ classdef ast_max < yop.ast_expression
                 case 3
                     obj.B = B;
                     obj.d = d;
-                    if isa(B, 'yop.ast_node')
+                    if isa(B, 'yop.node')
                         tmp = ones(size(B));
                     else
                         tmp = B;
@@ -37,7 +38,7 @@ classdef ast_max < yop.ast_expression
                     obj.B = B;
                     obj.d = d;
                     obj.flag = flag;
-                    if isa(B, 'yop.ast_node')
+                    if isa(B, 'yop.node')
                         tmp = ones(size(B));
                     else
                         tmp = B;

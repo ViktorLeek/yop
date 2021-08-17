@@ -4,6 +4,7 @@ classdef ast_exp < yop.ast_expression
     end
     methods
         function obj = ast_exp(expr)
+            obj@yop.ast_expression();
             obj.expr = expr;
             obj.dim = size(expr);
         end

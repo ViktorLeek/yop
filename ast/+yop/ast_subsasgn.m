@@ -8,6 +8,7 @@ classdef ast_subsasgn < yop.ast_expression
     
     methods
         function obj = ast_subsasgn(node, s, b)
+            obj@yop.ast_expression();
             obj.node = node;
             obj.s = s;
             obj.b = b;

@@ -20,6 +20,10 @@ classdef ocp < handle
         end
         
         function obj = st(obj, varargin)
+            
+            variables = yop.get_variables(varargin);
+            
+            % Classify constraints
             constraints = to_srf(varargin);
             for k=1:length(constraints)
                 [type, con] = get_constraint(constraints{k});
@@ -50,19 +54,19 @@ classdef ocp < handle
         end
         
         function obj = add_equality(obj, bc)
-            obj.box = [obj.equality(:)', {bc}];
+            obj.equality = [obj.equality(:)', {bc}];
         end
         
         function obj = add_inequality(obj, bc)
-            obj.box = [obj.inequality(:)', {bc}];
+            obj.inequality = [obj.inequality(:)', {bc}];
         end
         
         function obj = add_differential(obj, bc)
-            obj.box = [obj.differential(:)', {bc}];
+            obj.differential = [obj.differential(:)', {bc}];
         end
         
         function obj = add_algebraic(obj, bc)
-            obj.box = [obj.algebraic(:)', {bc}];
+            obj.algebraic = [obj.algebraic(:)', {bc}];
         end
     end
 end

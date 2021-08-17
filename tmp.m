@@ -39,3 +39,13 @@ dx = rocket_model(x, u);
 x.value = x0;
 u.value = u0;
 evaluate(dx)
+
+%%
+syms xx1 xx2
+import yop.*
+x1 = yop.state('x1');
+x2 = yop.state('x2');
+expr = abs(x1) + x2;
+[topsort, visited] = topological_sort(expr)
+x1.value = xx1;
+x2.value = xx2;

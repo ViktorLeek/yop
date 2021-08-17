@@ -5,6 +5,7 @@ classdef ast_mod < yop.ast_expression
     end
     methods
         function obj = ast_mod(a, m)
+            obj@yop.ast_expression();
             obj.a = a;
             obj.m = m;
             obj.dim = size(mod(ones(size(a)), ones(size(m))));

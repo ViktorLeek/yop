@@ -6,6 +6,7 @@ classdef ast_unary_expression < yop.ast_expression
     
     methods
         function obj = ast_unary_expression(expr)
+            obj@yop.ast_expression();
             obj.expr = expr;
         end
         

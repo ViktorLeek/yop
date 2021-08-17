@@ -4,6 +4,7 @@ classdef ast_sumsqr < yop.ast_expression
     end
     methods
         function obj = ast_sumsqr(expr)
+            obj@yop.ast_expression();
             obj.expr = expr;
             % dim is over simplified. To properly determine size it is
             % necessary to inspect the number of outputs the user expects.

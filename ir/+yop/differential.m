@@ -1,26 +1,24 @@
-classdef ast_timepoint < yop.ast_expression
+classdef differential < yop.node
     properties
-        timepoint
+        var
         expr
     end
     methods
-        function obj = ast_timepoint(timepoint, expr)
-            obj@yop.ast_expression();
-            obj.timepoint = timepoint;
+        function obj = differential(var, expr)
+            obj.var = var;
             obj.expr = expr;
         end
         
         function draw(obj)
-            fprintf('timepoint(timepoint, expr)\n');
+            fprintf('differential(var, expr)\n');
             
             begin_child(obj);
-            draw(obj.timepoint);
+            draw(obj.var);
             end_child(obj);
             
             last_child(obj);
             draw(obj.expr);
             end_child(obj);
         end
-        
     end
 end
