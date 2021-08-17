@@ -19,7 +19,12 @@ classdef ast_subsasgn < yop.ast_expression
             % Subsref are only created if indices are 's' are numerics, and
             % so they can be passed as they are.
             value = subsasgn(evaluate(obj.node), obj.s, evaluate(obj.b));
-        end        
+        end
+        
+        function v = forward(obj)
+            obj.m_value = subsasgn(value(obj.node), obj.s, value(obj.b));
+            v = obj.m_value;
+        end
         
         function draw(obj)
             fprintf('subsasgn(node, s, b)\n');
@@ -40,6 +45,32 @@ classdef ast_subsasgn < yop.ast_expression
             last_child(obj);
             draw(obj.node);
             end_child(obj);
+        end
+        
+        function [topsort, visited] = topological_sort(obj, topsort, visited)
+            % Topological sort of expression graph by a dfs.
+            
+            % Initialize if second and third args are empty
+            if nargin == 1
+                topsort = {};
+                visited = [];
+            end
+            
+            % only visit every node once
+            if ~isempty( find(visited == obj.id, 1) )
+                return;
+            end
+            
+            % Mark node as visited
+            visited = [visited, obj.id];
+            
+            % Visit child
+            [topsort, visited]=topological_sort(obj.node, topsort, visited);
+            [topsort, visited]=topological_sort(obj.s, topsort, visited);
+            [topsort, visited]=topological_sort(obj.b, topsort, visited);
+            
+            % append self to sort
+            topsort = [topsort(:)', {obj}];
         end
         
     end

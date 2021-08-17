@@ -13,6 +13,11 @@ classdef ast_mtimes < yop.ast_binary_expression
         function value = evaluate(obj)
             value = mtimes(evaluate(obj.lhs), evaluate(obj.rhs));
         end
+        
+        function v = forward(obj)
+            obj.m_value = mtimes(value(obj.lhs), value(obj.rhs));
+            v = obj.m_value;
+        end
     end
     
 end

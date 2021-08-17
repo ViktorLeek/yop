@@ -73,6 +73,32 @@ classdef ast_max < yop.ast_expression
             end
         end
         
+        function v = forward(obj)
+            switch obj.nargs
+                case 1
+                    obj.m_value = max(value(obj.A));
+                    
+                case 2
+                    obj.m_value = max(value(obj.A), value(obj.B));
+                    
+                case 3
+                    obj.m_value = max(...
+                        value(obj.A), ...
+                        value(obj.B), ...
+                        value(obj.d) ...
+                        );
+                    
+                case 4
+                    obj.m_value = max(...
+                        value(obj.A), ...
+                        value(obj.B), ...
+                        value(obj.d), ...
+                        value(obj.flag) ...
+                        );
+            end         
+            v = obj.m_value;
+        end
+        
         function draw(obj)
             switch obj.nargs
                 case 1
@@ -124,9 +150,35 @@ classdef ast_max < yop.ast_expression
                     
                     last_child(obj);
                     draw(obj.flag);
-                    end_child(obj);
-                    
+                    end_child(obj); 
             end
+        end
+        
+        function [topsort, visited] = topological_sort(obj, topsort, visited)
+            % Topological sort of expression graph by a dfs.
+            
+            % Initialize if second and third args are empty
+            if nargin == 1
+                topsort = {};
+                visited = [];
+            end
+            
+            % only visit every node once
+            if ~isempty( find(visited == obj.id, 1) )
+                return;
+            end
+            
+            % Mark node as visited
+            visited = [visited, obj.id];
+            
+            % Visit child
+            [topsort, visited]=topological_sort(obj.A, topsort, visited);
+            [topsort, visited]=topological_sort(obj.b, topsort, visited);
+            [topsort, visited]=topological_sort(obj.d, topsort, visited);
+            [topsort, visited]=topological_sort(obj.flag, topsort, visited);
+            
+            % append self to sort
+            topsort = [topsort(:)', {obj}];
         end
     end
 end

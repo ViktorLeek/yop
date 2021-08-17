@@ -12,6 +12,11 @@ classdef ast_le < yop.ast_relation
         function value = evaluate(obj)
             value = le(evaluate(obj.lhs), evaluate(obj.rhs));
         end
+        
+        function v = forward(obj)
+            obj.m_value = le(value(obj.lhs), value(obj.rhs));
+            v = obj.m_value;
+        end
     end
     
 end

@@ -18,6 +18,15 @@ classdef ast_repmat < yop.ast_expression
             value = repmat(evaluate(obj.expr), tmp{:});
         end
         
+        function v = forward(obj)
+            tmp = cell(size(obj.args));
+            for k=1:length(tmp)
+                tmp{k} = value(obj.args{k});
+            end
+            obj.m_value = repmat(value(obj.expr), tmp{:});
+            v = obj.m_value;
+        end
+        
         function draw(obj)
             str = [];
             for k=1:length(obj.args)
@@ -37,5 +46,39 @@ classdef ast_repmat < yop.ast_expression
             draw(obj.args{end});
             end_child(obj);
         end
+        
+        function [topsort, visited] = topological_sort(obj, topsort, visited)
+            % Topological sort of expression graph by a dfs.
+            
+            % Initialize if second and third args are empty
+            if nargin == 1
+                topsort = {};
+                visited = [];
+            end
+            
+            % only visit every node once
+            if ~isempty( find(visited == obj.id, 1) )
+                return;
+            end
+            
+            % Mark node as visited
+            visited = [visited, obj.id];
+            
+            % Visit child
+            [topsort, visited]=topological_sort(obj.expr, topsort, visited);
+            for k=1:length(obj.args)
+                % probably unnecessary, as args are expected to be numerics
+                % but could change in the future.
+                [topsort, visited] = topological_sort( ...
+                    obj.args{k}, ...
+                    topsort, ...
+                    visited ...
+                    );
+            end
+            
+            % append self to sort
+            topsort = [topsort(:)', {obj}];
+        end
+        
     end
 end

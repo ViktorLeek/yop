@@ -23,6 +23,15 @@ classdef ast_norm < yop.ast_expression
             end
         end
         
+        function v = forward(obj)
+            if obj.nargs == 1
+                obj.m_value = norm(value(obj.expr));
+            else
+                obj.m_value = norm(value(obj.expr), value(obj.p));
+            end
+            v = obj.m_value;
+        end
+        
         function draw(obj)
             if obj.nargs == 1
                 fprintf('norm(expr)\n');
@@ -38,6 +47,31 @@ classdef ast_norm < yop.ast_expression
                 draw(obj.p);
                 end_child(obj);
             end
+        end
+        
+        function [topsort, visited] = topological_sort(obj, topsort, visited)
+            % Topological sort of expression graph by a dfs.
+            
+            % Initialize if second and third args are empty
+            if nargin == 1
+                topsort = {};
+                visited = [];
+            end
+            
+            % only visit every node once
+            if ~isempty( find(visited == obj.id, 1) )
+                return;
+            end
+            
+            % Mark node as visited
+            visited = [visited, obj.id];
+            
+            % Visit child
+            [topsort, visited] = topological_sort(obj.expr, topsort, visited);
+            [topsort, visited] = topological_sort(obj.p, topsort, visited);
+            
+            % append self to sort
+            topsort = [topsort(:)', {obj}];
         end
     end
 end

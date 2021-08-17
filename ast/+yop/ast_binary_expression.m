@@ -30,6 +30,8 @@ classdef ast_binary_expression < yop.ast_expression
             % Initialize if second and third args are empty
             if nargin == 1
                 topsort = {};
+                topsort = cell(1e4, 1);
+                nelem = 0;
                 visited = [];
             end
             
@@ -46,7 +48,10 @@ classdef ast_binary_expression < yop.ast_expression
             [topsort, visited]=topological_sort(obj.rhs, topsort, visited);
             
             % append self to sort
-            topsort = [topsort(:)', {obj}];
+            topsort{nelem+1} = obj;
+%             topsort = [topsort(:)', {obj}];
+%             topsort = {topsort{:}, obj};
+
         end
         
     end

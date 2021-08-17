@@ -19,6 +19,15 @@ classdef ast_reshape < yop.ast_expression
             value = reshape(evaluate(obj.expr), tmp{:});
         end
         
+        function v = forward(obj)
+            tmp = cell(size(obj.szs));
+            for k=1:length(tmp)
+                tmp{k} = value(obj.szs{k});
+            end
+            obj.m_value = reshape(value(obj.expr), tmp{:});
+            v = obj.m_value;
+        end
+        
         function draw(obj)
             str = [];
             for k=1:length(obj.szs)
@@ -37,6 +46,39 @@ classdef ast_reshape < yop.ast_expression
             last_child(obj);
             draw(obj.szs{end});
             end_child(obj);
+        end
+        
+        function [topsort, visited] = topological_sort(obj, topsort, visited)
+            % Topological sort of expression graph by a dfs.
+            
+            % Initialize if second and third args are empty
+            if nargin == 1
+                topsort = {};
+                visited = [];
+            end
+            
+            % only visit every node once
+            if ~isempty( find(visited == obj.id, 1) )
+                return;
+            end
+            
+            % Mark node as visited
+            visited = [visited, obj.id];
+            
+            % Visit child
+            [topsort, visited]=topological_sort(obj.expr, topsort, visited);
+            for k=1:length(obj.args)
+                % probably unnecessary, as szs are expected to be numerics
+                % but could change in the future.
+                [topsort, visited] = topological_sort( ...
+                    obj.szs{k}, ...
+                    topsort, ...
+                    visited ...
+                    );
+            end
+            
+            % append self to sort
+            topsort = [topsort(:)', {obj}];
         end
     end
 end

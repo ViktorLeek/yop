@@ -15,6 +15,11 @@ classdef ast_uminus < yop.ast_unary_expression
             value = uminus(evaluate(obj.expr));
         end
         
+        function v = forward(obj)
+            obj.m_value = uminus(value(obj.expr));
+            v = obj.m_value;
+        end
+        
     end
     
 end

@@ -19,6 +19,15 @@ classdef ast_vertcat < yop.ast_expression
             end
             value = vertcat(tmp{:});
         end
+        
+        function v = forward(obj)
+            tmp = cell(size(obj.args));
+            for k=1:length(tmp)
+                tmp{k} = value(obj.args{k});
+            end
+            obj.m_value = vertcat(tmp{:});
+            v = obj.m_value;
+        end
 
         function draw(obj)
             % every arg is enumerated: "a1, a2, ..., aN, "
@@ -38,5 +47,36 @@ classdef ast_vertcat < yop.ast_expression
             end_child(obj);
             
         end
+        
+        function [topsort, visited] = topological_sort(obj, topsort, visited)
+            % Topological sort of expression graph by a dfs.
+            
+            % Initialize if second and third args are empty
+            if nargin == 1
+                topsort = {};
+                visited = [];
+            end
+            
+            % only visit every node once
+            if ~isempty( find(visited == obj.id, 1) )
+                return;
+            end
+            
+            % Mark node as visited
+            visited = [visited, obj.id];
+            
+            % Visit child
+            for k=1:length(obj.args)
+                [topsort, visited] = topological_sort( ...
+                    obj.args{k}, ...
+                    topsort, ...
+                    visited ...
+                    );
+            end
+            
+            % append self to sort
+            topsort = [topsort(:)', {obj}];
+        end
+        
     end
 end

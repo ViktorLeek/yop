@@ -17,6 +17,11 @@ classdef ast_subsref < yop.ast_expression
             value = subsref(evaluate(obj.node), obj.s);
         end
         
+        function v = forward(obj)
+            obj.m_value = subsref(value(obj.node), obj.s);
+            v = obj.m_value;
+        end
+        
         function bool = isa_variable(obj)
             bool = isa_variable(obj.node);
         end
@@ -46,6 +51,31 @@ classdef ast_subsref < yop.ast_expression
             last_child(obj);
             fprintf(['{', str(1:end-2), '}\n']);
             end_child(obj);
+        end
+        
+        function [topsort, visited] = topological_sort(obj, topsort, visited)
+            % Topological sort of expression graph by a dfs.
+            
+            % Initialize if second and third args are empty
+            if nargin == 1
+                topsort = {};
+                visited = [];
+            end
+            
+            % only visit every node once
+            if ~isempty( find(visited == obj.id, 1) )
+                return;
+            end
+            
+            % Mark node as visited
+            visited = [visited, obj.id];
+            
+            % Visit child
+            [topsort, visited]=topological_sort(obj.node, topsort, visited);
+            [topsort, visited]=topological_sort(obj.s, topsort, visited);
+            
+            % append self to sort
+            topsort = [topsort(:)', {obj}];
         end
         
     end

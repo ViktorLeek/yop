@@ -13,6 +13,11 @@ classdef ast_ctranspose < yop.ast_expression
             value = ctranspose(evaluate(obj.expr));
         end
         
+        function v = forward(obj)
+            obj.m_value = ctranspose(value(obj.expr));
+            v = obj.m_value;
+        end
+        
         function draw(obj)
             fprintf('ctranspose(obj)\n');
             last_child(obj);
@@ -20,5 +25,28 @@ classdef ast_ctranspose < yop.ast_expression
             end_child(obj);
         end
         
+        function [topsort, visited] = topological_sort(obj, topsort, visited)
+            % Topological sort of expression graph by a dfs.
+            
+            % Initialize if second and third args are empty
+            if nargin == 1
+                topsort = {};
+                visited = [];
+            end
+            
+            % only visit every node once
+            if ~isempty( find(visited == obj.id, 1) )
+                return;
+            end
+            
+            % Mark node as visited
+            visited = [visited, obj.id];
+            
+            % Visit child
+            [topsort, visited]=topological_sort(obj.expr, topsort, visited);
+            
+            % append self to sort
+            topsort = [topsort(:)', {obj}];
+        end
     end
 end

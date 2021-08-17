@@ -3,7 +3,7 @@ classdef node < handle
     
     properties 
         id
-        value
+        m_value
     end
     
     properties (Constant)
@@ -62,6 +62,10 @@ classdef node < handle
             fprintf('+-');
             obj.stream.branches(obj.stream.indent_level) = false;
             indent_more(obj);
+        end
+        
+        function v = value(obj)
+            v = obj.m_value;
         end
     end
     

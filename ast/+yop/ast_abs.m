@@ -13,9 +13,9 @@ classdef ast_abs < yop.ast_expression
             value = abs(evaluate(obj.expr));
         end
         
-        function value = forward(obj)
-            obj.value = abs(obj.expr.value);
-            value = obj.value;
+        function v = forward(obj)
+            obj.m_value = abs(value(obj.expr));
+            v = obj.m_value;
         end
         
         function draw(obj)

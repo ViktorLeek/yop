@@ -1,31 +1,79 @@
 %% LD2
-load('models/ld2/params.mat')
-x = yop.ast_variable([4, 1]);
-u = yop.ast_variable([3, 1]);
+load('models/liu_diesel_2/params.mat')
 
-x0 = [2e5; 2e5; 2e5; 9000]; 
-u0 = [15; 1; 0];
-f = @(t, x) liu_diesel_2(x, u0, 1200, ice_param);
-[t_sim, x_sim] = ode15s(f, [0, 10], x0);
+% simulate
+u_num = [15; 1; 0];
+f = @(t, x) liu_diesel_2(x, u_num, 1200, ice_param);
+[t_sim, x_sim] = ode15s(f, [0, 10], [2e5; 2e5; 2e5; 9000]);
 x_num = x_sim(end,:)';
-dx_num = liu_diesel_2(x_num, u0, 1200, ice_param)
 
-[dX, y, h] = liu_diesel_2(x, u, 1200, ice_param);
-x.value = x_num;
-u.value = u0;
-evaluate(dX)
+% evaluate derivative at end of interval
+x = yop.state('x', 4, 1);
+u = yop.control('u', 3, 1);
+disp('---- exact ----')
+dx_num = liu_diesel_2(x_num, u_num, 1200, ice_param)
+
+% Test evaluation mode to see that values match up
+[dx, y, h] = liu_diesel_2(x, u, 1200, ice_param);
+x.m_value = x_num;
+u.m_value = u_num;
+
+disp('---- forward ----')
+tic()
+topsort = topological_sort(dx);
+
+for k=1:length(topsort)
+    forward(topsort{k});
+end
+
+topsort{end}.m_value
+toc()
+
+disp('---- recursive ----')
+tic()
+evaluate(dx)
+toc()
+
+%% Nested calls
+
+x0 = x;
+dx0 = liu_diesel_2(x0, u, 1200, ice_param);
+x1 = x0 + 1e-5*dx0;
+dx1 = liu_diesel_2(x1, u, 1200, ice_param);
+x2 = x1 + 1e-5*dx1;
+dx2 = liu_diesel_2(x2, u, 1200, ice_param);
+x3 = x2 + 1e-5*dx2;
+dx3 = liu_diesel_2(x3, u, 1200, ice_param);
+x4 = x3 + 1e-5*dx3;
+dx4 = liu_diesel_2(x4, u, 1200, ice_param);
+
+disp('---- forward ----')
+tic()
+topsort = topological_sort(dx4);
+
+for k=1:length(topsort)
+    forward(topsort{k});
+end
+
+topsort{end}.m_value
+toc()
+
+% disp('---- recursive ----')
+% tic()
+% evaluate(dx2)
+% toc()
 
 %% LDE
 x = yop.ast_variable([5, 1]);
 u = yop.ast_variable([3, 1]);
 
 x0 = [83.7758; 1.0143e+05; 1.0975e+05; 2.0502e+03; 0];
-u0 = [15; 0; 0];
-gensetModel(x0, u0)
+u_num = [15; 0; 0];
+gensetModel(x0, u_num)
 
 dx = gensetModel(x, u);
 x.value = x0;
-u.value = u0;
+u.value = u_num;
 evaluate(dx)
 
 %% Goddard's rocket problem
@@ -33,16 +81,15 @@ x = yop.ast_variable([3, 1]);
 u = yop.ast_variable();
 
 x0 = [100; 1000; 200];
-u0 = 8;
-rocket_model(x0, u0)
+u_num = 8;
+rocket_model(x0, u_num)
 dx = rocket_model(x, u);
 x.value = x0;
-u.value = u0;
+u.value = u_num;
 evaluate(dx)
 
 %%
 syms xx1 xx2
-import yop.*
 x1 = yop.state('x1');
 x2 = yop.state('x2');
 expr = abs(x1) + x2;

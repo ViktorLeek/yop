@@ -12,6 +12,11 @@ classdef ast_ne < yop.ast_relation
         function value = evaluate(obj)
             value = ne(evaluate(obj.lhs), evaluate(obj.rhs));
         end
+        
+        function v = forward(obj)
+            obj.m_value = ne(value(obj.lhs), value(obj.rhs));
+            v = obj.m_value;
+        end
     end
     
 end

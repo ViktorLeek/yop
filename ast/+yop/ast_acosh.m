@@ -13,9 +13,9 @@ classdef ast_acosh < yop.ast_expression
             value = acosh(evaluate(obj.expr));
         end
         
-        function value = forward(obj)
-            obj.value = acos(obj.expr.value);
-            value = obj.value;
+        function v = forward(obj)
+            obj.m_value = acosh(value(obj.expr));
+            v = obj.m_value;
         end
         
         function [topsort, visited] = topological_sort(obj, topsort, visited)

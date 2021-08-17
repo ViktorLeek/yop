@@ -14,9 +14,9 @@ classdef ast_plus < yop.ast_binary_expression
             value = plus(evaluate(obj.lhs), evaluate(obj.rhs));
         end
         
-        function value = forward(obj)
-            obj.value = plus(obj.lhs.value, obj.rhs.value);
-            value = obj.value;
+        function v = forward(obj)
+            obj.m_value = plus(value(obj.lhs), value(obj.rhs));
+            v = obj.m_value;
         end
     end
     

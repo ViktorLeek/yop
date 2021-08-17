@@ -25,7 +25,8 @@ classdef ast_variable < yop.ast_expression
             value = obj.value;
         end
         
-        function forward(obj)
+        function v = forward(obj)
+            v = obj.m_value;
         end
         
         function [topsort, visited] = topological_sort(obj, topsort, visited)

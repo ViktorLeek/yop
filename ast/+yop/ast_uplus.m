@@ -15,6 +15,11 @@ classdef ast_uplus < yop.ast_unary_expression
             value = uplus(evaluate(obj.expr));
         end
         
+        function v = forward(obj)
+            obj.m_value = uplus(value(obj.expr));
+            v = obj.m_value;
+        end
+        
     end
     
 end
