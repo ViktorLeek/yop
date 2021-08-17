@@ -53,13 +53,15 @@ classdef ast_subsref < yop.ast_expression
             end_child(obj);
         end
         
-        function [topsort, visited] = topological_sort(obj, topsort, visited)
+        function [topsort, visited, n_elem] = topological_sort(obj, topsort, visited, n_elem)
             % Topological sort of expression graph by a dfs.
             
             % Initialize if second and third args are empty
             if nargin == 1
-                topsort = {};
+                % topsort = {};
                 visited = [];
+                topsort = cell(1e4, 1);
+                n_elem = 0;
             end
             
             % only visit every node once
@@ -71,11 +73,13 @@ classdef ast_subsref < yop.ast_expression
             visited = [visited, obj.id];
             
             % Visit child
-            [topsort, visited]=topological_sort(obj.node, topsort, visited);
-            [topsort, visited]=topological_sort(obj.s, topsort, visited);
+            [topsort, visited, n_elem]=topological_sort(obj.node, topsort, visited, n_elem);
+            [topsort, visited, n_elem]=topological_sort(obj.s, topsort, visited, n_elem);
             
             % append self to sort
-            topsort = [topsort(:)', {obj}];
+            n_elem = n_elem + 1;
+            topsort{n_elem} = obj;
+
         end
         
     end

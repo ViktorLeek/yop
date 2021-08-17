@@ -11,11 +11,12 @@ dx4 = liu_diesel_2(x4, u, 1200, ice_param);
 
 disp('---- forward ----')
 tic()
-topsort = topological_sort(dx4);
+[topsort, ~, n_elem] = topological_sort(dx4);
+n_elem
 
-for k=1:length(topsort)
+for k=1:n_elem
     forward(topsort{k});
 end
 
-topsort{end}.m_value
+topsort{n_elem}.m_value
 toc()

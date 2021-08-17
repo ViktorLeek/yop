@@ -20,13 +20,13 @@ u.m_value = u_num;
 
 disp('---- forward ----')
 tic()
-topsort = topological_sort(dx);
+[topsort, ~, n_elem] = topological_sort(dx);
 
-for k=1:length(topsort)
+for k=1:n_elem
     forward(topsort{k});
 end
 
-topsort{end}.m_value
+topsort{n_elem}.m_value
 toc()
 
 disp('---- recursive ----')
