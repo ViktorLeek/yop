@@ -37,3 +37,300 @@ u.m_value = uu;
 % rocket.height(t==t0);
 % rocket.height(t==tf);
 % rocket.height(t==4);
+
+%% Multiple shooting
+
+% Separate the problem variables into categories
+var = struct;
+var.t = {};
+var.t0 = {};
+var.tf = {};
+var.x = {};
+var.z = {};
+var.u = {};
+var.p = {};
+for k=1:length(ocp.variables)
+    switch class(ocp.variables{k})
+        case 'yop.ast_independent'
+            var.t = {var.t{:}, ocp.variables{k}};
+            
+        case 'yop.ast_independent_initial'
+            var.t0 = {var.t0{:}, ocp.variables{k}};
+            
+        case 'yop.ast_independent_final'
+            var.tf = {var.tf{:}, ocp.variables{k}};
+            
+        case 'yop.ast_state'
+            var.x = {var.x{:}, ocp.variables{k}};
+            
+        case 'yop.ast_algebraic'
+            var.z = {var.z{:}, ocp.variables{k}};
+            
+        case 'yop.ast_control'
+            var.u = {var.u{:}, ocp.variables{k}};
+            
+        case 'yop.ast_parameter'
+            var.p = {var.p{:}, ocp.variables{k}};
+            
+        otherwise
+            error('[yop] Error: Unknown variable type.')
+    end
+end
+
+% Populate the variables values
+sym = struct;
+sym.t = {};
+sym.t0 = {};
+sym.tf = {};
+sym.x = {};
+sym.z = {};
+sym.u = {};
+sym.p = {};
+
+sym.t = casadi.MX.sym('t');
+for k=1:length(var.t)
+    var.t{k}.m_value = sym.t;
+end
+
+sym.t0 = casadi.MX.sym('t0');
+for k=1:length(var.t0)
+    var.t0{k}.m_value = sym.t0;
+end
+
+sym.tf = casadi.MX.sym('tf');
+for k=1:length(var.tf)
+    var.tf{k}.m_value = sym.tf;
+end
+
+for k=1:length(var.x)
+    sz = size(var.x{k});
+    xk = casadi.MX.sym('x', sz(1), sz(2));
+    sym.x{k} = xk;
+    var.x{k}.m_value = xk;
+end
+
+for k=1:length(var.z)
+    sz = size(var.z{k});
+    zk = casadi.MX.sym('z', sz(1), sz(2));
+    sym.z{k} = zk;
+    var.z{k}.m_value = zk;
+end
+
+for k=1:length(var.u)
+    sz = size(var.u{k});
+    uk = casadi.MX.sym('u', sz(1), sz(2));
+    sym.u{k} = uk;
+    var.u{k}.m_value = uk;
+end
+
+for k=1:length(var.p)
+    sz = size(var.p{k});
+    pk = casadi.MX.sym('p', sz(1), sz(2));
+    sym.p{k} = pk;
+    var.p{k}.m_value = pk;
+end
+
+t = sym.t;
+t0 = sym.t0;
+tf = sym.tf;
+x = vertcat(sym.x{:}); % Could lead to problems if dimensions are wrong
+z = vertcat(sym.z{:});
+u = vertcat(sym.u{:});
+p = vertcat(sym.p{:});
+
+inputs = {t, t0, tf, x, z, u, p};
+% inputs = inputs(~cellfun('isempty', inputs));
+
+%% Temporary
+
+t  = casadi.MX.sym('t');
+t0 = casadi.MX.sym('t0');
+tf = casadi.MX.sym('tf');
+x  = casadi.MX.sym('x', 3);
+z  = casadi.MX.sym('z', 0);
+u  = casadi.MX.sym('u');
+p  = casadi.MX.sym('p', 0);
+inputs = {t, t0, tf, x, u, p};
+
+var.x{1}.m_value = x;
+var.u{1}.m_value = u;
+var.t0{1}.m_value = t0;
+
+%% Dynamics
+
+% As the variables node the nodes have been initialized with casadi
+% variables as values, the expressions are evaluated, and at the root the
+% relevant expression is obtained.
+
+% This should be done for every element of ocp.differential
+[sort, ~, n_elem] = topological_sort(ocp.differential{1}.expr);
+
+for k=1:(n_elem-1)
+    forward(sort{k});
+end
+xdot_expr = forward(sort{n_elem}); % root holds the dynamics.
+f = casadi.Function('xdot', inputs, {xdot_expr, 0}); % zero is for objective
+
+%% Objective function
+[sort, ~, n_elem] = topological_sort(ocp.objective);
+
+for k=1:(n_elem-1)
+    forward(sort{k});
+end
+J_expr = forward(sort{n_elem}); % root holds the objective
+J_fn = casadi.Function('J', inputs, {J_expr});
+
+
+%% Integrator
+T = tf-t0; % Time horizon
+N = 50; % number of control intervals
+
+% Fixed step Runge-Kutta 4 integrator
+M = 4; % RK4 steps per interval
+DT = T/N/M;
+T0  = casadi.MX.sym('T');
+X0 = casadi.MX.sym('X0', size(x,1));
+U  = casadi.MX.sym('U', size(u,1));
+P  = casadi.MX.sym('P', size(p,1));
+T = T0;
+X = X0;
+Q = 0;
+for j=1:M
+    [k1, k1_q] = f(T       , t0, tf, X            , U, P);
+    [k2, k2_q] = f(T + DT/2, t0, tf, X + DT/2 * k1, U, P);
+    [k3, k3_q] = f(T + DT/2, t0, tf, X + DT/2 * k2, U, P);
+    [k4, k4_q] = f(T + DT  , t0, tf, X + DT   * k3, U, P);
+    T = T + DT;
+    X = X + DT/6*(k1 +2*k2 +2*k3 +k4);
+    Q = Q + DT/6*(k1_q + 2*k2_q + 2*k3_q + k4_q);
+end
+F = casadi.Function('F', {T0, t0, tf, X0, U, P}, {X, Q});
+
+%% Constraints
+
+t0_lb = 0;
+t0_ub = 0;
+
+tf_lb = 0;
+tf_ub = inf;
+
+x0_lb = [0; 0; m0];
+x0_ub = [0; 0; m0];
+
+x_lb = [0; 0; mf];
+x_ub = [inf; inf; m0];
+
+xf_lb = [0; 0; mf];
+xf_ub = [inf; inf; m0];
+
+u_lb = 0;
+u_ub = 9.5;
+
+%% Initial guess
+xg = ones(3,1);
+ug = 1;
+
+%% Formulate NLP
+nx = size(x,1);
+nu = size(u,1);
+np = size(p,1);
+
+% Start with an empty NLP
+w={};
+w0 = [];
+lbw = [];
+ubw = [];
+J = 0;
+g={};
+lbg = [];
+ubg = [];
+
+t0 = casadi.MX.sym('t0');
+w = {w{:}, t0};
+lbw = [lbw; t0_lb];
+ubw = [ubw; t0_ub];
+w0 = [w0; 0];
+
+tf = casadi.MX.sym('tf');
+w = {w{:}, tf};
+lbw = [lbw; tf_lb];
+ubw = [ubw; tf_ub];
+w0 = [w0; 200];
+
+p = casadi.MX.sym('p', np);
+w = {w{:}, p};
+% lbw = [lbw; 0];
+% ubw = [ubw; 0];
+% w0 = [w0; 0];
+
+% "Lift" initial conditions
+Xk = casadi.MX.sym('x0', nx);
+w = {w{:}, Xk};
+lbw = [lbw; x0_lb];
+ubw = [ubw; x0_ub];
+w0 = [w0; xg];
+
+t = t0;
+dt = (tf-t0)/N;
+% Formulate the NLP
+for k=0:N-1
+    % New NLP variable for the control
+    Uk = casadi.MX.sym(['U_' num2str(k)], nu);
+    w = {w{:}, Uk};
+    lbw = [lbw; u_lb];
+    ubw = [ubw; u_ub];
+    w0 = [w0;  ug];
+
+    % Integrate till the end of the interval
+    [xf, qf] = F(t, t0, tf, Xk, Uk, p);
+    Xk_end = xf;
+    J = J + qf;
+    
+    % next step
+    t = t + dt;
+
+    % New NLP variable for state at end of interval
+    Xk = casadi.MX.sym(['X_' num2str(k+1)], nx);
+    w = {w{:}, Xk};
+    if k==N-1
+        lbw = [lbw; xf_lb];
+        ubw = [ubw; xf_ub];
+    else
+        lbw = [lbw; x_lb];
+        ubw = [ubw; x_ub];
+    end
+    w0 = [w0; xg];
+
+    % Add equality constraint
+    g = [g, {Xk_end-Xk}];
+    lbg = [lbg; zeros(nx, 1)];
+    ubg = [ubg; zeros(nx, 1)];
+end
+
+J = -Xk(2);
+
+% Create an NLP solver
+prob = struct('f', J, 'x', vertcat(w{:}), 'g', vertcat(g{:}));
+solver = casadi.nlpsol('solver', 'ipopt', prob);
+
+% Solve the NLP
+sol = solver('x0', w0, 'lbx', lbw, 'ubx', ubw, 'lbg', lbg, 'ubg', ubg);
+w_opt = full(sol.x);
+
+% Plot the solution
+x1_opt = w_opt(3:4:end);
+x2_opt = w_opt(4:4:end);
+x3_opt = w_opt(5:4:end);
+u_opt = w_opt(6:4:end);
+tgrid = linspace(0, full(w_opt(2)), N+1);
+
+figure(1)
+subplot(411); hold on;
+plot(tgrid, x1_opt)
+subplot(412); hold on;
+plot(tgrid, x2_opt)
+subplot(413); hold on;
+plot(tgrid, x2_opt)
+subplot(414); hold on;
+stairs(tgrid, [u_opt; nan])
+
