@@ -10,6 +10,10 @@ classdef ast_timepoint < yop.ast_expression
             obj.expr = expr;
         end
         
+        function bool = isa_variable(obj)
+            bool = isa_variable(obj.expr);
+        end
+        
         function draw(obj)
             fprintf('timepoint(timepoint, expr)\n');
             
@@ -22,14 +26,15 @@ classdef ast_timepoint < yop.ast_expression
             end_child(obj);
         end
         
-        function [topsort, visited, n_elem] = topological_sort(obj, topsort, visited, n_elem)
+        function [topsort, visited, n_elem] = ...
+                topological_sort(obj, topsort, visited, n_elem)
             % Topological sort of expression graph by a dfs.
             
-            % Initialize if second and third args are empty
             if nargin == 1
-                % topsort = {};
+                % Start new sort
                 visited = [];
-                topsort = cell(1e4, 1);
+                topsort = cell( ...
+                    yop.constants().topsort_preallocation_size, 1);
                 n_elem = 0;
             end
             
@@ -42,8 +47,11 @@ classdef ast_timepoint < yop.ast_expression
             visited = [visited, obj.id];
             
             % Visit child
-            [topsort, visited, n_elem]=topological_sort(obj.timepoint, topsort, visited, n_elem);
-            [topsort, visited, n_elem]=topological_sort(obj.expr, topsort, visited, n_elem);
+            [topsort, visited, n_elem] = ...
+                topological_sort(obj.timepoint, topsort, visited, n_elem);
+            
+            [topsort, visited, n_elem] = ...
+                topological_sort(obj.expr, topsort, visited, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;

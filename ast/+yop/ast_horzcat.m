@@ -49,14 +49,15 @@ classdef ast_horzcat < yop.ast_expression
             
         end
         
-        function [topsort, visited, n_elem] = topological_sort(obj, topsort, visited, n_elem)
+        function [topsort, visited, n_elem] = ...
+                topological_sort(obj, topsort, visited, n_elem)
             % Topological sort of expression graph by a dfs.
             
-            % Initialize if second and third args are empty
             if nargin == 1
-                % topsort = {};
+                % Start new sort
                 visited = [];
-                topsort = cell(1e4, 1);
+                topsort = cell( ...
+                    yop.constants().topsort_preallocation_size, 1);
                 n_elem = 0;
             end
             

@@ -1,6 +1,7 @@
 classdef ocp < handle
     properties
         objective
+        variables = {}
         box = {}
         equality = {}
         inequality = {}
@@ -21,7 +22,7 @@ classdef ocp < handle
         
         function obj = st(obj, varargin)
             
-            variables = yop.get_variables(varargin);
+            obj.variables = yop.get_variables(varargin);
             
             % Classify constraints
             constraints = to_srf(varargin);

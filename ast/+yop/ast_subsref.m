@@ -30,11 +30,15 @@ classdef ast_subsref < yop.ast_expression
             bool = is_differential(obj.node);
         end
         
-%         function bool = isnumeric(obj)
-%             % It would be preferable to inspect the subindices and see if
-%             % any of those in obj.node isnumeric. That is however on the
-%             % wish list for now.
-%         end
+        function bool = is_algebraic(obj)
+            bool = is_algebraic(obj.node);
+        end
+        
+        %         function bool = isnumeric(obj)
+        %             % It would be preferable to inspect the subindices and see if
+        %             % any of those in obj.node isnumeric. That is however on the
+        %             % wish list for now.
+        %         end
         
         function draw(obj)
             fprintf('subsref(node, s)\n');
@@ -53,14 +57,15 @@ classdef ast_subsref < yop.ast_expression
             end_child(obj);
         end
         
-        function [topsort, visited, n_elem] = topological_sort(obj, topsort, visited, n_elem)
+        function [topsort, visited, n_elem] = ...
+                topological_sort(obj, topsort, visited, n_elem)
             % Topological sort of expression graph by a dfs.
             
-            % Initialize if second and third args are empty
             if nargin == 1
-                % topsort = {};
+                % Start new sort
                 visited = [];
-                topsort = cell(1e4, 1);
+                topsort = cell( ...
+                    yop.constants().topsort_preallocation_size, 1);
                 n_elem = 0;
             end
             
@@ -73,13 +78,16 @@ classdef ast_subsref < yop.ast_expression
             visited = [visited, obj.id];
             
             % Visit child
-            [topsort, visited, n_elem]=topological_sort(obj.node, topsort, visited, n_elem);
-            [topsort, visited, n_elem]=topological_sort(obj.s, topsort, visited, n_elem);
+            [topsort, visited, n_elem] = ...
+                topological_sort(obj.node, topsort, visited, n_elem);
+            
+            [topsort, visited, n_elem] = ...
+                topological_sort(obj.s, topsort, visited, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;
             topsort{n_elem} = obj;
-
+            
         end
         
     end

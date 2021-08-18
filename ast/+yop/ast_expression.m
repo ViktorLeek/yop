@@ -316,7 +316,7 @@ classdef ast_expression < yop.node & yop.ast_ool
                 % Case: node(numeric_subs)
                 varargout{1} = yop.ast_subsref(obj, s);
                 
-            elseif length(s.subs)==1 && isa(s.subs{1}, 'yop.ast_eq')
+            elseif length(s.subs)==1 && isa(s.subs{1}, 'yop.ast_expression')
                 % timed expression: obj(t==4)
                 varargout{1} = yop.ast_timepoint(s.subs{1}, obj);
                 

@@ -86,14 +86,15 @@ classdef ast_cross < yop.ast_expression
             
         end
         
-        function [topsort, visited, n_elem] = topological_sort(obj, topsort, visited, n_elem)
+        function [topsort, visited, n_elem] = ...
+                topological_sort(obj, topsort, visited, n_elem)
             % Topological sort of expression graph by a dfs.
             
-            % Initialize if second and third args are empty
             if nargin == 1
-                % topsort = {};
+                % Start new sort
                 visited = [];
-                topsort = cell(1e4, 1);
+                topsort = cell( ...
+                    yop.constants().topsort_preallocation_size, 1);
                 n_elem = 0;
             end
             
@@ -121,7 +122,7 @@ classdef ast_cross < yop.ast_expression
                 );
             
             % If d is empty, this call should be dispatched to function
-            % topological sort, as opposed to the method, so it should
+            % topological_sort, as opposed to the method, so it should
             % simply return the topsort and visited.
             [topsort, visited, n_elem] = topological_sort(...
                 obj.d, ...

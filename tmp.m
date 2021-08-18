@@ -22,11 +22,10 @@ disp('---- forward ----')
 tic()
 [topsort, ~, n_elem] = topological_sort(dx);
 
-for k=1:n_elem
+for k=1:(n_elem-1)
     forward(topsort{k});
 end
-
-topsort{n_elem}.m_value
+forward(topsort{n_elem}) % returns value
 toc()
 
 disp('---- recursive ----')
@@ -46,16 +45,24 @@ x3 = x2 + 1e-5*dx2;
 dx3 = liu_diesel_2(x3, u, 1200, ice_param);
 x4 = x3 + 1e-5*dx3;
 dx4 = liu_diesel_2(x4, u, 1200, ice_param);
+x5 = x4 + 1e-5*dx4;
+dx5 = liu_diesel_2(x5, u, 1200, ice_param);
+x6 = x5 + 1e-5*dx5;
+dx6 = liu_diesel_2(x6, u, 1200, ice_param);
 
+clc
 disp('---- forward ----')
-tic()
-topsort = topological_sort(dx4);
 
-for k=1:length(topsort)
+tic()
+[topsort, ~, n_elem] = topological_sort(dx6);
+toc()
+n_elem
+
+tic()
+for k=1:(n_elem-1)
     forward(topsort{k});
 end
-
-topsort{end}.m_value
+forward(topsort{n_elem});
 toc()
 
 % disp('---- recursive ----')
