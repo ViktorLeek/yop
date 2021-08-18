@@ -230,107 +230,238 @@ u_ub = 9.5;
 xg = ones(3,1);
 ug = 1;
 
-%% Formulate NLP
-nx = size(x,1);
-nu = size(u,1);
-np = size(p,1);
+%% Variables NLP
+nx = 3;
+nu = 1;
+np = 0;
 
-% Start with an empty NLP
-w={};
-w0 = [];
-lbw = [];
-ubw = [];
-J = 0;
-g={};
-lbg = [];
-ubg = [];
-
+% Discretized independent
 t0 = casadi.MX.sym('t0');
-w = {w{:}, t0};
-lbw = [lbw; t0_lb];
-ubw = [ubw; t0_ub];
-w0 = [w0; 0];
-
 tf = casadi.MX.sym('tf');
-w = {w{:}, tf};
-lbw = [lbw; tf_lb];
-ubw = [ubw; tf_ub];
-w0 = [w0; 200];
 
-p = casadi.MX.sym('p', np);
-w = {w{:}, p};
-% lbw = [lbw; 0];
-% ubw = [ubw; 0];
-% w0 = [w0; 0];
-
-% "Lift" initial conditions
-Xk = casadi.MX.sym('x0', nx);
-w = {w{:}, Xk};
-lbw = [lbw; x0_lb];
-ubw = [ubw; x0_ub];
-w0 = [w0; xg];
-
-t = t0;
-dt = (tf-t0)/N;
-% Formulate the NLP
-for k=0:N-1
-    % New NLP variable for the control
-    Uk = casadi.MX.sym(['U_' num2str(k)], nu);
-    w = {w{:}, Uk};
-    lbw = [lbw; u_lb];
-    ubw = [ubw; u_ub];
-    w0 = [w0;  ug];
-
-    % Integrate till the end of the interval
-    [xf, qf] = F(t, t0, tf, Xk, Uk, p);
-    Xk_end = xf;
-    J = J + qf;
-    
-    % next step
-    t = t + dt;
-
-    % New NLP variable for state at end of interval
-    Xk = casadi.MX.sym(['X_' num2str(k+1)], nx);
-    w = {w{:}, Xk};
-    if k==N-1
-        lbw = [lbw; xf_lb];
-        ubw = [ubw; xf_ub];
-    else
-        lbw = [lbw; x_lb];
-        ubw = [ubw; x_ub];
-    end
-    w0 = [w0; xg];
-
-    % Add equality constraint
-    g = [g, {Xk_end-Xk}];
-    lbg = [lbg; zeros(nx, 1)];
-    ubg = [ubg; zeros(nx, 1)];
+% Discretized state
+x = cell(N+1, 1);
+for k=1:(N+1)
+    x{k} = casadi.MX.sym(['x_' num2str(k)], nx);
 end
 
-J = -Xk(2);
+% Discretized control
+u = cell(N, 1);
+for k=1:N
+    u{k} = casadi.MX.sym(['u_' num2str(k)], nu);
+end
 
-% Create an NLP solver
-prob = struct('f', J, 'x', vertcat(w{:}), 'g', vertcat(g{:}));
+% Parameters
+p = casadi.MX.sym('p', np);
+
+% Compute grid timepoints
+t = cell(N+1, 1);
+dt = (tf-t0)/N;
+t{1} = t0;
+t{end} = tf;
+for k=2:N
+    t{k} = t{k-1} + dt;
+end
+
+% Integrate objective
+J = 0;
+for k=1:N
+    [~, qf] = F(t{k}, t0, tf, x{k}, u{k}, p);
+    J = J + qf;
+end
+J = J + -x{end}(2);
+
+% Integrate dynamics
+xf = cell(N, 1);
+for k=1:N
+    xf{k} = F(t{k}, t0, tf, x{k}, u{k}, p);
+end
+
+% Introduce defect constraints
+g_dyn = cell(N, 1);
+for k=1:N
+    g_dyn{k} = xf{k} - x{k+1};
+end
+g_dyn_lb = zeros(N*nx, 1);
+g_dyn_ub = zeros(N*nx, 1);
+
+% Box constraints
+t0_lb = t0_lb;
+t0_ub = t0_ub;
+
+tf_lb = tf_lb;
+tf_ub = tf_ub;
+
+x_lb = repmat(x_lb, N+1, 1);
+x_ub = repmat(x_ub, N+1, 1);
+x_lb(1:3) = x0_lb;
+x_ub(1:3) = x0_ub;
+x_lb(end-2:end) = xf_lb;
+x_ub(end-2:end) = xf_ub;
+
+u_lb = repmat(u_lb, N, 1);
+u_ub = repmat(u_ub, N, 1);
+
+p_lb = -inf(np, 1);
+p_ub =  inf(np, 1);
+
+w = vertcat(t0, tf, x{:}, u{:}, p);
+w_lb = [t0_lb; tf_lb; x_lb; u_lb; p_lb];
+w_ub = [t0_ub; tf_ub; x_ub; u_ub; p_ub];
+w0 = ones(size(w));
+
+prob = struct('f', J, 'x', w, 'g', vertcat(g_dyn{:}));
 solver = casadi.nlpsol('solver', 'ipopt', prob);
+sol = solver('x0', w0, 'lbx', w_lb, 'ubx', w_ub, 'lbg', g_dyn_lb, 'ubg', g_dyn_ub);
 
-% Solve the NLP
-sol = solver('x0', w0, 'lbx', lbw, 'ubx', ubw, 'lbg', lbg, 'ubg', ubg);
-w_opt = full(sol.x);
 
-% Plot the solution
-x1_opt = w_opt(3:4:end);
-x2_opt = w_opt(4:4:end);
-x3_opt = w_opt(5:4:end);
-u_opt = w_opt(6:4:end);
-tgrid = linspace(0, full(w_opt(2)), N+1);
+%% Plot solution
+
+time = casadi.Function('x', {w}, {vertcat(t{:})});
+t_sol = full(time(sol.x));
+
+state = casadi.Function('x', {w}, {horzcat(x{:})});
+x_sol = full(state(sol.x))';
+
+control = casadi.Function('x', {w}, {horzcat(u{:})});
+u_sol = full(control(sol.x))';
 
 figure(1)
 subplot(411); hold on;
-plot(tgrid, x1_opt)
+plot(t_sol, x_sol(:,1))
 subplot(412); hold on;
-plot(tgrid, x2_opt)
+plot(t_sol, x_sol(:,2))
 subplot(413); hold on;
-plot(tgrid, x2_opt)
+plot(t_sol, x_sol(:,3))
 subplot(414); hold on;
-stairs(tgrid, [u_opt; nan])
+stairs(t_sol, [u_sol; nan])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%% Formulate NLP
+% nx = size(x,1);
+% nu = size(u,1);
+% np = size(p,1);
+% 
+% % Start with an empty NLP
+% w={};
+% w0 = [];
+% lbw = [];
+% ubw = [];
+% J = 0;
+% g={};
+% lbg = [];
+% ubg = [];
+% 
+% t0 = casadi.MX.sym('t0');
+% w = {w{:}, t0};
+% lbw = [lbw; t0_lb];
+% ubw = [ubw; t0_ub];
+% w0 = [w0; 0];
+% 
+% tf = casadi.MX.sym('tf');
+% w = {w{:}, tf};
+% lbw = [lbw; tf_lb];
+% ubw = [ubw; tf_ub];
+% w0 = [w0; 200];
+% 
+% p = casadi.MX.sym('p', np);
+% w = {w{:}, p};
+% % lbw = [lbw; 0];
+% % ubw = [ubw; 0];
+% % w0 = [w0; 0];
+% 
+% % "Lift" initial conditions
+% Xk = casadi.MX.sym('x0', nx);
+% w = {w{:}, Xk};
+% lbw = [lbw; x0_lb];
+% ubw = [ubw; x0_ub];
+% w0 = [w0; xg];
+% 
+% t = t0;
+% dt = (tf-t0)/N;
+% % Formulate the NLP
+% for k=0:N-1
+%     % New NLP variable for the control
+%     Uk = casadi.MX.sym(['U_' num2str(k)], nu);
+%     w = {w{:}, Uk};
+%     lbw = [lbw; u_lb];
+%     ubw = [ubw; u_ub];
+%     w0 = [w0;  ug];
+% 
+%     % Integrate till the end of the interval
+%     [xf, qf] = F(t, t0, tf, Xk, Uk, p);
+%     Xk_end = xf;
+%     J = J + qf;
+%     
+%     % next step
+%     t = t + dt;
+% 
+%     % New NLP variable for state at end of interval
+%     Xk = casadi.MX.sym(['X_' num2str(k+1)], nx);
+%     w = {w{:}, Xk};
+%     if k==N-1
+%         lbw = [lbw; xf_lb];
+%         ubw = [ubw; xf_ub];
+%     else
+%         lbw = [lbw; x_lb];
+%         ubw = [ubw; x_ub];
+%     end
+%     w0 = [w0; xg];
+% 
+%     % Add equality constraint
+%     g = [g, {Xk_end-Xk}];
+%     lbg = [lbg; zeros(nx, 1)];
+%     ubg = [ubg; zeros(nx, 1)];
+% end
+% 
+% J = -Xk(2);
+% 
+% % Create an NLP solver
+% prob = struct('f', J, 'x', vertcat(w{:}), 'g', vertcat(g{:}));
+% solver = casadi.nlpsol('solver', 'ipopt', prob);
+% 
+% % Solve the NLP
+% sol = solver('x0', w0, 'lbx', lbw, 'ubx', ubw, 'lbg', lbg, 'ubg', ubg);
+% w_opt = full(sol.x);
+% 
+% % Plot the solution
+% x1_opt = w_opt(3:4:end);
+% x2_opt = w_opt(4:4:end);
+% x3_opt = w_opt(5:4:end);
+% u_opt = w_opt(6:4:end);
+% tgrid = linspace(0, full(w_opt(2)), N+1);
+% 
+% figure(1)
+% subplot(411); hold on;
+% plot(tgrid, x1_opt)
+% subplot(412); hold on;
+% plot(tgrid, x2_opt)
+% subplot(413); hold on;
+% plot(tgrid, x2_opt)
+% subplot(414); hold on;
+% stairs(tgrid, [u_opt; nan])
 
