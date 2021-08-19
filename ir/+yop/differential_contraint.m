@@ -1,16 +1,16 @@
-classdef differential < yop.node
+classdef differential_contraint < yop.node
     properties
         var
         expr
     end
     methods
-        function obj = differential(var, expr)
+        function obj = differential_contraint(var, expr)
             obj.var = var;
             obj.expr = expr;
         end
         
         function draw(obj)
-            fprintf('differential(var, expr)\n');
+            fprintf('differential_contraint(var, expr)\n');
             
             begin_child(obj);
             draw(obj.var);
@@ -20,5 +20,6 @@ classdef differential < yop.node
             draw(obj.expr);
             end_child(obj);
         end
+        
     end
 end

@@ -1,21 +1,19 @@
-classdef inequality_constraint < yop.node
-    % h(t,x,z,u,p) <= 0
+classdef algebraic_contraint < yop.node
     properties
         expr
     end
     methods
-        function obj = inequality_constraint(expr)
-            % h(t,x,z,u,p) <= 0
-            obj@yop.node();
+        function obj = algebraic_contraint(expr)
             obj.expr = expr;
         end
         
         function draw(obj)
-            fprintf('inequality_constraint(expr)\n');
-
+            fprintf('algebraic_contraint(expr)\n');
+            
             last_child(obj);
             draw(obj.expr);
             end_child(obj);
         end
+        
     end
 end

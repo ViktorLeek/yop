@@ -5,6 +5,8 @@ classdef box_constraint < yop.node
     end
     methods
         function obj = box_constraint(var, bnd)
+            assert(isnumeric(bnd), ...
+                '[yop] Error: Box contraint bound is not numeric');
             obj.var = var;
             obj.bnd = bnd;
         end

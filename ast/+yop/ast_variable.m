@@ -21,6 +21,10 @@ classdef ast_variable < yop.ast_expression
         end
         
         function bool = isa_variable(obj)
+            % This function exist in order to detect that variables that
+            % have been subsrefed are treated as variables. It should
+            % therefore only be implemented for this class and 
+            % 'ast_subsref'.
             bool = true;
         end
         

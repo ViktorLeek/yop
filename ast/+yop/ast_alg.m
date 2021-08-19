@@ -9,6 +9,9 @@ classdef ast_alg < yop.ast_expression
             obj.dim = size(var);
         end
         
+        % Overload all illegal operations here!! which should be most!
+        % only allow 0 = alg(expr)!
+        
         function value = evaluate(obj)
             value = evaluate(obj.var);
         end

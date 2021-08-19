@@ -55,10 +55,6 @@ classdef ast_timepoint < yop.ast_expression
             obj.expr = expr;
         end
         
-        %         function bool = isa_variable(obj)
-        %             bool = isa_variable(obj.expr);
-        %         end
-        
         function draw(obj)
             fprintf('timepoint(timepoint, expr)\n');
             

@@ -30,29 +30,25 @@ classdef ocp < handle
                 yop.get_variables({obj.objective, obj.constraints{:}});
         end
         
-        function obj = classify_constraints(obj)
-            obj.constraints = yop.to_srf(obj.constraints);
+        function obj = classify_constraints(obj)            
+            cons = yop.to_srf(obj.constraints);
             
-            % Classify constraints
-            constraints = yop.to_srf(varargin);
-            for k=1:length(constraints)
-                [type, con] = get_constraint(constraints{k});
-                switch type
-                    case 'box'
-                        obj.add_box(con);
-                        
-                    case 'equality'
-                        obj.add_equality(con);
-                        
-                    case 'inequality'
-                        obj.add_inequality(con);
-                        
-                    case 'differential'
-                        obj.add_differential(con);
-                        
-                    case 'algebraic'
-                        obj.add_algebraic(con);
-                        
+            for k=1:length(cons)
+                ck = yop.classify_constraint(cons{k});
+                switch class(ck)
+                    case 'yop.differential_contraint'
+                    case 'yop.algebraic_contraint'
+                    case 'yop.box_initial_equality'
+                    case 'yop.box_equality'
+                    case 'yop.box_final_equality'
+                    case 'yop.box_initial_upper'
+                    case 'yop.box_upper'
+                    case 'yop.box_final_upper'
+                    case 'yop.box_initial_lower'
+                    case 'yop.box_lower'
+                    case 'yop.box_final_lower'
+                    case 'yop.inequality_constraint'
+                    case 'yop.equality_contraint'
                     otherwise
                         error('[yop] Error: Unknown constraint type.')
                 end

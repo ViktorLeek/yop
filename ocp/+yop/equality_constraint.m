@@ -1,17 +1,17 @@
-classdef inequality_constraint < yop.node
+classdef equality_constraint < yop.node
     % h(t,x,z,u,p) <= 0
     properties
         expr
     end
     methods
-        function obj = inequality_constraint(expr)
-            % h(t,x,z,u,p) <= 0
+        function obj = equality_constraint(expr)
+            % h(t,x,z,u,p) == 0
             obj@yop.node();
             obj.expr = expr;
         end
         
         function draw(obj)
-            fprintf('inequality_constraint(expr)\n');
+            fprintf('equality_constraint(expr)\n');
 
             last_child(obj);
             draw(obj.expr);
