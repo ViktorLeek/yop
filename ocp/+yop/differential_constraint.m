@@ -1,4 +1,4 @@
-classdef differential_contraint < yop.node
+classdef differential_constraint < yop.node
     properties
         var
         expr
@@ -10,7 +10,7 @@ classdef differential_contraint < yop.node
         end
         
         function draw(obj)
-            fprintf('differential_contraint(var, expr)\n');
+            fprintf('differential_constraint(var, expr)\n');
             
             begin_child(obj);
             draw(obj.var);

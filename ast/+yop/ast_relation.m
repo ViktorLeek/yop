@@ -279,6 +279,10 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
             error('[yop] Error: Method not implemented for class "yop.ast_relation".');
         end
         
+        function node = int(obj)
+            error('[yop] Error: Method not implemented for class "yop.ast_relation".');
+        end
+        
         function idx = end(obj, k, n)
             idx = builtin('end', ones(size(obj)), k, n);
         end

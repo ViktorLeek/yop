@@ -72,5 +72,6 @@ classdef (Abstract) ast_ool < handle
         node = cumsum(obj, varargin)
         node = der(obj)
         node = alg(obj)
+        node = int(obj)
     end
 end
