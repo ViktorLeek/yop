@@ -316,8 +316,11 @@ classdef ast_expression < yop.node & yop.ast_ool
                 % Case: node(numeric_subs)
                 varargout{1} = yop.ast_subsref(obj, s);
                 
-            elseif length(s.subs)==1 && isa(s.subs{1}, 'yop.ast_expression')
+            elseif length(s.subs)==1 && isa(s.subs{1}, 'yop.node')
                 % timed expression: obj(t==4)
+                % Error handling in ast_timepoint class, as it easier to
+                % intuitively understand where that logic is placed if it
+                % is inside the constructor of that class.
                 varargout{1} = yop.ast_timepoint(s.subs{1}, obj);
                 
             else

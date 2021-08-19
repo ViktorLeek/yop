@@ -1,0 +1,11 @@
+
+<state_iv> ::= <state>"(t0)"
+<state> ::= <state_call> <call_begin> <call_end>;
+<state> ::= <state_call> <call_begin> <ident> <call_end>;
+<state> ::= <state_call> <call_begin> <ident> "," <num> <call_end>;
+<state> ::= <state_call> <call_begin> <ident> "," <num> "," <num> <call_end>;
+
+<call_end> ::= ")";
+<call_begin> ::= "(";
+<state_call> ::= "yop.state" | "state";
+<ident> ::= <matlab_ident>;

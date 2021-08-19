@@ -1,10 +1,10 @@
 function vars = get_variables(expressions)
 vars = {};
 
-% First iteration is hoisted out because there is no need to cold 
-% start the search for every expression, it might even lead to erroneous 
+% First iteration is hoisted out in order to later warm start the search
+% for every expression. Otherwise it might even lead to erroneous 
 % results as doublettes are likely to appear, these could be found 
-% afterwards, but it is much easier to warm start the search after the 
+% afterwards, but it is faster to warm start the search after the 
 % first iteration.
 
 [tsort, visited, n_elem] = topological_sort(expressions{1});

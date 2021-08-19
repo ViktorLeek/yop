@@ -1,4 +1,12 @@
 classdef ast_variable < yop.ast_expression
+    % The meaning of an ast_variable is a problem variable in the OCP.
+    % Variables and expressions have almost the same semantics, but they
+    % differ in a few ways:
+    %   1) Variables can represent time-varying and constant values,
+    %      whereas expressions are always considered time-varying. This
+    %      means that states for instance can be evaluated at timepoints,
+    %      whereas parameters cannot.
+    %   2) Time-varying variables can only be eval
     
     properties
         name

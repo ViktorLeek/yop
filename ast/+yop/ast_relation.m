@@ -1,4 +1,4 @@
-classdef (InferiorClasses = {?yop.ast_expression}) ast_relation < yop.node & yop.ast_ool
+classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relation < yop.node & yop.ast_ool
     % yop.ast_relation
     % yop.ast_expression is inferior in order to make it impossible to mix
     % expressions and relations in illegal ways, for instance:
@@ -286,7 +286,7 @@ classdef (InferiorClasses = {?yop.ast_expression}) ast_relation < yop.node & yop
         function rels = get_relations(obj)
             l = get_relations(obj.lhs);
             r = get_relations(obj.rhs);
-            rels = [{obj}, l(:)', r(:)'];
+            rels = {obj, l{:}, r{:}}; % [{obj}, l(:)', r(:)'];
             rels = rels(~cellfun('isempty', rels));
         end
         

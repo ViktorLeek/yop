@@ -1,6 +1,7 @@
 classdef ocp < handle
     properties
         objective
+        constraints
         variables = {}
         box = {}
         equality = {}
@@ -21,11 +22,19 @@ classdef ocp < handle
         end
         
         function obj = st(obj, varargin)
-            
-            obj.variables = yop.get_variables(varargin);
+            obj.constraints = varargin;
+        end
+        
+        function obj = get_variables(obj)
+            obj.variables = ...
+                yop.get_variables({obj.objective, obj.constraints{:}});
+        end
+        
+        function obj = classify_constraints(obj)
+            obj.constraints = yop.to_srf(obj.constraints);
             
             % Classify constraints
-            constraints = to_srf(varargin);
+            constraints = yop.to_srf(varargin);
             for k=1:length(constraints)
                 [type, con] = get_constraint(constraints{k});
                 switch type
