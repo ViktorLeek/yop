@@ -55,10 +55,10 @@ disp('---- forward ----')
 
 tic()
 [topsort, ~, n_elem] = topological_sort(dx6);
-toc()
-n_elem
+% toc()
+% n_elem
 
-tic()
+% tic()
 for k=1:(n_elem-1)
     forward(topsort{k});
 end

@@ -13,7 +13,7 @@ m0 = 215;
 mf = 68;
 
 ocp = yop.ocp();
-ocp.max(y.rocket.height);
+ocp.max(y.rocket.height(tf));
 ocp.st(...
     ... dynamics 
     der(x) == rocket_model(x, u), ...

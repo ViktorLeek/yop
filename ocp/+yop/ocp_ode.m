@@ -1,25 +1,25 @@
-classdef differential_constraint < yop.node
+classdef ocp_ode < yop.node
     properties
         var
-        expr
+        ode
     end
     methods
-        function obj = differential_constraint(var, expr)
+        function obj = ocp_ode(var, ode)
+            obj@yop.node();
             obj.var = var;
-            obj.expr = expr;
+            obj.ode = ode;
         end
         
         function draw(obj)
-            fprintf('differential_constraint(var, expr)\n');
+            fprintf('ocp_ode(var, ode)\n');
             
             begin_child(obj);
             draw(obj.var);
             end_child(obj);
             
             last_child(obj);
-            draw(obj.expr);
+            draw(obj.ode);
             end_child(obj);
         end
-        
     end
 end

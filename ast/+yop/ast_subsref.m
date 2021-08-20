@@ -26,6 +26,15 @@ classdef ast_subsref < yop.ast_expression
             bool = isa_variable(obj.node);
         end
         
+        function var = get_variable(obj)
+            % The purpose of this variable is not to act as a classical
+            % getter/setter, but to be able to query subsref nodes that ARE
+            % KNOWN to be variables (tested by call to "get_variable") for
+            % their underlying variable. So, this function is also
+            % implemented for ast_variable.
+            var  = get_variable(obj.node);
+        end
+        
         function bool = is_differential(obj)
             bool = is_differential(obj.node);
         end
@@ -33,12 +42,6 @@ classdef ast_subsref < yop.ast_expression
         function bool = is_algebraic(obj)
             bool = is_algebraic(obj.node);
         end
-        
-        %         function bool = isnumeric(obj)
-        %             % It would be preferable to inspect the subindices and see if
-        %             % any of those in obj.node isnumeric. That is however on the
-        %             % wish list for now.
-        %         end
         
         function draw(obj)
             fprintf('subsref(node, s)\n');

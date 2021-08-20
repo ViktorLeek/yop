@@ -28,6 +28,14 @@ classdef ast_variable < yop.ast_expression
             bool = true;
         end
         
+        function obj = get_variable(obj)
+            % The purpose of this variable is not to act as a classical
+            % getter/setter, but to be able to query subsref nodes that ARE
+            % KNOWN to be variables (tested by call to "get_variable") for
+            % their underlying variable. So, this function is also
+            % implemented for ast_subsref.
+        end
+        
         
         function draw(obj)
             fprintf([obj.name, '\n']);
