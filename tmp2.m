@@ -30,6 +30,11 @@ ocp.parse_constraints()
 
 %% Extract indices from subsasgn expressions
 
+% Idén är att köra uttrycket med subindices med variables värde satt till
+% en uppräkning av dess element, man får sedan ut en vector med de
+% relevanta indexen när uttrycket evaluerats. Det kan sedan användas för
+% hämta ut rätt subindices.
+
 x = yop.state('x', 10);
 x37 = x(3:7);
 x46 = x37(2:4);

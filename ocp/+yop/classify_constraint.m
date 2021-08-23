@@ -8,11 +8,11 @@ switch class(u)
     case {'yop.ast_lt', 'yop.ast_le'}
         % Will be undefined if der(x) < expr
         
-        if isa_variable(u.lhs) && isnumeric(u.rhs)
+        if all(isa_variable(u.lhs)) && isnumeric(u.rhs)
             % v < 2
             c = yop.box_upper(u.lhs, u.rhs);
             
-        elseif isnumeric(u.lhs) && isa_variable(u.rhs)
+        elseif isnumeric(u.lhs) && all(isa_variable(u.rhs))
             % 2 < v
             c = yop.box_lower(u.rhs, u.lhs);
             
@@ -20,17 +20,17 @@ switch class(u)
             % expr(tp) < 2
             
             if isa(u.lhs.timepoint, 'yop.ast_independent') && ...
-                    isa_variable(u.lhs.expr)
+                    all(isa_variable(u.lhs.expr))
                 % v(t) < 2
                 c = yop.box_upper(u.lhs.expr, u.rhs);
                 
             elseif isa(u.lhs.timepoint, 'yop.ast_independent_initial') && ...
-                    isa_variable(u.lhs.expr)
+                    all(isa_variable(u.lhs.expr))
                 % v(t0) < 2
                 c  = yop.box_initial_upper(u.lhs.expr, u.rhs);
                 
             elseif isa(u.lhs.timepoint, 'yop.ast_independent_final') && ...
-                    isa_variable(u.lhs.expr)
+                    all(isa_variable(u.lhs.expr))
                 % v(tf) < 2
                 c = yop.box_final_upper(u.lhs.expr, u.rhs); 
 
@@ -45,17 +45,17 @@ switch class(u)
             % 2 < expr(tp)
             
             if isa(u.rhs.timepoint, 'yop.ast_independent') && ...
-                    isa_variable(u.rhs.expr)
+                    all(isa_variable(u.rhs.expr))
                 % 2 < v(t)
                 c = yop.box_lower(u.rhs.expr, u.lhs);
                 
             elseif isa(u.rhs.timepoint, 'yop.ast_independent_initial') && ...
-                    isa_variable(u.rhs.expr)
+                    all(isa_variable(u.rhs.expr))
                 % 2 < v(t0) <==> v(t0) > 2
                 c = yop.box_initial_lower(u.rhs.expr, u.lhs);
                 
             elseif isa(u.rhs.timepoint, 'yop.ast_independent_final') && ...
-                    isa_variable(u.rhs.expr)
+                    all(isa_variable(u.rhs.expr))
                 % 2 < v(tf) <==> v(tf) > 2
                 c = yop.box_final_lower(u.rhs.expr, u.lhs);
                 
@@ -76,11 +76,11 @@ switch class(u)
     case {'yop.ast_gt', 'yop.ast_ge'}
         % Will be undefined if der(x) > expr
         
-        if isa_variable(u.lhs) && isnumeric(u.rhs)
+        if all(isa_variable(u.lhs)) && isnumeric(u.rhs)
             % v > 2
             c = yop.box_lower(u.lhs, u.rhs);
             
-        elseif isnumeric(u.lhs) && isa_variable(u.rhs)
+        elseif isnumeric(u.lhs) && all(isa_variable(u.rhs))
             % 2 > v
             c = yop.box_upper(u.rhs, u.lhs);
             
@@ -88,17 +88,17 @@ switch class(u)
             % expr(tp) > 2
             
             if isa(u.lhs.timepoint, 'yop.ast_independent') && ...
-                    isa_variable(u.lhs.expr) 
+                    all(isa_variable(u.lhs.expr))
                 % v(t) > 2
                 c = yop.box_lower(u.lhs.expr, u.rhs);
                 
             elseif isa(u.lhs.timepoint, 'yop.ast_independent_initial') && ...
-                    isa_variable(u.lhs.expr)
+                    all(isa_variable(u.lhs.expr))
                 % v(t0) > 2
                 c  = yop.box_initial_lower(u.lhs.expr, u.rhs);
                 
             elseif isa(u.lhs.timepoint, 'yop.ast_independent_final') && ...
-                    isa_variable(u.lhs.expr)
+                    all(isa_variable(u.lhs.expr))
                 % v(tf) > 2
                 c = yop.box_final_lower(u.lhs.expr, u.rhs); 
 
@@ -117,12 +117,12 @@ switch class(u)
                 c = yop.box_upper(u.rhs.expr, u.lhs);
                 
             elseif isa(u.rhs.timepoint, 'yop.ast_independent_initial') && ...
-                    isa_variable(u.rhs.expr)
+                    all(isa_variable(u.rhs.expr))
                 % 2 > v(t0) <==> v(t0) < 2
                 c = yop.box_initial_upper(u.rhs.expr, u.lhs);
                 
             elseif isa(u.rhs.timepoint, 'yop.ast_independent_final') && ...
-                    isa_variable(u.rhs.expr)
+                    all(isa_variable(u.rhs.expr))
                 % 2 > v(tf) <==> v(tf) < 2
                 c = yop.box_final_upper(u.rhs.expr, u.lhs);
                 
@@ -142,11 +142,11 @@ switch class(u)
     case 'yop.ast_eq'
         % der, alg
         
-        if isa_variable(u.lhs) && isnumeric(u.rhs)
+        if all(isa_variable(u.lhs)) && isnumeric(u.rhs)
             % v == 2
             c = yop.box_equality(u.lhs, u.rhs);
             
-        elseif isnumeric(u.lhs) && isa_variable(u.rhs)
+        elseif isnumeric(u.lhs) && all(isa_variable(u.rhs))
             % 2 <= v
             c = yop.box_equality(u.rhs, u.lhs);
             
@@ -154,17 +154,17 @@ switch class(u)
             % expr(tp) = 2
             
             if isa(u.lhs.timepoint, 'yop.ast_independent') && ...
-                    isa_variable(u.lhs.expr) 
+                    all(isa_variable(u.lhs.expr))
                 % v(t) = 2
                 c = yop.box_equality(u.lhs.expr, u.rhs);
                 
             elseif isa(u.lhs.timepoint, 'yop.ast_independent_initial') && ...
-                    isa_variable(u.lhs.expr)
+                    all(isa_variable(u.lhs.expr))
                 % v(t0) = 2
                 c  = yop.box_initial_equality(u.lhs.expr, u.rhs);
                 
             elseif isa(u.lhs.timepoint, 'yop.ast_independent_final') && ...
-                    isa_variable(u.lhs.expr)
+                    all(isa_variable(u.lhs.expr))
                 % v(tf) = 2
                 c = yop.box_final_equality(u.lhs.expr, u.rhs); 
 
@@ -178,17 +178,17 @@ switch class(u)
             % 2 = expr(tp)
             
             if isa(u.rhs.timepoint, 'yop.ast_independent') && ...
-                    isa_variable(u.rhs.expr)
+                    all(isa_variable(u.rhs.expr))
                 % 2 = v(t)
                 c = yop.box_equality(u.rhs.expr, u.lhs);
                 
             elseif isa(u.rhs.timepoint, 'yop.ast_independent_initial') && ...
-                    isa_variable(u.rhs.expr)
+                    all(isa_variable(u.rhs.expr))
                 % 2 = v(t0)
                 c = yop.box_initial_equality(u.rhs.expr, u.lhs);
                 
             elseif isa(u.rhs.timepoint, 'yop.ast_independent_final') && ...
-                    isa_variable(u.rhs.expr)
+                    all(isa_variable(u.rhs.expr))
                 % 2 = v(tf)
                 c = yop.box_final_equality(u.rhs.expr, u.lhs);
                 

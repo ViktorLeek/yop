@@ -287,6 +287,10 @@ classdef ast_expression < yop.node & yop.ast_ool
             node = yop.ast_int(obj);
         end
         
+        function idx = end(obj, k, n)
+            idx = builtin('end', ones(size(obj)), k, n);
+        end
+        
         
         function varargout = subsref(obj, s)
             % sr = subsref(obj, s)

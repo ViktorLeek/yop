@@ -1,3 +1,4 @@
 function bool = isa_variable(obj)
-bool = false;
+bool = false(size(obj));
+bool = bool(:);
 end

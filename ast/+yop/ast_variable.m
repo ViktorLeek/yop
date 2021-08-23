@@ -21,21 +21,9 @@ classdef ast_variable < yop.ast_expression
         end
         
         function bool = isa_variable(obj)
-            % This function exist in order to detect that variables that
-            % have been subsrefed are treated as variables. It should
-            % therefore only be implemented for this class and 
-            % 'ast_subsref'.
-            bool = true;
+            bool = true(size(obj));
+            bool = bool(:);
         end
-        
-        function obj = get_variable(obj)
-            % The purpose of this variable is not to act as a classical
-            % getter/setter, but to be able to query subsref nodes that ARE
-            % KNOWN to be variables (tested by call to "get_variable") for
-            % their underlying variable. So, this function is also
-            % implemented for ast_subsref.
-        end
-        
         
         function draw(obj)
             fprintf([obj.name, '\n']);

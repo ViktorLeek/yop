@@ -24,14 +24,20 @@ classdef ast_subsref < yop.ast_expression
         
         function bool = isa_variable(obj)
             bool = isa_variable(obj.node);
+            
+            % The bools vector is for every element in obj.node. Since this
+            % node only refers to a few of those elements, it is necessary
+            % to extract those. This is done by enumerating all of the
+            % elements of obj.node, forward evaluating this node, and then
+            % the indices are are the value of this node. 
+            sz = size(obj.node);
+            obj.node.m_value = reshape(1:prod(sz), sz);
+            idx_matrix = forward(obj);
+            bool = bool(idx_matrix(:)); 
+            
         end
         
         function var = get_variable(obj)
-            % The purpose of this variable is not to act as a classical
-            % getter/setter, but to be able to query subsref nodes that ARE
-            % KNOWN to be variables (tested by call to "get_variable") for
-            % their underlying variable. So, this function is also
-            % implemented for ast_variable.
             var  = get_variable(obj.node);
         end
         

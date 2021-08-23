@@ -28,6 +28,13 @@ classdef ast_vertcat < yop.ast_expression
             obj.m_value = vertcat(tmp{:});
             v = obj.m_value;
         end
+        
+        function bool = isa_variable(obj)
+            bool = isa_variable(obj.args{1});
+            for k=2:length(obj.args)
+                bool = [bool; isa_variable(obj.args{k})];
+            end       
+        end
 
         function draw(obj)
             % every arg is enumerated: "a1, a2, ..., aN, "
