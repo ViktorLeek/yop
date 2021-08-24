@@ -316,7 +316,7 @@ classdef ast_expression < yop.node & yop.ast_ool
             % subs: {[s1], [s2], ..., [sN]}
             numeric = true;
             for k=1:length(s.subs)
-                numeric = (isnumeric(s.subs{k}) || ischar(s.subs{k}) ) ...
+                numeric = (isnumeric(s.subs{k}) || ischar(s.subs{k}) || islogical(s.subs{k}) ) ...
                     && numeric;
             end
             

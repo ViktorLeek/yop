@@ -6,6 +6,7 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
     properties
         lhs
         rhs
+        dim % dimensions of 'size'
     end
     
     methods
@@ -13,6 +14,10 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
             obj@yop.node();
             obj.lhs = lhs;
             obj.rhs = rhs;
+        end
+        
+        function sz = size(obj, varargin)
+            sz = size(ones(obj.dim), varargin{:});
         end
         
         function rel = lt(lhs, rhs)
@@ -287,10 +292,54 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
             idx = builtin('end', ones(size(obj)), k, n);
         end
         
+        function srf_cell = to_srf(obj)
+            % to_srl - To single relation form
+            %   From the current node, finds all relations, and creates a
+            %   node with a single relation, for all relations withing this
+            %   node.
+            
+            % Find all 'ast_relation' nodes in the constraints
+            relations = get_relations(obj);
+            
+            % Convert the relations to srf
+            srf_cell = {};
+            for k=1:length(relations)
+                rk = relations{k};
+                switch class(rk)
+                    case 'yop.ast_lt'
+                        srf_cell = {srf_cell{:}, ...
+                            yop.ast_lt(rmost(rk.lhs), lmost(rk.rhs))};
+                        
+                    case 'yop.ast_gt'
+                        srf_cell = {srf_cell{:}, ...
+                            yop.ast_gt(rmost(rk.lhs), lmost(rk.rhs))};
+                        
+                    case 'yop.ast_le'
+                        srf_cell = {srf_cell{:}, ...
+                            yop.ast_le(rmost(rk.lhs), lmost(rk.rhs))};
+                        
+                    case 'yop.ast_ge'
+                        srf_cell = {srf_cell{:}, ...
+                            yop.ast_ge(rmost(rk.lhs), lmost(rk.rhs))};
+                        
+                    case 'yop.ast_eq'
+                        srf_cell = {srf_cell{:}, ...
+                            yop.ast_eq(rmost(rk.lhs), lmost(rk.rhs))};
+                        
+                    case 'yop.ast_ne'
+                        srf_cell = {srf_cell{:}, ...
+                            yop.ast_ne(rmost(rk.lhs), lmost(rk.rhs))};
+                        
+                    otherwise
+                        error('[yop] Error: unknown relation')
+                end
+            end
+        end
+        
         function rels = get_relations(obj)
             l = get_relations(obj.lhs);
             r = get_relations(obj.rhs);
-            rels = {obj, l{:}, r{:}}; % [{obj}, l(:)', r(:)'];
+            rels = {obj, l{:}, r{:}};
             rels = rels(~cellfun('isempty', rels));
         end
         
@@ -314,16 +363,30 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
             end_child(obj);
         end
         
-        function [topsort, visited, n_elem] = ...
-                topological_sort(obj, topsort, visited, n_elem)
+        function [topsort, n_elem, visited] = ...
+                topological_sort(obj, visited, topsort, n_elem)
             % Topological sort of expression graph by a dfs.
             
-            if nargin == 1
-                % Start new sort
-                visited = [];
-                topsort = cell( ...
-                    yop.constants().topsort_preallocation_size, 1);
-                n_elem = 0;
+            switch nargin
+                case 1
+                    % Start new sort: topological_sort(obj)
+                    visited = [];
+                    topsort = ...
+                        cell(yop.constants().topsort_preallocation_size, 1);
+                    n_elem = 0;
+                    
+                case 2
+                    % Semi-warm start: topological_sort(obj, visited)
+                    % In semi-warm start 'visited' is already provided, but
+                    % no elements are sorted. This is for instance useful
+                    % for finding all variables in a number of expressions
+                    % that are suspected to contain common subexpressions.
+                    topsort = ...
+                        cell(yop.constants().topsort_preallocation_size, 1);
+                    n_elem = 0;
+                    
+                otherwise
+                    % Pass
             end
             
             % only visit every node once
@@ -335,16 +398,16 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
             visited = [visited, obj.id];
             
             % Visit child
-            [topsort, visited, n_elem] = ...
-                topological_sort(obj.lhs, topsort, visited, n_elem);
+            [topsort, n_elem, visited] = ...
+                topological_sort(obj.lhs, visited, topsort, n_elem);
             
-            [topsort, visited, n_elem] = ...
-                topological_sort(obj.rhs, topsort, visited, n_elem);
+            [topsort, n_elem, visited] = ...
+                topological_sort(obj.rhs, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;
             topsort{n_elem} = obj;
-
+            
         end
         
     end

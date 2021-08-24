@@ -7,6 +7,7 @@ classdef ast_gt < yop.ast_relation
     methods
         function obj = ast_gt(lhs, rhs)
             obj@yop.ast_relation(lhs, rhs);
+            obj.dim = gt(ones(size(lhs)), ones(size(rhs)));
         end
         
         function value = evaluate(obj)

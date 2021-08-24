@@ -56,16 +56,30 @@ classdef ast_horzcat < yop.ast_expression
             
         end
         
-        function [topsort, visited, n_elem] = ...
-                topological_sort(obj, topsort, visited, n_elem)
+        function [topsort, n_elem, visited] = ...
+                topological_sort(obj, visited, topsort, n_elem)
             % Topological sort of expression graph by a dfs.
             
-            if nargin == 1
-                % Start new sort
-                visited = [];
-                topsort = cell( ...
-                    yop.constants().topsort_preallocation_size, 1);
-                n_elem = 0;
+            switch nargin
+                case 1
+                    % Start new sort: topological_sort(obj)
+                    visited = [];
+                    topsort = ...
+                        cell(yop.constants().topsort_preallocation_size, 1);
+                    n_elem = 0;
+                    
+                case 2
+                    % Semi-warm start: topological_sort(obj, visited)
+                    % In semi-warm start 'visited' is already provided, but 
+                    % no elements are sorted. This is for instance useful 
+                    % for finding all variables in a number of expressions 
+                    % that are suspected to contain common subexpressions.
+                    topsort = ...
+                        cell(yop.constants().topsort_preallocation_size, 1);
+                    n_elem = 0;
+                    
+                otherwise
+                    % Pass
             end
             
             % only visit every node once
@@ -78,10 +92,10 @@ classdef ast_horzcat < yop.ast_expression
             
             % Visit child
             for k=1:length(obj.args)
-                [topsort, visited, n_elem] = topological_sort( ...
+                [topsort, n_elem, visited] = topological_sort(...
                     obj.args{k}, ...
-                    topsort, ...
                     visited, ...
+                    topsort, ...
                     n_elem ...
                     );
             end

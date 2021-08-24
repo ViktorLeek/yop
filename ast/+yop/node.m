@@ -22,6 +22,16 @@ classdef node < handle
             reset(obj.stream);
         end
         
+        function vars = get_variables(obj)
+            [tsort, n_elem] = topological_sort(obj);
+            vars = {};
+            for k=1:n_elem
+                if isa(tsort{k}, 'yop.ast_variable')
+                    vars = {vars{:}, tsort{k}};
+                end
+            end
+        end
+        
         function indent(obj)
             % Indents the print by implementing the behvaiour:
             % for k=1:obj.stream.indent_level
@@ -67,6 +77,7 @@ classdef node < handle
         function v = value(obj)
             v = obj.m_value;
         end
+        
     end
     
     methods (Static)

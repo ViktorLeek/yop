@@ -163,7 +163,7 @@ var.t0{1}.m_value = t0;
 % relevant expression is obtained.
 
 % This should be done for every element of ocp.differential
-[sort, ~, n_elem] = topological_sort(ocp.differential{1}.expr);
+[sort, n_elem] = topological_sort(ocp.differential{1}.expr);
 
 for k=1:(n_elem-1)
     forward(sort{k});
@@ -172,7 +172,7 @@ xdot_expr = forward(sort{n_elem}); % root holds the dynamics.
 f = casadi.Function('xdot', inputs, {xdot_expr, 0}); % zero is for objective
 
 %% Objective function
-[sort, ~, n_elem] = topological_sort(ocp.objective);
+[sort, n_elem] = topological_sort(ocp.objective);
 
 for k=1:(n_elem-1)
     forward(sort{k});

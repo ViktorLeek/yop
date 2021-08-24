@@ -136,16 +136,30 @@ classdef ast_sum < yop.ast_expression
             end 
         end
         
-        function [topsort, visited, n_elem] = ...
-                topological_sort(obj, topsort, visited, n_elem)
+        function [topsort, n_elem, visited] = ...
+                topological_sort(obj, visited, topsort, n_elem)
             % Topological sort of expression graph by a dfs.
             
-            if nargin == 1
-                % Start new sort
-                visited = [];
-                topsort = cell( ...
-                    yop.constants().topsort_preallocation_size, 1);
-                n_elem = 0;
+            switch nargin
+                case 1
+                    % Start new sort: topological_sort(obj)
+                    visited = [];
+                    topsort = ...
+                        cell(yop.constants().topsort_preallocation_size, 1);
+                    n_elem = 0;
+                    
+                case 2
+                    % Semi-warm start: topological_sort(obj, visited)
+                    % In semi-warm start 'visited' is already provided, but 
+                    % no elements are sorted. This is for instance useful 
+                    % for finding all variables in a number of expressions 
+                    % that are suspected to contain common subexpressions.
+                    topsort = ...
+                        cell(yop.constants().topsort_preallocation_size, 1);
+                    n_elem = 0;
+                    
+                otherwise
+                    % Pass
             end
             
             % only visit every node once
@@ -157,17 +171,17 @@ classdef ast_sum < yop.ast_expression
             visited = [visited, obj.id];
             
             % Visit child
-            [topsort, visited, n_elem] = ...
-                topological_sort(obj.expr, topsort, visited, n_elem);
+            [topsort, n_elem, visited] = ...
+                topological_sort(obj.expr, visited, topsort, n_elem);
             
-            [topsort, visited, n_elem] = ...
-                topological_sort(obj.opt1, topsort, visited, n_elem);
+            [topsort, n_elem, visited] = ...
+                topological_sort(obj.opt1, visited, topsort, n_elem);
             
-            [topsort, visited, n_elem] = ...
-                topological_sort(obj.opt2, topsort, visited, n_elem);
+            [topsort, n_elem, visited] = ...
+                topological_sort(obj.opt2, visited, topsort, n_elem);
             
-            [topsort, visited, n_elem] = ...
-                topological_sort(obj.opt3, topsort, visited, n_elem);
+            [topsort, n_elem, visited] = ...
+                topological_sort(obj.opt3, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;

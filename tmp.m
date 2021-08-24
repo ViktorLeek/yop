@@ -20,7 +20,7 @@ u.m_value = u_num;
 
 disp('---- forward ----')
 tic()
-[topsort, ~, n_elem] = topological_sort(dx);
+[topsort, n_elem] = topological_sort(dx);
 
 for k=1:(n_elem-1)
     forward(topsort{k});
@@ -100,6 +100,6 @@ syms xx1 xx2
 x1 = yop.state('x1');
 x2 = yop.state('x2');
 expr = abs(x1) + x2;
-[topsort, visited] = topological_sort(expr)
+[topsort, n_elem, visited] = topological_sort(expr)
 x1.value = xx1;
 x2.value = xx2;
