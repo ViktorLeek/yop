@@ -7,7 +7,7 @@ classdef ast_le < yop.ast_relation
     methods
         function obj = ast_le(lhs, rhs)
             obj@yop.ast_relation(lhs, rhs);
-            obj.dim = le(ones(size(lhs)), ones(size(rhs)));
+            %obj.dim = le(ones(size(lhs)), ones(size(rhs)));
         end
         
         function value = evaluate(obj)
@@ -20,18 +20,60 @@ classdef ast_le < yop.ast_relation
         end
         
         function rels = split_vars(srf)
+            % Transformations before: srf, split vars and exprs
             
             if all(isa_variable(srf.lhs)) && isnumeric(srf.rhs)
                 
-                i = reaching_indices(srf.lhs);
+                % In order to split the variables it is first necessary to
+                % deterimine the variables that reaches the definition of
+                % srf.lhs
+                rv = reaching_variables(srf.lhs);
                 
+                % Based on the reaching variables the expression is divided
+                % into subexpressions.
                 rels = {};
-                for k=1:length(i.vars)
-                    
+                for k=1:length(rv)
+                    if ~isempty(rv(k).reaching)
+                        idx = rv(k).index;
+                        if isscalar(srf.rhs)
+                            node = yop.ast_le(srf.lhs(idx), srf.rhs);
+                            
+                        else
+                            node = yop.ast_le(srf.lhs(idx), srf.rhs(idx));
+                            
+                        end
+                        rels = {rels{:}, node};  
+                    end
                 end
-                
+                assert(~isempty(rels), ...
+                    ['[Yop] Unexpected error: Some variables are', ...
+                    'expected to reach the expression. Check if the', ...
+                    'proper transforms has been applied first.'])
                 
             elseif isnumeric(srf.lhs) && all(isa_variable(srf.rhs))
+                
+                rv = reaching_variables(srf.rhs);
+                
+                % Based on the reaching variables the expression is divided
+                % into subexpressions.
+                rels = {};
+                for k=1:length(rv)
+                    if ~isempty(rv(k).reaching)
+                        idx = rv(k).index;
+                        if isscalar(srf.lhs)
+                            node = yop.ast_le(srf.lhs, srf.rhs(idx));
+                            
+                        else
+                            node = yop.ast_le(srf.lhs(idx), srf.rhs(idx));
+                            
+                        end
+                        rels = {rels{:}, node};  
+                    end
+                end
+                assert(~isempty(rels), ...
+                    ['[Yop] Unexpected error: Some variables are', ...
+                    'expected to reach the expression. Check if the', ...
+                    'proper transforms has been applied first.'])
                 
             else
                 % If it is neither var <= num nor num <= var then this

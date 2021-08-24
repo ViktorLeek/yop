@@ -56,7 +56,7 @@ vk.m_value = reshape(I2, sz);
 idx0 = idx0 + n2;
 
 % 2) Utvärdera uttrycket för att propagera indexen
-e = yop.forward_evaluate(bc.lhs);
+e = forward_evaluate(bc.lhs);
 
 % 3) För de element som inte är variabler, sätt deras index till något
 % värde som uppräkningen inte kan anta
