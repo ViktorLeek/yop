@@ -11,6 +11,16 @@ classdef ast_mod < yop.ast_expression
             obj.dim = size(mod(ones(size(a)), ones(size(m))));
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            if all(isa_numeric(obj.a)) && all(isa_numeric(obj.m))
+                boolv = true(size(obj));
+            else
+                boolv = false(size(obj));
+            end
+        end
+        
         function value = evaluate(obj)
             value = mod(evaluate(obj.a), evaluate(obj.m));
         end

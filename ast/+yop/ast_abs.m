@@ -18,6 +18,12 @@ classdef ast_abs < yop.ast_expression
             v = obj.m_value;
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            boolv = isa_numeric(obj.expr);
+        end
+        
         function draw(obj)
             fprintf('abs(expr)\n');
             last_child(obj);

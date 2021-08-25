@@ -15,6 +15,16 @@ classdef ast_norm < yop.ast_expression
             end
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            if all(isa_numeric(obj.expr))
+                boolv = true(size(obj));
+            else
+                boolv = false(size(obj));
+            end
+        end
+        
         function value = evaluate(obj)
             if obj.nargs == 1
                 value = norm(evaluate(obj.expr));

@@ -11,6 +11,16 @@ classdef ast_atan2 < yop.ast_expression
             obj.dim = size(atan2(ones(size(y)), ones(size(x))));
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            if all(isa_numeric(obj.y) & isa_numeric(obj.x))
+                boolv = true(size(obj));
+            else
+                boolv = false(size(obj));
+            end
+        end
+        
         function value = evaluate(obj)
             value = atan2(evaluate(obj.y), evaluate(obj.x));
         end

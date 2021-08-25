@@ -13,6 +13,15 @@ classdef ast_horzcat < yop.ast_expression
             obj.dim = size(horzcat(tmp{:}));
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            boolv = isa_numeric(obj.args{1});
+            for k=2:length(obj.args)
+                boolv = [boolv, isa_numeric(obj.args{k})];
+            end
+        end
+        
         function value = evaluate(obj)
             tmp = cell(size(obj.args));
             for k=1:length(tmp)
@@ -33,7 +42,7 @@ classdef ast_horzcat < yop.ast_expression
         function bool = isa_variable(obj)
             bool = isa_variable(obj.args{1});
             for k=2:length(obj.args)
-                bool = [bool; isa_variable(obj.args{k})];
+                bool = [bool, isa_variable(obj.args{k})];
             end     
         end
         

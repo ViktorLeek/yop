@@ -22,21 +22,24 @@ classdef ast_subsref < yop.ast_expression
             v = obj.m_value;
         end
         
-        function bool = isa_variable(obj)
-            bool = isa_variable(obj.node);
-            
-            % The bools vector is for every element in obj.node. Since this
-            % node only refers to a few of those elements, it is necessary
-            % to extract those. This is done by enumerating all of the
-            % elements of obj.node, forward evaluating this node, and then
-            % the indices are are the value of this node. 
-            tmp = obj.node.m_value;
+        function idx = get_indices(obj)
+            % Return the indices this subsref node refers to
+            node_val = obj.node.m_value;
             sz = size(obj.node);
             obj.node.m_value = reshape(1:prod(sz), sz);
-            idx_matrix = forward(obj);
-            bool = bool(idx_matrix(:)); 
-            obj.node.m_value = tmp;
-            
+            idx = subsref(value(obj.node), obj.s);
+            idx = idx(:);
+            obj.node.m_value = node_val;
+        end
+        
+        function bool = isa_variable(obj)
+            bool = isa_variable(obj.node);
+            bool = bool(get_indices(obj));
+        end
+        
+        function bool = isa_numeric(obj)
+            bool = isa_numeric(obj.node);
+            bool = bool(get_indices(obj));            
         end
         
         function var = get_variable(obj)

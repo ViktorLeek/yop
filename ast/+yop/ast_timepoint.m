@@ -55,6 +55,12 @@ classdef ast_timepoint < yop.ast_expression
             obj.expr = expr;
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            boolv = isa_numeric(obj.expr);
+        end
+        
         function value = evaluate(obj)
             % This simply propagates through. The purpose is to be able to
             % go to single variable form by enumaration, so this function

@@ -48,6 +48,26 @@ classdef ast_min < yop.ast_expression
             
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            switch obj.nargs
+                case 1
+                    if all(isa_numeric(obj.A))
+                        boolv = true(size(obj));
+                    else
+                        boolv = false(size(obj));
+                    end
+                    
+                case {2, 3, 4}
+                    if all(isa_numeric(obj.A)) && all(isa_numeric(obj.B))
+                        boolv = true(size(obj));
+                    else
+                        boolv = false(size(obj));
+                    end
+            end
+        end
+        
         function value = evaluate(obj)
             switch obj.nargs
                 case 1

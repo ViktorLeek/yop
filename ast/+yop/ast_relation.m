@@ -292,49 +292,7 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
             idx = builtin('end', ones(size(obj)), k, n);
         end
         
-        function srf_cell = to_srf(obj)
-            % to_srl - To single relation form
-            %   From the current node, finds all relations, and creates a
-            %   node with a single relation, for all relations withing this
-            %   node.
-            
-            % Find all 'ast_relation' nodes in the constraints
-            relations = get_relations(obj);
-            
-            % Convert the relations to srf
-            srf_cell = {};
-            for k=1:length(relations)
-                rk = relations{k};
-                switch class(rk)
-                    case 'yop.ast_lt'
-                        srf_cell = {srf_cell{:}, ...
-                            yop.ast_lt(rmost(rk.lhs), lmost(rk.rhs))};
-                        
-                    case 'yop.ast_gt'
-                        srf_cell = {srf_cell{:}, ...
-                            yop.ast_gt(rmost(rk.lhs), lmost(rk.rhs))};
-                        
-                    case 'yop.ast_le'
-                        srf_cell = {srf_cell{:}, ...
-                            yop.ast_le(rmost(rk.lhs), lmost(rk.rhs))};
-                        
-                    case 'yop.ast_ge'
-                        srf_cell = {srf_cell{:}, ...
-                            yop.ast_ge(rmost(rk.lhs), lmost(rk.rhs))};
-                        
-                    case 'yop.ast_eq'
-                        srf_cell = {srf_cell{:}, ...
-                            yop.ast_eq(rmost(rk.lhs), lmost(rk.rhs))};
-                        
-                    case 'yop.ast_ne'
-                        srf_cell = {srf_cell{:}, ...
-                            yop.ast_ne(rmost(rk.lhs), lmost(rk.rhs))};
-                        
-                    otherwise
-                        error('[yop] Error: unknown relation')
-                end
-            end
-        end
+        
         
         function rels = get_relations(obj)
             l = get_relations(obj.lhs);

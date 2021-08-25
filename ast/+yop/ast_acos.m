@@ -18,6 +18,12 @@ classdef ast_acos < yop.ast_expression
             v = obj.m_value;
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            boolv = isa_numeric(obj.expr);
+        end
+        
         function [topsort, n_elem, visited] = ...
                 topological_sort(obj, visited, topsort, n_elem)
             % Topological sort of expression graph by a dfs.

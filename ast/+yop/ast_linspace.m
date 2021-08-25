@@ -13,6 +13,16 @@ classdef ast_linspace < yop.ast_expression
             obj.dim = [1, n];
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            if all(isa_numeric(obj.x1)) && all(isa_numeric(obj.x2)) && isa_numeric(obj.n)
+                boolv = true(size(obj));
+            else
+                boolv = false(size(obj));
+            end
+        end
+        
         function value = evaluate(obj)
             value = linspace(...
                 evaluate(obj.x1), ...

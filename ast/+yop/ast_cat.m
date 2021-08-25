@@ -15,6 +15,16 @@ classdef ast_cat < yop.ast_expression
             obj.dim = size(cat(d, tmp{:}));
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            tmp = {isa_numeric(obj.args{1})};
+            for k=2:length(obj.args)
+                tmp = {tmp{:}, isa_numeric(obj.args{k})};
+            end
+            boolv = cat(obj.d, tmp{:});
+        end
+        
         function value = evaluate(obj)
             tmp = cell(size(obj.args));
             for k=1:length(tmp)
@@ -33,10 +43,11 @@ classdef ast_cat < yop.ast_expression
         end
         
         function bool = isa_variable(obj)
-            bool = isa_variable(obj.args{1});
+            tmp = {isa_variable(obj.args{1})};
             for k=2:length(obj.args)
-                bool = [bool; isa_variable(obj.args{k})];
-            end       
+                tmp = {tmp{:}, isa_variable(obj.args{k})};
+            end      
+            bool = cat(obj.d, tmp{:});
         end
         
         function draw(obj)

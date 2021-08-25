@@ -9,6 +9,12 @@ classdef ast_pinv < yop.ast_expression
             obj.dim = size(pinv(ones(size(A))));
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            boolv = isa_numeric(obj.A);
+        end
+        
         function value = evaluate(obj)
             value = pinv(evaluate(obj.A));
         end

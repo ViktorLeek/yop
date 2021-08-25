@@ -26,6 +26,26 @@ classdef ast_dot < yop.ast_expression
             end
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            boolv = isa_numeric(obj.expr);
+            switch obj.nargs
+                case 2
+                    if all(isa_numeric(obj.A)) &&  all(isa_numeric(obj.B))
+                        boolv = true(size(obj));
+                    else
+                        boolv = false(size(obj));
+                    end
+                case 3
+                    if all(isa_numeric(obj.A)) && all(isa_numeric(obj.B)) && all(isa_numeric(obj.d))
+                        boolv = true(size(obj));
+                    else
+                        boolv = false(size(obj));
+                    end
+            end
+        end
+        
         function value = evaluate(obj)
             switch obj.nargs
                 case 2

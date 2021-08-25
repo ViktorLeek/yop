@@ -9,6 +9,16 @@ classdef ast_trace < yop.ast_expression
             obj.dim = size(trace(ones(size(expr))));
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            if all(isa_numeric(obj.expr))
+                boolv = true(size(obj));
+            else
+                boolv = false(size(obj));
+            end
+        end
+        
         function value = evaluate(obj)
             value = trace(evaluate(obj.expr));
         end

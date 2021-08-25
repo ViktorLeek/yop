@@ -24,6 +24,12 @@ classdef ast_alg < yop.ast_expression
                 ]);
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            error('[Yop] Error: Method not implemented.');
+        end
+        
         function draw(obj)
             fprintf('alg(var)\n');
             last_child(obj);

@@ -15,8 +15,16 @@ classdef ast_subsasgn < yop.ast_expression
             obj.dim = size(node);
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            boolv = isa_numeric(obj.node);
+            idx = get_indices(obj);
+            boolv(idx) = isa_numeric(obj.b);
+        end
+        
         function value = evaluate(obj)
-            % Subsref are only created if indices are 's' are numerics, and
+            % Subsref are only created if indices 's' are numerics, and
             % so they can be passed as they are.
             value = subsasgn(evaluate(obj.node), obj.s, evaluate(obj.b));
         end
@@ -24,6 +32,22 @@ classdef ast_subsasgn < yop.ast_expression
         function v = forward(obj)
             obj.m_value = subsasgn(value(obj.node), obj.s, value(obj.b));
             v = obj.m_value;
+        end
+        
+        function idx = get_indices(obj)
+            % Return the indices this subsasgn node refers to
+            node_val = obj.node.m_value;
+            sz = size(obj.node);
+            obj.node.m_value = reshape(1:prod(sz), sz);
+            idx = subsref(value(obj.node), obj.s); % eval as subsasgn
+            idx = idx(:);
+            obj.node.m_value = node_val;
+        end
+        
+        function bool = isa_variable(obj)
+            bool = isa_variable(obj.node);
+            idx = get_indices(obj);
+            bool(idx) = isa_variable(obj.b);
         end
         
         function draw(obj)

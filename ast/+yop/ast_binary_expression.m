@@ -12,6 +12,16 @@ classdef ast_binary_expression < yop.ast_expression
             obj.rhs = rhs;
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            if all(isa_numeric(obj.lhs) & isa_numeric(obj.rhs))
+                boolv = true(size(obj));
+            else
+                boolv = false(size(obj));
+            end
+        end
+        
         function draw(obj)
             fprintf([obj.name, '(lhs, rhs)\n']);
             

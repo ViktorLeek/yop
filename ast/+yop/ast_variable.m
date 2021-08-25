@@ -22,7 +22,10 @@ classdef ast_variable < yop.ast_expression
         
         function bool = isa_variable(obj)
             bool = true(size(obj));
-            bool = bool(:);
+        end
+        
+        function boolv = isa_numeric(obj)
+            boolv = false(size(obj));
         end
         
         function draw(obj)

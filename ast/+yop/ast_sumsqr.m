@@ -14,6 +14,16 @@ classdef ast_sumsqr < yop.ast_expression
             obj.dim = [1, 1];
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            if all(isa_numeric(obj.expr))
+                boolv = true(size(obj));
+            else
+                boolv = false(size(obj));
+            end
+        end
+        
         function value = evaluate(obj)
             value = sumsqr(evaluate(obj.expr));
         end

@@ -10,29 +10,44 @@ x.m_value = [x1; x2; x3; x4];
 [t, t0, tf] = yop.independent();
 
 mix = [v(1); x(1); v(2); x(2); v(3); x(3); v(4); x(4)];
+m67 = mix([6,7]);
+c1 = 1 <= [mix; mix(3)*2; exp(norm(m67)); mix] <= [v(2); v(3).^x(2); 2*ones(16,1)]; 
 
-constraint = 1 <= [mix; mix(3)*2] <= 1; 
-
-srf = to_srf(constraint);
-srf_vne = {};
-for k=1:length(srf)
-    vne = split_vars_and_exprs(srf{k});
-    srf_vne = {srf_vne{:}, vne{:}};
-end
-
-tmp = {};
-for k=1:length(srf_vne)
-    tk = split_vars(srf_vne{k});
-    tmp = {tmp{:}, tk{:}};
-end
+constraints = {c1};
+srf = yop.to_srf(constraints);
+hsrf = yop.to_hsrf(srf.get_relations);
+svhsrf = yop.to_svhsrf(hsrf);
+vnf = yop.to_vnf(svhsrf);
 
 clc
 disp('Constraint: ')
-disp(forward_evaluate(constraint));
+disp(forward_evaluate(c1));
 disp('is transformed into: ')
 
+disp('Box constraints:')
 
-for k=1:length(tmp)
-    disp(['[k=' num2str(k) ']'])
-    disp(forward_evaluate(tmp{k}))
+for k=1:length(vnf.vn)
+    disp(evaluate(vnf.vn{k}))
 end
+
+for k=1:length(vnf.vn)
+    disp(evaluate(vnf.nv{k}))
+end
+
+disp('General constraints')
+for k=1:length(vnf.ve)
+    disp(evaluate(vnf.ve{k}))
+end
+
+for k=1:length(vnf.ev)
+    disp(evaluate(vnf.ev{k}))
+end
+
+for k=1:length(hsrf.vv)
+    disp(evaluate(hsrf.vv{k}))
+end
+
+for k=1:length(hsrf.ee)
+    disp(evaluate(hsrf.ee{k}))
+end
+

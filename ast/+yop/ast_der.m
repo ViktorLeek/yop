@@ -11,6 +11,12 @@ classdef ast_der < yop.ast_expression
         
         % Overload all illegal operations here!! which should be most!
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            boolv = isa_numeric(obj.var);
+        end
+        
         function value = evaluate(obj)
             value = evaluate(obj.var);
         end
