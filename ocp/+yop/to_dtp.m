@@ -2,9 +2,10 @@ function dtp = to_dtp(vnf)
 % Transform the vnf form to relations with distinct timepoint.
 % Only concerns the sets vn and nv
 
-dtp = yop.dtp_data(vnf);
+dtp = yop.dtp_data();
 
 % preserve all old analysis information
+% Should be dtp_data(vnf);
 dtp.add_vv(vnf.vv);
 dtp.add_ve(vnf.ve);
 dtp.add_ev(vnf.ev);
@@ -45,7 +46,7 @@ end
 for k=1:length(vnf.nv)
     rk = vnf.nv{k}; % rk - relation k
     
-    [is_tp, tp] = isa_timepoint(rk.lhs);
+    [is_tp, tp] = isa_timepoint(rk.rhs);
     
     % The elements to select
     t0 = tp==yop.initial_timepoint;

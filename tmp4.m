@@ -25,6 +25,7 @@ constraints = {c1};
 srf = yop.to_srf(constraints);
 hsrf = yop.to_hsrf(srf.get_relations);
 vnf = yop.to_vnf(hsrf);
+dtp = yop.to_dtp(vnf);
 
 clc
 disp('Constraint:')
@@ -33,29 +34,49 @@ disp('is transformed into:')
 
 disp('Box constraints:')
 
-for k=1:length(vnf.vn)
-    disp(evaluate(vnf.vn{k}))
+for k=1:length(dtp.vn_t)
+    disp(evaluate(dtp.vn_t{k}))
 end
 
-for k=1:length(vnf.nv)
-    disp(evaluate(vnf.nv{k}))
+for k=1:length(dtp.nv_t)
+    disp(evaluate(dtp.nv_t{k}))
+end
+
+disp('Initial box constraints:')
+
+for k=1:length(dtp.vn_t0)
+    disp(evaluate(dtp.vn_t0{k}))
+end
+
+for k=1:length(dtp.nv_t0)
+    disp(evaluate(dtp.nv_t0{k}))
+end
+
+disp('Final box constraints:')
+
+for k=1:length(dtp.vn_tf)
+    disp(evaluate(dtp.vn_tf{k}))
+end
+
+for k=1:length(dtp.nv_tf)
+    disp(evaluate(dtp.nv_tf{k}))
 end
 
 disp('General constraints:')
-for k=1:length(vnf.ve)
-    disp(evaluate(vnf.ve{k}))
+for k=1:length(dtp.ve)
+    disp(evaluate(dtp.ve{k}))
 end
 
-for k=1:length(vnf.ev)
-    disp(evaluate(vnf.ev{k}))
+for k=1:length(dtp.ev)
+    disp(evaluate(dtp.ev{k}))
 end
 
-for k=1:length(hsrf.vv)
+for k=1:length(dtp.vv)
     disp(evaluate(hsrf.vv{k}))
 end
 
-for k=1:length(hsrf.ee)
-    disp(evaluate(hsrf.ee{k}))
+for k=1:length(dtp.ee)
+    disp(evaluate(dtp.ee{k}))
 end
 
 
