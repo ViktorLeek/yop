@@ -77,10 +77,10 @@ classdef ast_timepoint < yop.ast_expression
             bool = true(size(obj.expr));
             switch class(obj.timepoint)    
                 case 'yop.ast_independent_initial'
-                    tp = -inf(size(obj.expr)); % -inf represent t0
+                    tp = yop.initial_timepoint(size(obj.expr));
                     
                 case 'yop.ast_independent_final'
-                    tp = inf(size(obj.expr)); %  inf represent tf
+                    tp = yop.final_timepoint(size(obj.expr));
                     
                 otherwise
                     % numeric types

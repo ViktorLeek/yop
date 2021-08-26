@@ -7,7 +7,6 @@ classdef ocp_state < yop.node
         lb   % lower bound
         ubf  % final upper bound
         lbf  % final lower bound
-        
     end
     methods
         function obj = ocp_state(var)

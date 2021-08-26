@@ -125,7 +125,7 @@ classdef ast_subsasgn < yop.ast_expression
                 topological_sort(obj.s, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.d, visited, topsort, n_elem);
+                topological_sort(obj.b, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;

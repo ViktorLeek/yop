@@ -9,9 +9,13 @@ x.m_value = [x1; x2; x3; x4];
 
 [t, t0, tf] = yop.independent();
 
-v3 = v(3);
+v33 = v(3);
+v11 = v(1);
+x44 = x(4);
 
-mix = [v(1); x(1); v(2); x(2); v3(t0); x(3); v(4); x(4)];
+mix = [v(1); x(1); v(2); x(2); v33(t0); x(3); v(4); x(4)];
+mix(1) = v11(t==4);
+mix(end) = x44(tf);
 m67 = mix([6,7]);
 c1 = 1 <= [mix; mix(3)*2; exp(norm(m67)); mix] <= [v(2); v(3).^x(2); 2*ones(16,1)]; 
 % 
