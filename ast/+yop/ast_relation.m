@@ -292,7 +292,9 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
             idx = builtin('end', ones(size(obj)), k, n);
         end
         
-        
+        function fn_hdl = get_constructor(obj)
+            eval(['fn_hdl = @(lhs, rhs) ', class(obj), '(lhs, rhs);']);
+        end
         
         function rels = get_relations(obj)
             l = get_relations(obj.lhs);

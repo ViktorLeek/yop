@@ -24,6 +24,7 @@ classdef ast_subsref < yop.ast_expression
         
         function idx = get_indices(obj)
             % Return the indices this subsref node refers to
+            % persistant variable for idx?
             node_val = obj.node.m_value;
             sz = size(obj.node);
             obj.node.m_value = reshape(1:prod(sz), sz);
@@ -32,14 +33,23 @@ classdef ast_subsref < yop.ast_expression
             obj.node.m_value = node_val;
         end
         
-        function bool = isa_variable(obj)
-            bool = isa_variable(obj.node);
-            bool = bool(get_indices(obj));
+        function [bool, id] = isa_variable(obj)
+            [bool, id] = isa_variable(obj.node);
+            idx = get_indices(obj);
+            bool = bool(idx);
+            id = id(idx);
         end
         
         function bool = isa_numeric(obj)
             bool = isa_numeric(obj.node);
             bool = bool(get_indices(obj));            
+        end
+        
+        function [bool, tp] = isa_timepoint(obj)
+            [bool, tp] = isa_timepoint(obj.node);
+            idx = get_indices(obj);
+            bool = bool(idx);
+            tp = tp(idx);
         end
         
         function var = get_variable(obj)
@@ -61,10 +71,13 @@ classdef ast_subsref < yop.ast_expression
             draw(obj.node);
             end_child(obj);
             
-            
             str = [];
             for k=1:length(obj.s.subs)
-                str = [str, '[', num2str(obj.s.subs{k}), '], '];
+                idx = obj.s.subs{k};
+                if size(idx,1) > size(idx,2)
+                    idx = idx';
+                end
+                str = [str, '[', num2str(idx), '], '];
             end
             last_child(obj);
             fprintf(['{', str(1:end-2), '}\n']);

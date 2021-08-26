@@ -17,10 +17,28 @@ classdef ast_subsasgn < yop.ast_expression
         
         function boolv = isa_numeric(obj)
             % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used.
+            % alternative solution, such as a DFS can be used, or an
+            % instance variable to remember the answer (assumes graph is
+            % static)
             boolv = isa_numeric(obj.node);
             idx = get_indices(obj);
             boolv(idx) = isa_numeric(obj.b);
+        end
+        
+        function [bool, id] = isa_variable(obj)
+            [bool, id] = isa_variable(obj.node);
+            [boolb, idb] = isa_variable(obj.b);
+            idx = get_indices(obj);
+            bool(idx) = boolb;
+            id(idx) = idb;
+        end
+        
+        function [bool, tp] = isa_timepoint(obj)
+            [bool, tp] = isa_timepoint(obj.node);
+            idx = get_indices(obj);
+            [boolb, tpb] = isa_timepoint(obj.b);
+            bool(idx) = boolb;
+            tp(idx) = tpb;
         end
         
         function value = evaluate(obj)
@@ -42,12 +60,6 @@ classdef ast_subsasgn < yop.ast_expression
             idx = subsref(value(obj.node), obj.s); % eval as subsasgn
             idx = idx(:);
             obj.node.m_value = node_val;
-        end
-        
-        function bool = isa_variable(obj)
-            bool = isa_variable(obj.node);
-            idx = get_indices(obj);
-            bool(idx) = isa_variable(obj.b);
         end
         
         function draw(obj)

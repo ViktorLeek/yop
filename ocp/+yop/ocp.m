@@ -71,145 +71,52 @@ classdef ocp < handle
         end
         
         function obj = parse_constraints(obj)            
-            cons = yop.to_srf(obj.constraints);
+            srf = yop.to_srf(obj.constraints);
+            hsrf = yop.to_hsrf(srf.get_relations());
+            vnf = yop.to_vnf(hsrf);
+            obj.match_box_constraints(vnf.vn);
+            obj.match_box_constraints(vnf.nv);
             
-            for k=1:length(cons)
-                ck = yop.classify_constraint(cons{k});
-                switch class(ck)
-                    case 'yop.differential_constraint'
-                        obj.add_ode(ck);
-                        
-                    case 'yop.algebraic_contraint'
-                        obj.add_algebraic_eq(ck);
-                        
-                    case 'yop.box_initial_equality'
-                        var = get_variable(ck.var);
-                        
-                        switch class(var)
-                            case 'yop.ast_independent'
-                                % What type of constraint is this??
-                                % initial and ast_independent??
-                                % Should be t(t0) - have to increase
-                                % ocp_independent class.
-                            case 'yop.ast_independent_initial'
-                            case 'yop.ast_independent_final'
-                            case 'yop.ast_state'
-                            case 'yop.ast_algebraic'
-                            case 'yop.ast_control'
-                            case 'yop.ast_parameter'
-                            otherwise
-                                error('[Yop] Error: Unknown data type.');
-                        end
-                        
-                    case 'yop.box_equality'
-                        
-                        % Need to match which variable the box constraint
-                        % concernes. So the underlying variable of th
-                        % contraint is found, and based on its type the
-                        % same variable is found in ocp object. Once a
-                        % match between the variables is found, it is
-                        % possible to extract the box constraint values
-                        % and set in the ocp_[type] object.
-                        var = get_variable(ck.var);
-                        
-                        switch class(var)
-                            case 'yop.ast_independent'
-                            case 'yop.ast_independent_initial'
-                                t = obj.get_matching_independent_initial(var);
-                                t.set_ub(ck);
-                                t.set_lb(ck);
-                            case 'yop.ast_independent_final'
-                            case 'yop.ast_state'
-                            case 'yop.ast_algebraic'
-                            case 'yop.ast_control'
-                            case 'yop.ast_parameter'
-                            otherwise
-                                %error('[Yop] Error: Unknown data type.');
-                        end
-                        
-                    case 'yop.box_final_equality'
-                    case 'yop.box_initial_upper'
-                    case 'yop.box_upper'
-                    case 'yop.box_final_upper'
-                    case 'yop.box_initial_lower'
-                    case 'yop.box_lower'
-                    case 'yop.box_final_lower'
-                    case 'yop.inequality_constraint'
-                    case 'yop.equality_constraint'
-                    otherwise
-                        error('[Yop] Error: Unknown constraint type.')
-                end
+        end
+        
+        function obj = match_box_constraints(obj, vnf)
+            for k=1:length(vnf.vn)
+                bk = vnf.vn{k};
+                obj.match_box_constraint(class(bk), bk.lhs, bk.rhs);
+            end
+            
+            % The same for nv
+        end
+        
+        function obj = match_box_constraint(obj, class, variable, bound)
+            switch class(bk)
+                case 'yop.ast_eq'
+                    obj.set_box_equality(variable, value, bound);
+                    
+                case {'yop.ast_gt', 'yop.ast_ge'}
+                    
+                case {'yop.ast_lt', 'yop.ast_le'}
+                    
+                otherwise
+                    error(['[Yop] Error: Illegal relation for a ', ...
+                        'box constraint.']);
             end
         end
         
-        function v = get_matching_independent(obj, v2m)
-            % v2m - variable to match
-            for v = obj.independent
-                if isequal(v.var, v2m)
-                    return;
-                end
-            end
-            error('[Yop] Error: Could not match variable.')
-        end
-        
-        function v = get_matching_independent_initial(obj, v2m)
-            % v2m - variable to match
-            for v = obj.independent_initial
-                if isequal(v.var, v2m)
-                    return;
-                end
-            end
-            error('[Yop] Error: Could not match variable.')
-        end
-        
-        function v = get_matching_independent_final(obj, v2m)
-            % v2m - variable to match
-            for v = obj.independent_final
-                if isequal(v.var, v2m)
-                    return;
-                end
-            end
-            error('[Yop] Error: Could not match variable.')
-        end
-        
-        function v = get_matching_state(obj, v2m)
-            % v2m - variable to match
-            for v = obj.states
-                if isequal(v.var, v2m)
-                    return;
-                end
-            end
-            error('[Yop] Error: Could not match variable.')
-        end
-        
-        function v = get_matching_algebraic(obj, v2m)
-            % v2m - variable to match
-            for v = obj.algebraics
-                if isequal(v.var, v2m)
-                    return;
-                end
-            end
-            error('[Yop] Error: Could not match variable.')
-        end
-        
-        function v = get_matching_control(obj, v2m)
-            % v2m - variable to match
-            for v = obj.controls
-                if isequal(v.var, v2m)
-                    return;
-                end
-            end
-            error('[Yop] Error: Could not match variable.')
-        end
-        
-        function v = get_matching_parameters(obj, v2m)
-            % v2m - variable to match
-            for v = obj.independent
-                if isequal(v.var, v2m)
-                    return;
-                end
-            end
-            error('[Yop] Error: Could not match variable.')
+        function obj = set_box_equality(obj, variable, value)
+            % 1) Find the variable which the constraint concerns
+            % 2) Get the reaching indices
+            % 3) Get timepoints
+            % 4) For every element
+            %    1) Om det inte är en tp
+            %         - Sätt övre och undre gräns till value
+            %    2) Om det är en tp
+            %         - Sätt övre och undre gräns för tidpunkten
+            %
+            [~, ID] = isa_variable(variable);
+            var = obj.find_variable(unique(ID));
+            [is_tp, tps] = isa_timepoint(variable);
+            
         end
         
         function obj = add_independent(obj, t)

@@ -20,12 +20,18 @@ classdef ast_variable < yop.ast_expression
             obj.dim = [rows, cols];
         end
         
-        function bool = isa_variable(obj)
+        function [bool, id] = isa_variable(obj)
             bool = true(size(obj));
+            id = obj.id*ones(size(obj));
         end
         
         function boolv = isa_numeric(obj)
             boolv = false(size(obj));
+        end
+        
+        function [bool, tp] = isa_timepoint(obj)
+            bool = false(size(obj));
+            tp = zeros(size(obj));
         end
         
         function draw(obj)

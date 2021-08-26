@@ -25,6 +25,32 @@ classdef ast_cat < yop.ast_expression
             boolv = cat(obj.d, tmp{:});
         end
         
+        function [bool, id] = isa_variable(obj)
+            [bool, id] = isa_variable(obj.args{1});
+            tmp_bool = {bool};
+            tmp_id = {id};
+            for k=2:length(obj.args)
+                [bk, ik] = isa_variable(obj.args{k});
+                tmp_bool = {tmp_bool{:}, bk};
+                tmp_id = {tmp_id{:}, ik};
+            end      
+            bool = cat(obj.d, tmp_bool{:});
+            id = cat(obj.d, tmp_id{:});
+        end
+        
+        function [bool, tp] = isa_timepoint(obj)
+            [bool, tp] = isa_timepoint(obj.args{1});
+            tmp_bool = {bool};
+            tmp_tp = {tp};
+            for k=2:length(obj.args)
+                [bk, tk] = isa_timepoint(obj.args{k});
+                tmp_bool = {tmp_bool{:}, bk};
+                tmp_tp = {tmp_tp{:}, tk};
+            end
+            bool = cat(obj.d, tmp_bool{:});
+            tp = cat(obj.d, tmp_tp{:});
+        end
+        
         function value = evaluate(obj)
             tmp = cell(size(obj.args));
             for k=1:length(tmp)
@@ -40,14 +66,6 @@ classdef ast_cat < yop.ast_expression
             end
             obj.m_value = cat(value(obj.d), tmp{:});
             v = obj.m_value;
-        end
-        
-        function bool = isa_variable(obj)
-            tmp = {isa_variable(obj.args{1})};
-            for k=2:length(obj.args)
-                tmp = {tmp{:}, isa_variable(obj.args{k})};
-            end      
-            bool = cat(obj.d, tmp{:});
         end
         
         function draw(obj)

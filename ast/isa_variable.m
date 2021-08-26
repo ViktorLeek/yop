@@ -1,4 +1,4 @@
-function bool = isa_variable(obj)
+function [bool, id] = isa_variable(obj)
 bool = false(size(obj));
-bool = bool(:);
+id = -ones(size(obj));
 end

@@ -9,6 +9,12 @@ classdef ast_abs < yop.ast_expression
             obj.dim = size(expr);
         end
         
+        function boolv = isa_numeric(obj)
+            % Potentially very slow. If it turns out to be too slow an
+            % alternative solution, such as a DFS can be used.
+            boolv = isa_numeric(obj.expr);
+        end
+        
         function value = evaluate(obj)
             value = abs(evaluate(obj.expr));
         end
@@ -16,12 +22,6 @@ classdef ast_abs < yop.ast_expression
         function v = forward(obj)
             obj.m_value = abs(value(obj.expr));
             v = obj.m_value;
-        end
-        
-        function boolv = isa_numeric(obj)
-            % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used.
-            boolv = isa_numeric(obj.expr);
         end
         
         function draw(obj)

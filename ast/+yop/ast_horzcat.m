@@ -13,12 +13,30 @@ classdef ast_horzcat < yop.ast_expression
             obj.dim = size(horzcat(tmp{:}));
         end
         
+        function [bool, id] = isa_variable(obj)
+            [bool, id] = isa_variable(obj.args{1});
+            for k=2:length(obj.args)
+                [bk, ik] = isa_variable(obj.args{k});
+                bool = [bool, bk];
+                id = [id, ik];
+            end       
+        end
+        
         function boolv = isa_numeric(obj)
             % Potentially very slow. If it turns out to be too slow an
             % alternative solution, such as a DFS can be used.
             boolv = isa_numeric(obj.args{1});
             for k=2:length(obj.args)
                 boolv = [boolv, isa_numeric(obj.args{k})];
+            end
+        end
+        
+        function [bool, tp] = isa_timepoint(obj)
+            [bool, tp] = isa_timepoint(obj.args{1});
+            for k=2:length(obj.args)
+                [bk, tk] = isa_timepoint(obj.args{k});
+                bool = [bool, bk];
+                tp = [tp, tk];
             end
         end
         
@@ -37,13 +55,6 @@ classdef ast_horzcat < yop.ast_expression
             end
             obj.m_value = horzcat(tmp{:});
             v = obj.m_value;
-        end
-        
-        function bool = isa_variable(obj)
-            bool = isa_variable(obj.args{1});
-            for k=2:length(obj.args)
-                bool = [bool, isa_variable(obj.args{k})];
-            end     
         end
         
         function draw(obj)

@@ -7,7 +7,7 @@ classdef ast_eq < yop.ast_relation
     methods
         function obj = ast_eq(lhs, rhs)
             obj@yop.ast_relation(lhs, rhs);
-            obj.dim = eq(ones(size(lhs)), ones(size(rhs)));
+            obj.dim = size(eq(ones(size(lhs)), ones(size(rhs))));
         end
         
         function value = evaluate(obj)

@@ -17,11 +17,19 @@ classdef ast_timepoint < yop.ast_expression
                     if isa(tp.lhs, 'yop.ast_independent') && ...
                             isnumeric(tp.rhs)
                         % t == 2
+                        if isinf(tp.rhs)
+                            error(['[Yop] Error: inf is not a '...
+                                'valid timepoint']);
+                        end
                         timepoint = tp.rhs;
                         
                     elseif isnumeric(tp.lhs) && ...
                             isa(tp.rhs, 'yop.ast_independent')
                         % 2 == t
+                        if isinf(tp.lhs)
+                            error(['[Yop] Error: inf is not a '...
+                                'valid timepoint']);
+                        end
                         timepoint = tp.lhs;
                         
                     elseif isa(tp.lhs, 'yop.ast_independent') && ...
@@ -42,10 +50,14 @@ classdef ast_timepoint < yop.ast_expression
                         
                     end
                     
-                case {'yop.ast_independent', ...
-                      'yop.ast_independent_initial' ...
+                case {'yop.ast_independent_initial', ...
                       'yop.ast_independent_final'}
                   timepoint = tp;
+                  
+                case 'yop.ast_independent'
+                  error(['[yop] Error: Do not specify the independent', ...
+                      ' variable as a timepoint. It represents the '...
+                      'evolution of time, not a timepoint'])
                   
                 otherwise
                     error('[yop] Error: Illegal relation for a timepoint');
@@ -59,6 +71,21 @@ classdef ast_timepoint < yop.ast_expression
             % Potentially very slow. If it turns out to be too slow an
             % alternative solution, such as a DFS can be used.
             boolv = isa_numeric(obj.expr);
+        end
+        
+        function [bool, tp] = isa_timepoint(obj)
+            bool = true(size(obj.expr));
+            switch class(obj.timepoint)    
+                case 'yop.ast_independent_initial'
+                    tp = -inf(size(obj.expr)); % -inf represent t0
+                    
+                case 'yop.ast_independent_final'
+                    tp = inf(size(obj.expr)); %  inf represent tf
+                    
+                otherwise
+                    % numeric types
+                    tp = obj.timepoint*ones(size(obj.expr));
+            end
         end
         
         function value = evaluate(obj)
@@ -76,8 +103,8 @@ classdef ast_timepoint < yop.ast_expression
             v = obj.m_value;
         end
         
-        function bool = isa_variable(obj)
-            bool = isa_variable(obj.expr);
+        function [bool, id] = isa_variable(obj)
+            [bool, id] = isa_variable(obj.expr);
         end
         
         function draw(obj)

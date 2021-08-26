@@ -11,7 +11,7 @@ end
 
 for k=1:length(hsrf.ve)
     rk = hsrf.ve{k};
-    constructor = yop.get_constructor(rk);
+    f = get_constructor(rk);
     
     % In order to split the variables it is first necessary to
     % deterimine the variables that reaches the definition of
@@ -24,9 +24,9 @@ for k=1:length(hsrf.ve)
         if ~isempty(rv(n).reaching)
             idx = rv(n).index;
             if isscalar(rk.rhs)
-                node = yop.ast_le(rk.lhs(idx), rk.rhs);
+                node = f(rk.lhs(idx), rk.rhs);
             else
-                node = yop.ast_le(rk.lhs(idx), rk.rhs(idx));
+                node = f(rk.lhs(idx), rk.rhs(idx));
             end
             svhsrf.add_ve(node);
         end
@@ -39,7 +39,7 @@ end
 
 for k=1:length(hsrf.ev)
     rk = hsrf.ev{k};
-    constructor = yop.get_constructor(rk);
+    f = get_constructor(rk);
     
     % In order to split the variables it is first necessary to
     % deterimine the variables that reaches the definition of
@@ -52,9 +52,9 @@ for k=1:length(hsrf.ev)
         if ~isempty(rv(n).reaching)
             idx = rv(n).index;
             if isscalar(rk.lhs)
-                node = yop.ast_le(rk.lhs, rk.rhs(idx));
+                node = f(rk.lhs, rk.rhs(idx));
             else
-                node = yop.ast_le(rk.lhs(idx), rk.rhs(idx));
+                node = f(rk.lhs(idx), rk.rhs(idx));
             end
             svhsrf.add_ev(node);
         end

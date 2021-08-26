@@ -7,7 +7,7 @@ classdef ast_lt < yop.ast_relation
     methods
         function obj = ast_lt(lhs, rhs)
             obj@yop.ast_relation(lhs, rhs);
-            obj.dim = lt(ones(size(lhs)), ones(size(rhs)));
+            obj.dim = size(lt(ones(size(lhs)), ones(size(rhs))));
         end
         
         function value = evaluate(obj)

@@ -1,4 +1,4 @@
-function vnf = to_vnf(svhsrf, vnf)
+function vnf = to_vnf(hsrf, vnf)
 % To variable-numeric form
 % Last step before it can be distinguhised which constraints are box and
 % which are other constraints
@@ -7,9 +7,14 @@ if nargin == 1
     vnf = yop.vnf_data();
 end
 
-for k=1:length(svhsrf.ve)
-    rk = svhsrf.ve{k};
-    cnstrctr = yop.get_constructor(rk);
+% Even though not all relations are affected by the transformation, the
+% relations still represent the complete constraint set, so all relations
+% that are not affected are copied.
+vnf.add_vv(hsrf.vv);
+vnf.add_ee(hsrf.ee);
+
+for k=1:length(hsrf.ve)
+    rk = hsrf.ve{k};
     
     nums = isa_numeric(rk.rhs);
     
@@ -20,14 +25,14 @@ for k=1:length(svhsrf.ve)
         vnf.add_ve(rk);
         
     else
-        vnf.add_vn(cnstrctr(rk.lhs( nums), rk.rhs( nums)));
-        vnf.add_ve(cnstrctr(rk.lhs(~nums), rk.rhs(~nums)));
+        vnf.add_vn( get_subrelation(rk,  nums) );
+        vnf.add_ve( get_subrelation(rk, ~nums) );
     end 
+    
 end
 
-for k=1:length(svhsrf.ev)
-    rk = svhsrf.ev{k};
-    cnstrctr = yop.get_constructor(rk);
+for k=1:length(hsrf.ev)
+    rk = hsrf.ev{k};
     
     nums = isa_numeric(rk.lhs);
     
@@ -38,9 +43,31 @@ for k=1:length(svhsrf.ev)
         vnf.add_ev(rk);
         
     else
-        vnf.add_nv(cnstrctr(rk.lhs( nums), rk.rhs( nums)));
-        vnf.add_ev(cnstrctr(rk.lhs(~nums), rk.rhs(~nums)));
+        vnf.add_nv( get_subrelation(rk,  nums) );
+        vnf.add_ev( get_subrelation(rk, ~nums) );
     end 
 end
+
+end
+
+function sr = get_subrelation(relation, idx)
+% Since indices might be scaled and variables can be scalars it is
+% necessary to test if it is possible to take the subindices of the
+% relations.
+
+if isscalar(relation.rhs)
+    rhs = relation.rhs;
+else
+    rhs = relation.rhs(idx);
+end
+
+if isscalar(relation.lhs)
+    lhs = relation.lhs;
+else
+    lhs = relation.lhs(idx);
+end
+
+f  = get_constructor(relation);
+sr = f(lhs, rhs);
 
 end

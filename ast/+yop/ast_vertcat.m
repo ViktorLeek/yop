@@ -21,6 +21,24 @@ classdef ast_vertcat < yop.ast_expression
             end
         end
         
+        function [bool, tp] = isa_timepoint(obj)
+            [bool, tp] = isa_timepoint(obj.args{1});
+            for k=2:length(obj.args)
+                [bk, tk] = isa_timepoint(obj.args{k});
+                bool = [bool; bk];
+                tp = [tp; tk];
+            end
+        end
+        
+        function [bool, id] = isa_variable(obj)
+            [bool, id] = isa_variable(obj.args{1});
+            for k=2:length(obj.args)
+                [bk, ik] = isa_variable(obj.args{k});
+                bool = [bool; bk];
+                id = [id; ik];
+            end       
+        end
+        
         function value = evaluate(obj)
             tmp = cell(size(obj.args));
             for k=1:length(tmp)
@@ -36,13 +54,6 @@ classdef ast_vertcat < yop.ast_expression
             end
             obj.m_value = vertcat(tmp{:});
             v = obj.m_value;
-        end
-        
-        function bool = isa_variable(obj)
-            bool = isa_variable(obj.args{1});
-            for k=2:length(obj.args)
-                bool = [bool; isa_variable(obj.args{k})];
-            end       
         end
 
         function draw(obj)

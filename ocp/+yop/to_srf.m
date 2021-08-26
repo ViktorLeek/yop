@@ -1,7 +1,4 @@
-function srf = to_srf(constraints, srf)
-% OBJ BORDE VARA EN CELL MED ALLA RELATIONER OCH DETTA BORDE
-% LIGGA SO EN FUNKTION
-
+function srf = to_srf(constraints_cell, srf)
 % to_srl - To single relation form
 %   From the current node, finds all relations, and creates a
 %   node with a single relation, for all relations withing this
@@ -11,9 +8,9 @@ if nargin == 1
     srf = yop.srf_data();
 end
 
-for n=1:length(constraints)
+for n=1:length(constraints_cell)
     % Find all 'ast_relation' nodes in the constraints
-    relations = get_relations(constraints{n});
+    relations = get_relations(constraints_cell{n});
     
     % Convert the relations to srf
     for k=1:length(relations)

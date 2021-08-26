@@ -1,16 +1,16 @@
-function hsrf = to_hsrf(srf_cell, hsrf)
-% Transform representation to homogeneous single relation form
-% split the srf into relations that do not mix
-% expressions and variables on the same side. It is either:
-%   1) vv: var  <= var
-%   2) ve: var  <= expr
-%   3) ev: expr <= var
-%   4) ee: expr <= expr
-%   :) u is for unknown
-% Never: [expr; var] <= some_value
-%
-% srf - A single relation on srf form
-% rel - function handle to the
+function hsrf = to_hsrf(relations, hsrf)
+% Transform representation to homogeneous single relation form.
+%   Split the srf into relations that do not mix expressions and variables 
+%   on the same side. It is either:
+%     1) vv: var  <= var
+%     2) ve: var  <= expr
+%     3) ev: expr <= var
+%     4) ee: expr <= expr
+%     :) u is for unknown
+%   Never: [expr; var] <= some_value
+% 
+%   Furthermore, it also separates the variables so that ve and ev 
+%   relations only contains variables with a unique ID
 
 if nargin == 1
     hsrf = yop.hsrf_data();
@@ -18,71 +18,77 @@ else
     hsrf.clear_unknown();
 end
 
-for n=1:length(srf_cell)
-    rn = srf_cell{n};
+for n=1:length(relations)
+    %% Split relation into var-unknowns and expr-unknowns
+    rn = relations{n};
+    [var, ID] = isa_variable_helper(rn, 'lhs');
     
-    % Function handle to the class contructor
-    cnstrctr = yop.get_constructor(rn);
-    
-    % First process lhs
-    vars = isa_variable(rn.lhs);
-    
-    if all(vars)
-        % No need to split if all are variables
-        hsrf.add_vu(rn);
-        
-    elseif all(~vars)
-        % No need to split if none are variables
-        hsrf.add_eu(rn);
-        
-    elseif isscalar(rn.rhs)
-        % Cannot access subindices of scalars
-        hsrf.add_vu(cnstrctr(rn.lhs( vars), rn.rhs));
-        hsrf.add_eu(cnstrctr(rn.lhs(~vars), rn.rhs));
-    else
-        hsrf.add_vu(cnstrctr(rn.lhs( vars), rn.rhs( vars)));
-        hsrf.add_eu(cnstrctr(rn.lhs(~vars), rn.rhs(~vars)));
+    % Add variable-unknown relation
+    for u = yop.row_vec( unique(ID(var)) )
+        hsrf.add_vu( get_subrelation(rn, ID==u) );
     end
     
+    % Add expression-unknown relation
+    hsrf.add_eu( get_subrelation(rn, ~var) );
     
+    %% Split var-unknown into var-var and var-expr
+    % Process all variable-unknown
     for k=1:length(hsrf.vu)
-        rk = hsrf.vu{k};
-        vars = isa_variable(rk.rhs);
-        
-        if all(vars)
-            hsrf.add_vv(rk);
-            
-        elseif all(~vars)
-            hsrf.add_ve(rk);
-            
-        elseif isscalar(rk.lhs)
-            hsrf.add_vv(cnstrctr(rk.lhs, rk.rhs( vars)));
-            hsrf.add_ve(cnstrctr(rk.lhs, rk.rhs(~vars)));
-        else
-            hsrf.add_vv(cnstrctr(rk.lhs( vars), rk.rhs( vars)));
-            hsrf.add_ve(cnstrctr(rk.lhs(~vars), rk.rhs(~vars)));
+        ck = hsrf.vu{k};
+        [var, ID] = isa_variable_helper(ck, 'rhs');
+        for u = yop.row_vec(unique(ID(var)))
+            hsrf.add_vv( get_subrelation(ck, ID==u) );
         end
+        hsrf.add_ve( get_subrelation(ck, ~var) );
     end
     
+    %% Split expr-unknown into expr-var and expr-expr
     for k=1:length(hsrf.eu)
-        rk = hsrf.eu{k};
-        vars = isa_variable(rk.rhs);
-        
-        if all(vars)
-            hsrf.add_ev(rk);
-            
-        elseif all(~vars)
-            hsrf.add_ee(rk);
-            
-        elseif isscalar(rk.lhs)
-            hsrf.add_ev(cnstrctr(rk.lhs, rk.rhs( vars)));
-            hsrf.add_ee(cnstrctr(rk.lhs, rk.rhs(~vars)));
-        else
-            hsrf.add_ev(cnstrctr(rk.lhs( vars), rk.rhs( vars)));
-            hsrf.add_ee(cnstrctr(rk.lhs(~vars), rk.rhs(~vars)));
+        ck = hsrf.eu{k};
+        [var, ID] = isa_variable_helper(ck, 'rhs');
+        for u = yop.row_vec( unique(ID(var)) )
+            hsrf.add_ev( get_subrelation(ck, ID==u) );
         end
+        hsrf.add_ee( get_subrelation(ck, ~var) );
     end
     
+    %% Reset unknown in order not to process any relation twice
     hsrf.clear_unknown();
 end
+
+end
+
+function [vars, ID] = isa_variable_helper(relation, side)
+% If one side is scalar, the other can be something different.
+% The values are therefore scaled according to the size of the
+% relation, which has a valid size.
+
+[vars, ID] = isa_variable(relation.(side));
+
+if isscalar(relation.(side))
+    vars = vars & true(size(relation));
+    ID = ID * ones(size(relation));
+end
+end
+
+function sr = get_subrelation(relation, idx)
+% Since indices might be scaled and variables can be scalars it is
+% necessary to test if it is possible to take the subindices of the
+% relations.
+
+if isscalar(relation.rhs)
+    rhs = relation.rhs;
+else
+    rhs = relation.rhs(idx);
+end
+
+if isscalar(relation.lhs)
+    lhs = relation.lhs;
+else
+    lhs = relation.lhs(idx);
+end
+
+f  = get_constructor(relation);
+sr = f(lhs, rhs);
+
 end
