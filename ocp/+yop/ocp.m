@@ -1,11 +1,6 @@
 classdef ocp < handle
     properties
-        objective
-        constraints
-        variables
-        box
-        equality
-        inequality
+        % Variables
         independent
         independent_initial
         independent_final
@@ -13,8 +8,20 @@ classdef ocp < handle
         algebraics
         controls
         parameters
-        alg_eqs  % algebraic equations
+        
+        % odes and algebraic eq's
+        alg_eqs
         odes
+        
+        % objective
+        objective
+        
+        % Unparsed constraints
+        constraints
+        
+        % Parsed constraints
+        equality = {}; % Temporary cell
+        inequality = {}; % Temporary cell
     end
     methods
         function obj = ocp()
@@ -33,12 +40,13 @@ classdef ocp < handle
         end
         
         function obj = build(obj)
+            % Reset problem before building?
             obj.parse_variables();
             obj.parse_constraints();
         end
         
         function obj = parse_variables(obj)
-            vars = yop.get_variables({obj.objective, obj.constraints{:}});
+            vars = get_variables({obj.objective, obj.constraints{:}});
             for k=1:length(vars)
                 vk = vars{k};
                 switch class(vk)
@@ -70,249 +78,432 @@ classdef ocp < handle
             end
         end
         
-        function obj = parse_constraints(obj)            
+        function obj = parse_constraints(obj)
             srf = yop.to_srf(obj.constraints);
             hsrf = yop.to_hsrf(srf.get_relations());
             vnf = yop.to_vnf(hsrf);
             dtp = yop.to_dtp(vnf);
             
-            % Box constraints
+            % Box constraints: var-num
             for k=1:length(dtp.vn_t)
-                obj.add_box(dtp.vn_t{k});
+                bc = dtp.vn_t{k};
+                var_expr = bc.lhs;
+                bnd = dummy_evaluate(bc.rhs);
+                re = yop.reaching_elements(var_expr);
+                var = obj.find_variable(re.var.id);
+                switch class(bc)
+                    case 'yop.ast_eq' % var == bnd
+                        var.ub(re.idx_var) = bnd(re.idx_expr);
+                        var.lb(re.idx_var) = bnd(re.idx_expr);
+                    case {'yop.ast_le', 'yop.ast_lt'} % var < bnd
+                        var.ub(re.idx_var) = bnd(re.idx_expr);
+                    case {'yop.ast_ge', 'yop.ast_gt'} % var > bnd
+                        var.lb(re.idx_var) = bnd(re.idx_expr);
+                    otherwise
+                        error('[Yop] Error: Wrong constraint class.');
+                end
             end
             
+            % Box constraints: var-num, t==t0
             for k=1:length(dtp.vn_t0)
-                obj.add_box0(dtp.vn_t0{k});
+                bc = dtp.vn_t0{k};
+                var_expr = bc.lhs;
+                bnd = dummy_evaluate(bc.rhs);
+                re = yop.reaching_elements(var_expr);
+                var = obj.find_variable(re.var.id);
+                switch class(bc)
+                    case 'yop.ast_eq' % var == bnd
+                        var.ub0(re.idx_var) = bnd(re.idx_expr);
+                        var.lb0(re.idx_var) = bnd(re.idx_expr);
+                    case {'yop.ast_le', 'yop.ast_lt'} % var < bnd
+                        var.ub0(re.idx_var) = bnd(re.idx_expr);
+                    case {'yop.ast_ge', 'yop.ast_gt'} % var > bnd
+                        var.lb0(re.idx_var) = bnd(re.idx_expr);
+                    otherwise
+                        error('[Yop] Error: Wrong constraint class.');
+                end
             end
             
+            % Box constraints: var-num, t==tf
             for k=1:length(dtp.vn_tf)
-                obj.add_boxf(dtp.vn_tf{k});
+                bc = dtp.vn_tf{k};
+                var_expr = bc.lhs;
+                bnd = dummy_evaluate(bc.rhs);
+                re = yop.reaching_elements(var_expr);
+                var = obj.find_variable(re.var.id);
+                switch class(bc)
+                    case 'yop.ast_eq' % var == bnd
+                        var.ubf(re.idx_var) = bnd(re.idx_expr);
+                        var.lbf(re.idx_var) = bnd(re.idx_expr);
+                    case {'yop.ast_le', 'yop.ast_lt'} % var < bnd
+                        var.ubf(re.idx_var) = bnd(re.idx_expr);
+                    case {'yop.ast_ge', 'yop.ast_gt'} % var > bnd
+                        var.lbf(re.idx_var) = bnd(re.idx_expr);
+                    otherwise
+                        error('[Yop] Error: Wrong constraint class.');
+                end
             end
             
+            % Box constraints: num-var
             for k=1:length(dtp.nv_t)
-                obj.add_box(dtp.nv_t{k});
+                bc = dtp.nv_t{k};
+                var_expr = bc.rhs;
+                bnd = dummy_evaluate(bc.lhs);
+                re = yop.reaching_elements(var_expr);
+                var = obj.find_variable(re.var.id);
+                switch class(bc)
+                    case 'yop.ast_eq' % bnd == var
+                        var.ub(re.idx_var) = bnd(re.idx_expr);
+                        var.lb(re.idx_var) = bnd(re.idx_expr);
+                    case {'yop.ast_le', 'yop.ast_lt'} % bnd < var
+                        var.lb(re.idx_var) = bnd(re.idx_expr);
+                    case {'yop.ast_ge', 'yop.ast_gt'} % bnd > var
+                        var.ub(re.idx_var) = bnd(re.idx_expr);
+                    otherwise
+                        error('[Yop] Error: Wrong constraint class.');
+                end
             end
             
+            % Box constraints: num-var, t==t0
             for k=1:length(dtp.nv_t0)
-                obj.add_box0(dtp.nv_t0{k});
+                bc = dtp.nv_t0{k};
+                var_expr = bc.rhs;
+                bnd = dummy_evaluate(bc.lhs);
+                re = yop.reaching_elements(var_expr);
+                var = obj.find_variable(re.var.id);
+                switch class(bc)
+                    case 'yop.ast_eq' % bnd == var
+                        var.ub0(re.idx_var) = bnd(re.idx_expr);
+                        var.lb0(re.idx_var) = bnd(re.idx_expr);
+                    case {'yop.ast_le', 'yop.ast_lt'} % bnd < var
+                        var.lb0(re.idx_var) = bnd(re.idx_expr);
+                    case {'yop.ast_ge', 'yop.ast_gt'} % bnd > var
+                        var.ub0(re.idx_var) = bnd(re.idx_expr);
+                    otherwise
+                        error('[Yop] Error: Wrong constraint class.');
+                end
             end
             
+            % Box constraints: num-var, t==tf
             for k=1:length(dtp.nv_tf)
-                obj.add_boxf(dtp.nv_tf{k});
+                bc = dtp.nv_tf{k};
+                var_expr = bc.rhs;
+                bnd = dummy_evaluate(bc.lhs);
+                re = yop.reaching_elements(var_expr);
+                var = obj.find_variable(re.var.id);
+                switch class(bc)
+                    case 'yop.ast_eq' % bnd == var
+                        var.ubf(re.idx_var) = bnd(re.idx_expr);
+                        var.lbf(re.idx_var) = bnd(re.idx_expr);
+                    case {'yop.ast_le', 'yop.ast_lt'} % bnd < var
+                        var.lbf(re.idx_var) = bnd(re.idx_expr);
+                    case {'yop.ast_ge', 'yop.ast_gt'} % bnd > var
+                        var.ubf(re.idx_var) = bnd(re.idx_expr);
+                    otherwise
+                        error('[Yop] Error: Wrong constraint class.');
+                end
             end
             
             % Path constraints
-        end
-        
-        function obj = match_box_constraints(obj, vnf)
-            for k=1:length(vnf.vn)
-                bk = vnf.vn{k};
-                obj.match_box_constraint(...
-                    class(bk), ...
-                    bk.lhs, ...
-                    dummy_evaluate(bk.rhs) ...
-                    );
+            pc = dtp.get_pathcon();
+            for k=1:length(pc)
+                switch class(pc{k})
+                    case 'yop.ast_eq'
+                        c = yop.ast_eq(pc{k}.lhs - pc{k}.rhs, 0);
+                        obj.add_equality(c);
+                    case {'yop.ast_le', 'yop.ast_lt'}
+                        c = yop.ast_le(pc{k}.lhs - pc{k}.rhs, 0);
+                        obj.add_inequality(c);
+                    case {'yop.ast_ge', 'yop.ast_gt'}
+                        c = yop.ast_le(pc{k}.rhs - pc{k}.lhs, 0);
+                        obj.add_inequality(c);
+                end
             end
-            
-            % The same for nv
         end
         
-%         function obj = match_box_constraint(obj, class, variable, bound)
-%             switch class(bk)
-%                 case 'yop.ast_eq'
-%                     obj.set_box_equality(variable, value, bound);
-%                     
-%                 case {'yop.ast_gt', 'yop.ast_ge'}
-%                     
-%                 case {'yop.ast_lt', 'yop.ast_le'}
-%                     
-%                 otherwise
-%                     error(['[Yop] Error: Illegal relation for a ', ...
-%                         'box constraint.']);
-%             end
-%         end
-%         
-%         function obj = set_box_equality(obj, var_expr, value)
-%             % 1) Find the variable which the constraint concerns
-%             % 2) Get the reaching indices
-%             % 3) Get timepoints
-%             % 4) For every element
-%             %    1) Om det inte är en tp
-%             %         - Sätt övre och undre gräns till value
-%             %    2) Om det är en tp
-%             %         - Sätt övre och undre gräns för tidpunkten
-%             %
-%             
-%             re = reaching_elements(var_expr);
-%             assert(length(re)==1, '[Yop] Unexpected error.');
-%             
-%             var = obj.find_variable(re.var.id);
-%             [is_tp, tps] = isa_timepoint(var_expr);
-%             
-%             for k=1:length(is_tp)
-%                 if is_tp(k)
-%                     switch tps(k)
-%                         case yop.initial_timepoint()
-%                             % try-catch? ub0 may not exist
-%                             var.ub0(re.idx_var) = value(re.idx_expr);
-%                             var.lb0(re.idx_var) = value(re.idx_expr);
-%                             
-%                         case yop.final_timepoint()
-%                             var.ubf(re.idx_var) = value(re.idx_expr);
-%                             var.lbf(re.idx_var) = value(re.idx_expr);
-%                             
-%                         otherwise
-%                             % Här har det smugit sig in ett inequality
-%                             % constraint.
-%                             disp('ieq')
-%                     end
-%                 else
-%                     var.ub(re.idx_var) = value(re.idx_expr);
-%                     var.lb(re.idx_var) = value(re.idx_expr);
-%                     
-%                 end
-%             end
-%             
-%         end
+        function vars = variables(obj)
+            % Find variable might increase in speed depending on the order
+            % the variables are conctatenated.
+            vars = [...
+                obj.independent(:), ...
+                obj.independent_initial(:), ...
+                obj.independent_final(:), ...
+                obj.states(:), ...
+                obj.algebraics(:), ...
+                obj.controls(:), ...
+                obj.parameters(:) ...
+                ];
+        end
         
         function var = find_variable(obj, id)
-            for k=1:length(obj.independent)
-                if obj.independent{k}.id == id
-                    var = obj.independent{k};
-                    return
+            for v = obj.variables
+                if v.var.id == id
+                    var = v;
+                    return;
                 end
             end
-            
-            for k=1:length(obj.independent_initial)
-                if obj.independent_initial{k}.id == id
-                    var = obj.independent_initial{k};
-                    return
-                end
-            end
-            
-            for k=1:length(obj.independent_final)
-                if obj.independent_final{k}.id == id
-                    var = obj.independent_final{k};
-                    return
-                end
-            end
-            
-            for k=1:length(obj.states)
-                if obj.states{k}.id == id
-                    var = obj.states{k};
-                    return
-                end
-            end
-            
-            for k=1:length(obj.algebraics)
-                if obj.algebraics{k}.id == id
-                    var = obj.algebraics{k};
-                    return
-                end
-            end
-            
-            for k=1:length(obj.controls)
-                if obj.controls{k}.id == id
-                    var = obj.controls{k};
-                    return
-                end
-            end
-            
-            for k=1:length(obj.parameters)
-                if obj.parameters{k}.id == id
-                    var = obj.parameters{k};
-                    return
-                end
-            end
-            
             error('[Yop] Error: ID not found');
         end
         
         function obj = add_independent(obj, t)
             if isempty(obj.independent)
-                obj.independent = yop.ocp_independent(t);
+                obj.independent = yop.ocp_variable(t);
             else
-                obj.independent(end+1) = yop.ocp_independent(t);
+                obj.independent(end+1) = yop.ocp_variable(t);
             end
         end
         
         function obj = add_independent_initial(obj, t)
             if isempty(obj.independent_initial)
-                obj.independent_initial = yop.ocp_independent_initial(t);
+                obj.independent_initial = yop.ocp_variable(t);
             else
                 obj.independent_initial(end+1) = ...
-                    yop.ocp_independent_initial(t);
+                    yop.ocp_variable(t);
             end
         end
         
         function obj = add_independent_final(obj, t)
             if isempty(obj.independent_final)
-                obj.independent_final = yop.ocp_independent_final(t);
+                obj.independent_final = yop.ocp_variable(t);
             else
                 obj.independent_final(end+1) = ...
-                    yop.ocp_independent_final(t);
+                    yop.ocp_variable(t);
             end
         end
         
         function obj = add_state(obj, x)
             if isempty(obj.states)
-                obj.states = yop.ocp_state(x);
+                obj.states = yop.ocp_variable(x);
             else
-                obj.states(end+1) = yop.ocp_state(x);
+                obj.states(end+1) = yop.ocp_variable(x);
             end
         end
         
         function obj = add_algebraic(obj, z)
             if isempty(obj.algebraics)
-                obj.algebraics = yop.ocp_algebraic(z);
+                obj.algebraics = yop.ocp_variable(z);
             else
-                obj.algebraics(end+1) = yop.ocp_algebraic(z);
+                obj.algebraics(end+1) = yop.ocp_variable(z);
             end
         end
         
         function obj = add_algebraic_eq(obj, eq)
             if isempty(obj.alg_eqs)
-                obj.alg_eqs = yop.ocp_algebraic_eq(eq);
+                obj.alg_eqs = yop.ocp_variable(eq);
             else
-                obj.alg_eqs(end+1) = yop.ocp_algebraic_eq(eq);
+                obj.alg_eqs(end+1) = yop.ocp_variable(eq);
             end
         end
         
         function obj = add_control(obj, u)
             if isempty(obj.controls)
-                obj.controls = yop.ocp_control(u);
+                obj.controls = yop.ocp_variable(u);
             else
-                obj.controls(end+1) = yop.ocp_control(u);
+                obj.controls(end+1) = yop.ocp_variable(u);
             end
         end
         
         function obj = add_parameter(obj, p)
             if isempty(obj.parameters)
-                obj.parameters = yop.ocp_parameter(p);
+                obj.parameters = yop.ocp_variable(p);
             else
-                obj.parameters(end+1) = yop.ocp_parameter(p);
+                obj.parameters(end+1) = yop.ocp_variable(p);
             end
         end
         
-%         function obj = add_box(obj, bc)
-%             obj.box = [obj.box(:)', {bc}];
-%         end
-%         
-%         function obj = add_equality(obj, bc)
-%             obj.equality = [obj.equality(:)', {bc}];
-%         end
-%         
-%         function obj = add_inequality(obj, bc)
-%             obj.inequality = [obj.inequality(:)', {bc}];
-%         end
-%         
-%         function obj = add_ode(obj, ode)
-%             if isempty(obj.odes)
-%                 obj.odes = yop.ocp_ode(ode.var, ode.expr);
-%             else
-%                 obj.odes(end+1) = yop.ocp_ode(ode.var, ode.expr);
-%             end
-%         end
+        function obj = add_inequality(obj, pc)
+            obj.inequality = {obj.inequality{:}, pc};
+        end
+        
+        function obj = add_equality(obj, pc)
+            obj.equality = {obj.equality{:}, pc};
+        end
+        
+        function present(obj)
+            
+            for k=obj.variables
+                k.store_value();
+            end
+            
+            for t=obj.independent
+                t.set_value(sym(t.var.name));
+            end
+            
+            for t0=obj.independent_initial
+                t0.set_value(sym(t0.var.name));
+            end
+            
+            for tf=obj.independent_final
+                tf.set_value(sym(tf.var.name));
+            end
+            
+            for x=obj.states
+                x.set_value(sym(x.var.name, size(x.var)));
+            end
+            
+            for z=obj.algebraics
+                z.set_value(sym(z.var.name, size(z.var)));
+            end
+            
+            for u=obj.controls
+                u.set_value(sym(u.var.name, size(u.var)));
+            end
+            
+            for p=obj.parameters
+                p.set_value(sym(p.var.name, size(p.var)));
+            end
+            
+            % objective function
+            x = forward_evaluate(obj.objective);
+            fprintf('Yop - Optimal Control Problem\n');
+            fprintf('  min\t');
+            fprintf(char(x));
+            fprintf('\n');
+            
+            % Constraints
+            fprintf('  s.t.');
+            
+            obj.print_box( ...
+                'independent_initial', ...
+                yop.defaults().independent_lb0, ...
+                yop.defaults().independent_ub0 ...
+                );
+            
+            obj.print_box( ...
+                'independent_final', ...
+                yop.defaults().independent_lbf, ...
+                yop.defaults().independent_ubf ...
+                );
+            
+            obj.print_box_timed( ...
+                'states', ...
+                'lb0', ...
+                'ub0', ...
+                yop.defaults().state_lb0, ...
+                yop.defaults().state_ub0, ...
+                '(t0)' ...
+                )
+            
+            obj.print_box( ...
+                'states', ...
+                yop.defaults().state_lb, ...
+                yop.defaults().state_ub ...
+                );
+            
+            obj.print_box_timed( ...
+                'states', ...
+                'lbf', ...
+                'ubf', ...
+                yop.defaults().state_lbf, ...
+                yop.defaults().state_ubf, ...
+                '(tf)' ...
+                )
+            
+            obj.print_box( ...
+                'algebraics', ...
+                yop.defaults().algebraic_lb, ...
+                yop.defaults().algebraic_ub ...
+                );
+            
+            obj.print_box_timed( ...
+                'controls', ...
+                'lb0', ...
+                'ub0', ...
+                yop.defaults().control_lb0, ...
+                yop.defaults().control_ub0, ...
+                '(t0)' ...
+                )
+            
+            obj.print_box( ...
+                'controls', ...
+                yop.defaults().control_lb, ...
+                yop.defaults().control_ub ...
+                );
+            
+            obj.print_box_timed( ...
+                'controls', ...
+                'lbf', ...
+                'ubf', ...
+                yop.defaults().control_lbf, ...
+                yop.defaults().control_ubf, ...
+                '(tf)' ...
+                )
+            
+            obj.print_box( ...
+                'parameters', ...
+                yop.defaults().parameter_lb, ...
+                yop.defaults().parameter_ub ...
+                );
+            
+            % equality constraints
+            for k=1:length(obj.equality)
+                fprintf('\n\t');
+                fprintf(char(forward_evaluate(obj.equality{k})));
+            end
+            fprintf('\n');
+            
+            % inequality constraints
+            for k=1:length(obj.inequality)
+                fprintf('\n\t');
+                fprintf(char(forward_evaluate(obj.inequality{k})));
+            end
+            fprintf('\n');
+            
+            
+            
+            for k=obj.variables
+                k.restore_value();
+            end
+            
+        end
+        
+        function obj = print_box(obj, varstr, lbdef, ubdef)
+            for v=obj.(varstr)
+                %if ~all(isnan(v.lb) & isnan(v.ub))
+                ub = v.ub;
+                if ~isempty(isnan(ub))
+                    ub(isnan(ub)) = ubdef;
+                end
+                
+                lb = v.lb;
+                if ~isempty(isnan(lb))
+                    lb(isnan(lb)) = lbdef;
+                end
+                
+                var_name = v.var.name;
+                
+                ub = char(sym(ub));
+                lb = char(sym(lb));
+                bc = ['\t', lb, ' <= ', var_name, ' <= ', ub, '\n'];
+                fprintf(bc);
+                
+                %end
+            end
+        end
+        
+        function print_box_timed(obj, varstr, lbstr, ubstr, lbdef, ubdef, timestr)
+            for v=obj.(varstr)
+                ub0 = v.(ubstr);
+                % If the value is nan, the value is the same as the
+                % general bound for the variable. If that too is nan,
+                % then the value is the default one.
+                bd = v.ub(isnan(v.(ubstr)));
+                bd(isnan(bd)) = ubdef;
+                ub0(isnan(ub0)) = bd;
+                
+                lb0 = v.(lbstr);
+                bd = v.lb(isnan(v.(lbstr)));
+                bd(isnan(bd)) = lbdef;
+                lb0(isnan(lb0)) = bd;
+                
+                var_name = [v.var.name, timestr];
+                
+                ub = char(sym(ub0));
+                lb = char(sym(lb0));
+                bc = ['\t', lb, ' <= ', var_name, ' <= ', ub, '\n'];
+                fprintf(bc);
+            end
+        end
         
     end
 end

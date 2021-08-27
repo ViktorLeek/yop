@@ -143,5 +143,9 @@ classdef dtp_data < handle
             end
         end
         
+        function r = get_pathcon(obj)
+            r = {obj.vv{:}, obj.ve{:}, obj.ev{:}, obj.ee{:}};
+        end
+        
     end
 end

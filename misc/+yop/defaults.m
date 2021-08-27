@@ -3,7 +3,7 @@ classdef defaults
         
         independent_ub0 = 0;
         independent_lb0 = 0;
-        independent_ub  = inf;  % semantics. t = [lb, ub], fixed time!
+        independent_ub  = inf;  % semantics. t = [lb, ub], fixed time?
         independent_lb  = 0;
         independent_ubf = inf;
         independent_lbf = 0;

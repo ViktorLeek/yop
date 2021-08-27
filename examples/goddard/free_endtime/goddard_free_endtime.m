@@ -1,6 +1,6 @@
 %%
-syms tt xx1 xx2 xx3 uu
-xx = [xx1; xx2; xx3];
+% syms tt xx1 xx2 xx3 uu
+% xx = [xx1; xx2; xx3];
 
 import yop.*
 [t, t0, tf] = independent('t');
@@ -28,9 +28,10 @@ ocp.st(...
     mf <= y.rocket.mass <= m0, ...
      0 <= y.rocket.fuel_mass_flow <= 9.5 ...
     );
+ocp.build();
 
-x.m_value = xx;
-u.m_value = uu;
+% x.m_value = xx;
+% u.m_value = uu;
 
 % rocket.height(t0);
 % rocket.height(tf);
