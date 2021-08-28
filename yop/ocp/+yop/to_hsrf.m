@@ -29,7 +29,9 @@ for n=1:length(relations)
     end
     
     % Add expression-unknown relation
-    hsrf.add_eu( get_subrelation(rn, ~var) );
+    if ~all(var)
+        hsrf.add_eu( get_subrelation(rn, ~var) );
+    end
     
     %% Split var-unknown into var-var and var-expr
     % Process all variable-unknown
@@ -39,7 +41,10 @@ for n=1:length(relations)
         for u = yop.row_vec(unique(ID(var)))
             hsrf.add_vv( get_subrelation(ck, ID==u) );
         end
-        hsrf.add_ve( get_subrelation(ck, ~var) );
+        
+        if ~all(var)
+            hsrf.add_ve( get_subrelation(ck, ~var) );
+        end
     end
     
     %% Split expr-unknown into expr-var and expr-expr
@@ -49,7 +54,10 @@ for n=1:length(relations)
         for u = yop.row_vec( unique(ID(var)) )
             hsrf.add_ev( get_subrelation(ck, ID==u) );
         end
-        hsrf.add_ee( get_subrelation(ck, ~var) );
+        
+        if ~all(var)
+            hsrf.add_ee( get_subrelation(ck, ~var) );
+        end
     end
     
     %% Reset unknown in order not to process any relation twice
@@ -76,13 +84,13 @@ function sr = get_subrelation(relation, idx)
 % necessary to test if it is possible to take the subindices of the
 % relations.
 
-if isscalar(relation.rhs)
+if isscalar(relation.rhs) && ~all(idx==false)
     rhs = relation.rhs;
 else
     rhs = relation.rhs(idx);
 end
 
-if isscalar(relation.lhs)
+if isscalar(relation.lhs)  && ~all(idx==false)
     lhs = relation.lhs;
 else
     lhs = relation.lhs(idx);

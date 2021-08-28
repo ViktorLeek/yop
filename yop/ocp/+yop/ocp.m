@@ -1,5 +1,8 @@
 classdef ocp < handle
     properties
+        % Misc
+        name
+        
         % Variables
         independent
         independent_initial
@@ -24,7 +27,8 @@ classdef ocp < handle
         inequality = {}; % Temporary cell
     end
     methods
-        function obj = ocp()
+        function obj = ocp(name)
+            obj.name = name;
         end
         
         function obj = min(obj, objective)
@@ -225,13 +229,13 @@ classdef ocp < handle
             % Find variable might increase in speed depending on the order
             % the variables are conctatenated.
             vars = [...
-                obj.independent(:), ...
-                obj.independent_initial(:), ...
-                obj.independent_final(:), ...
-                obj.states(:), ...
-                obj.algebraics(:), ...
-                obj.controls(:), ...
-                obj.parameters(:) ...
+                obj.independent(:).', ...
+                obj.independent_initial(:).', ...
+                obj.independent_final(:).', ...
+                obj.states(:).', ...
+                obj.algebraics(:).', ...
+                obj.controls(:).', ...
+                obj.parameters(:).' ...
                 ];
         end
         
@@ -338,24 +342,45 @@ classdef ocp < handle
             end
             
             for x=obj.states
-                x.set_value(sym(x.var.name, size(x.var)));
+                if isscalar(x.var.size)
+                    x.set_value(sym(x.var.name));
+                else
+                    x.set_value(sym(x.var.name, size(x.var)));
+                end
             end
             
             for z=obj.algebraics
-                z.set_value(sym(z.var.name, size(z.var)));
+                if isscalar(z.var.size)
+                    z.set_value(sym(z.var.name));
+                else
+                    z.set_value(sym(z.var.name, size(z.var)));
+                end
             end
             
             for u=obj.controls
-                u.set_value(sym(u.var.name, size(u.var)));
+                if isscalar(u.var.size)
+                    u.set_value(sym(u.var.name));
+                else
+                    u.set_value(sym(u.var.name, size(u.var)));
+                end
             end
             
             for p=obj.parameters
-                p.set_value(sym(p.var.name, size(p.var)));
+                if isscalar(p.var.size)
+                    p.set_value(sym(p.var.name));
+                else
+                    p.set_value(sym(p.var.name, size(p.var)));
+                end
             end
             
             % objective function
             x = forward_evaluate(obj.objective);
-            fprintf('Yop - Optimal Control Problem\n');
+            if isempty(obj.name)
+                title = 'Optimal Control Problem';
+            else
+                title = obj.name;
+            end
+            fprintf(['Yop - ', title, '\n']);
             fprintf('  min\t');
             fprintf(char(x));
             fprintf('\n');
