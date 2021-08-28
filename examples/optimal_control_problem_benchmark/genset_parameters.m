@@ -1,4 +1,4 @@
-function param = gensetParameters()
+function param = genset_parameters()
 param.AFs= 14.7500;
 param.A_t_eff= 7.8800e-04;
 param.A_wg_eff= 3.1400e-04;

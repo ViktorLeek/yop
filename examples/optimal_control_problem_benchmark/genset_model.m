@@ -1,4 +1,4 @@
-function [dX, y] = gensetModel(state, control)
+function [dX, y] = genset_model(state, control)
 % MVEM2 - a diesel-electric powertrain model, with the engine modeled using
 % typical engine efficiency characteristic as described in:
 % "MODELLING FOR OPTIMAL CONTROL: A VALIDATED DIESEL-ELECTRIC POWERTRAIN MODEL"
@@ -28,6 +28,7 @@ function [dX, y] = gensetModel(state, control)
 % -----------------------------------------------------------------------------
 %
 %     Modified 2019, Viktor Leek
+%     Modified 2021, Viktor Leek
 %
 % -----------------------------------------------------------------------------
 w_ice = state(1);
@@ -40,7 +41,7 @@ u_f = control(1);
 u_wg = control(2);
 P_gen = control(3);
 
-param = gensetParameters;
+param = genset_parameters();
 
 %% Compressor
 % Massflow
@@ -181,43 +182,43 @@ dX = [dwice; dpim; dpem; dwtc; dE_gen];
 
 %% Signals
 y.compressor.speed = w_tc;
-y.compressor.pressureRatio = Pi_c;
+y.compressor.pressure_ratio = Pi_c;
 y.compressor.efficiency = eta_c;
 y.compressor.power = P_c;
-y.compressor.surgeline = param.c_mc_surge(1) * dot_m_c_corr + param.c_mc_surge(2);
+y.compressor.surge_line = param.c_mc_surge(1) * dot_m_c_corr + param.c_mc_surge(2);
 
 y.intake.pressure = p_im;
 y.intake.temperature = param.T_im;
 
-y.cylinder.volumetricEfficiency = eta_vol;
-y.cylinder.airMassflow = dot_m_ci;
-y.cylinder.fuelInjection = u_f;
-y.cylinder.fuelMassflow = dot_m_f;
-y.cylinder.fuelToAirRatio = phi;
-y.cylinder.indicatedEfficiency = eta_ig;
-y.cylinder.indicatedTorque = W_ig/(4*pi);
-y.cylinder.pumpingTorque = W_pump/(4*pi);
-y.cylinder.frictionTorque = W_fric/(4*pi);
-y.cylinder.temperatureOut = T_eo;
-y.cylinder.fuelLimiter = u_f_max;
-y.cylinder.lambdaMin = 1.2;
+y.cylinder.volumetric_efficiency = eta_vol;
+y.cylinder.air_massflow = dot_m_ci;
+y.cylinder.fuel_injection = u_f;
+y.cylinder.fuel_massflow = dot_m_f;
+y.cylinder.fuel_to_air_ratio = phi;
+y.cylinder.indicated_efficiency = eta_ig;
+y.cylinder.indicated_torque = W_ig/(4*pi);
+y.cylinder.pumping_torque = W_pump/(4*pi);
+y.cylinder.friction_torque = W_fric/(4*pi);
+y.cylinder.temperature_out = T_eo;
+y.cylinder.fuel_limiter = u_f_max;
+y.cylinder.lambda_min = 1.2;
 
 y.engine.speed = w_ice;
 % y.engine.efficiency = if_else(u_f <= 0, 0, P_ice/(dot_m_f*param.Hlhv));
 y.engine.torque = M_ice;
 y.engine.power = P_ice;
-y.engine.powerLimit = [(param.cPice(1)*w_ice^2 + param.cPice(2)*w_ice + param.cPice(3)); ....
+y.engine.power_limit = [(param.cPice(1)*w_ice^2 + param.cPice(2)*w_ice + param.cPice(3)); ....
                        (param.cPice(4)*w_ice^2 + param.cPice(5)*w_ice + param.cPice(6))];
 
 y.exhaust.pressure = p_em;
 y.exhaust.temperature = T_em;
 
 y.turbine.speed = w_tc;
-y.turbine.pressureRatio = Pi_t;
+y.turbine.pressure_ratio = Pi_t;
 y.turbine.massflow = dot_m_t;
 y.turbine.BSR = BSR;
-y.turbine.BSRMax = param.BSR_max;
-y.turbine.BSRMin = param.BSR_min;
+y.turbine.BSR_max = param.BSR_max;
+y.turbine.BSR_min = param.BSR_min;
 y.turbine.efficiency = eta_tm;
 y.turbine.power = P_t_eta_tm;
 

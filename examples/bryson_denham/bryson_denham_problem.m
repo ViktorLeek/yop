@@ -1,0 +1,19 @@
+[t, t0, tf] = yop.time('t');
+p = yop.state('p'); % position
+s = yop.state('s'); % speed
+a = yop.control('a'); % acceleration
+l = yop.parameter('l'); % maximum position of the cart
+
+bdp = yop.ocp('Bryson-Denham Problem');
+bdp.min( 1/2 * int(a^2) );
+bdp.st( ...
+    0 <= t <= 1, ... semantics: t = [0, 1]
+    der(p) == s, ...
+    der(s) == a, ...
+     p(t0) == p(tf) == 1, ...
+     s(t0) == -s(tf) == 1, ...
+    p <= l == 1/9 ...
+    );
+bdp.build().present();
+
+% YOP FATTAR INTE TIDSBIVILLKORET

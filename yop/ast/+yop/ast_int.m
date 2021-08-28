@@ -16,11 +16,12 @@ classdef ast_int < yop.ast_expression
         end
         
         function value = evaluate(obj)
-            error('[Yop] Error: Unable to evaluate node.');
+            value = evaluate(obj.expr);
         end
         
         function v = forward(obj)
-            error('[Yop] Error: Unable to forward evaluate node.');
+            obj.m_value = value(obj.expr);
+            v = obj.m_value;
         end
         
         function [topsort, n_elem, visited] = ...
