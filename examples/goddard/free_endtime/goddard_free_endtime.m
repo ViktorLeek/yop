@@ -9,7 +9,7 @@ rocket = y.rocket;
 m0 = 215;
 mf = 68;
 
-ocp = yop.ocp();
+ocp = yop.ocp('Goddard''s Rocket Problem');
 ocp.max(y.rocket.height(tf));
 ocp.st(...
     ... dynamics 
@@ -25,8 +25,7 @@ ocp.st(...
     mf <= rocket.mass <= m0, ...
      0 <= rocket.fuel_mass_flow <= 9.5 ...
     );
-ocp.build();
-ocp.present();
+ocp.build().present();
 
 %% Formulation 2
 [t, t0, tf] = yop.time('t');
@@ -54,8 +53,7 @@ ocp.st( ...
     m_min <= m <= m_max, ...
     0 <= F <= F_max ...
     );
-ocp.build();
-ocp.present();
+ocp.build().present();
 
 %% Formulation 3
 % Time
