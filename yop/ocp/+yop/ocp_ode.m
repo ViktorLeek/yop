@@ -1,24 +1,24 @@
 classdef ocp_ode < yop.node
     properties
         var
-        ode
+        expr
     end
     methods
-        function obj = ocp_ode(var, ode)
+        function obj = ocp_ode(var, expr)
             obj@yop.node();
             obj.var = var;
-            obj.ode = ode;
+            obj.expr = expr;
         end
         
         function draw(obj)
-            fprintf('ocp_ode(var, ode)\n');
+            fprintf('ocp_ode(var, expr)\n');
             
             begin_child(obj);
             draw(obj.var);
             end_child(obj);
             
             last_child(obj);
-            draw(obj.ode);
+            draw(obj.expr);
             end_child(obj);
         end
     end

@@ -25,6 +25,14 @@ classdef ast_cat < yop.ast_expression
             boolv = cat(obj.d, tmp{:});
         end
         
+        function boolv = isa_der(obj)
+            tmp = {isa_der(obj.args{1})};
+            for k=2:length(obj.args)
+                tmp = {tmp{:}, isa_der(obj.args{k})};
+            end
+            boolv = cat(obj.d, tmp{:});
+        end
+        
         function [bool, id] = isa_variable(obj)
             [bool, id] = isa_variable(obj.args{1});
             tmp_bool = {bool};

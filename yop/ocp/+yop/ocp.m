@@ -49,7 +49,7 @@ classdef ocp < handle
         
         function obj = build(obj)
             % Reset problem before building?
-            obj.parse_variables().parse_constraints().set_box_bounds();
+            obj.parse_variables().parse_constraints();
         end
         
         function obj = parse_variables(obj)
@@ -211,18 +211,45 @@ classdef ocp < handle
                 end
             end
             
+            % Propagate precedence rules for constraints. For instance if
+            % initial bounds should be set to path bounds, or default ones,
+            % or has already been set.
+            obj.set_box_bounds();
+            
             % Path constraints
             pc = dtp.get_pathcon();
             for k=1:length(pc)
-                switch class(pc{k})
+                pck = pc{k};
+                switch class(pck)
                     case 'yop.ast_eq'
-                        c = yop.ast_eq(pc{k}.lhs - pc{k}.rhs, 0);
-                        obj.add_equality(c);
+                        
+                        dl = isa_der(pck.lhs);
+                        if all(dl) % der(v) == expr
+                            obj.add_ode(pck.lhs, pck.rhs);
+                            continue;                        
+                        elseif all(~dl) % expr == ??
+                            r = pck; % remaining relations
+                        else % (der(x), expr) == (expr, ??)
+                            obj.add_ode(pck.lhs(dl), pck.rhs(dl));
+                            r = yop.ast_eq(pck.lhs(~dl), pck.rhs(~dl));
+                        end
+                        
+                        dr = isa_der(r.rhs);
+                        if all(dr)
+                            obj.add_ode(r.rhs, r.lhs);
+                        elseif all(~dr)
+                            obj.add_equality(yop.ast_eq(r.lhs-r.rhs, 0));
+                        else
+                            obj.add_ode(r.rhs(dr), r.lhs(dr));
+                            obj.add_equality(...
+                                yop.ast_eq(r.lhs(~dr)-r.rhs(~dr), 0));
+                        end
+                        
                     case {'yop.ast_le', 'yop.ast_lt'}
-                        c = yop.ast_le(pc{k}.lhs - pc{k}.rhs, 0);
+                        c = yop.ast_le(pck.lhs - pck.rhs, 0);
                         obj.add_inequality(c);
                     case {'yop.ast_ge', 'yop.ast_gt'}
-                        c = yop.ast_le(pc{k}.rhs - pc{k}.lhs, 0);
+                        c = yop.ast_le(pck.rhs - pck.lhs, 0);
                         obj.add_inequality(c);
                 end
             end
@@ -426,6 +453,14 @@ classdef ocp < handle
             obj.equality = {obj.equality{:}, pc};
         end
         
+        function obj = add_ode(obj, var, expr)
+            if isempty(obj.odes)
+                obj.odes = yop.ocp_ode(var, expr);
+            else
+                obj.odes(end+1) = yop.ocp_ode(var, expr);
+            end
+        end
+        
         function present(obj)
             
             for k=obj.variables
@@ -514,10 +549,31 @@ classdef ocp < handle
             obj.print_box_timed('controls', 'lbf', 'ubf', '(tf)');
             
             if ~isempty(obj.parameters)
-                fprintf('  Parameters-\n');
+                fprintf('  Parameters\n');
             end
             obj.print_box('parameters');
             
+            
+            if ~isempty(obj.odes)
+                fprintf('  ODE\n');
+            end
+            for k=1:length(obj.odes)
+                fprintf('\tder(');
+                fprintf(char(forward_evaluate(obj.odes(k).var)));
+                fprintf(') == ');
+                rhs = char(forward_evaluate(obj.odes(k).expr));
+                if length(rhs) > 40
+                    vs = get_variables(obj.odes(k).expr);
+                    args = '';
+                    for n=1:length(vs)
+                        args = [args(:).', vs{n}.name, ', '];
+                    end
+                    fprintf(['f(', args(1:end-2), ')']);
+                else
+                    fprintf(rhs);
+                end
+                fprintf('\n');
+            end
             
             if ~isempty(obj.equality)
                 fprintf('  Equality\n');
@@ -527,7 +583,6 @@ classdef ocp < handle
                 fprintf(char(forward_evaluate(obj.equality{k})));
                 fprintf('\n');
             end
-            fprintf('\n');
             
             if ~isempty(obj.inequality)
                 fprintf('  Inequality\n');
@@ -541,7 +596,7 @@ classdef ocp < handle
             for k=obj.variables
                 k.restore_value();
             end
-            
+
         end
         
         function obj = print_box(obj, varstr)

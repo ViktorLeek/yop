@@ -22,6 +22,13 @@ classdef ast_horzcat < yop.ast_expression
             end       
         end
         
+        function boolv = isa_der(obj)
+            boolv = isa_der(obj.args{1});
+            for k=2:length(obj.args)
+                boolv = [boolv, isa_der(obj.args{k})];
+            end
+        end
+        
         function boolv = isa_numeric(obj)
             % Potentially very slow. If it turns out to be too slow an
             % alternative solution, such as a DFS can be used.

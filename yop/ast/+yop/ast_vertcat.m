@@ -30,6 +30,13 @@ classdef ast_vertcat < yop.ast_expression
             end
         end
         
+        function boolv = isa_der(obj)
+            boolv = isa_der(obj.args{1});
+            for k=2:length(obj.args)
+                boolv = [boolv; isa_der(obj.args{k})];
+            end
+        end
+        
         function [bool, id] = isa_variable(obj)
             [bool, id] = isa_variable(obj.args{1});
             for k=2:length(obj.args)
