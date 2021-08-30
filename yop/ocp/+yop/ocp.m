@@ -52,6 +52,66 @@ classdef ocp < handle
             obj.parse_variables().parse_constraints();
         end
         
+        function nx = n_states(obj)
+            nx = 0;
+            for k=1:length(obj.states)
+                nx = nx + prod(size(obj.states(k).var));
+            end
+        end
+        
+        function nu = n_controls(obj)
+            nu = 0;
+            for k=1:length(obj.controls)
+                nu = nu + prod(size(obj.controls(k).var));
+            end
+        end
+        
+        function [t0_lb, t0_ub, tf_lb, tf_ub] = independent_bound(obj)
+            t0_lb=[]; t0_ub=[]; tf_lb=[]; tf_ub=[];
+            for k=1:length(obj.independent_initial)
+                t0_lb = [t0_lb(:); obj.independent_initial(k).lb(:).'];
+                t0_ub = [t0_ub(:); obj.independent_initial(k).ub(:).'];
+            end
+            for k=1:length(obj.independent_final)
+                tf_lb = [tf_lb(:); obj.independent_final(k).lb(:).'];
+                tf_ub = [tf_ub(:); obj.independent_final(k).ub(:).'];
+            end
+        end
+        
+        function [x0_lb, x0_ub, x_lb, x_ub, xf_lb, xf_ub] = ...
+                state_bound(obj)
+            x0_lb=[]; x0_ub=[]; x_lb=[]; x_ub=[]; xf_lb=[]; xf_ub=[];
+            for k=1:length(obj.states)
+                x_lb = [x_lb(:); obj.states(k).lb(:).'];
+                x_ub = [x_ub(:); obj.states(k).ub(:).'];
+                x0_lb = [x0_lb(:); obj.states(k).lb0(:).'];
+                x0_ub = [x0_ub(:); obj.states(k).ub0(:).'];
+                xf_lb = [xf_lb(:); obj.states(k).lbf(:).'];
+                xf_ub = [xf_ub(:); obj.states(k).ubf(:).'];
+            end
+        end
+        
+        function [u0_lb, u0_ub, u_lb, u_ub, uf_lb, uf_ub] = ...
+                control_bound(obj)
+            u0_lb=[]; u0_ub=[]; u_lb=[]; u_ub=[]; uf_lb=[]; uf_ub=[];
+            for k=1:length(obj.controls)
+                u_lb = [u_lb(:); obj.controls(k).lb(:).'];
+                u_ub = [u_ub(:); obj.controls(k).ub(:).'];
+                u0_lb = [u0_lb(:); obj.controls(k).lb0(:).'];
+                u0_ub = [u0_ub(:); obj.controls(k).ub0(:).'];
+                uf_lb = [uf_lb(:); obj.controls(k).lbf(:).'];
+                uf_ub = [uf_ub(:); obj.controls(k).ubf(:).'];
+            end
+        end
+        
+        function [p_lb, p_ub] = parameter_bound(obj)
+            p_lb=[]; p_ub=[];
+            for k=1:length(obj.parameters)
+                p_lb = [p_lb(:); obj.parameters(k).lb(:).'];
+                p_ub = [p_ub(:); obj.parameters(k).ub(:).'];
+            end
+        end
+        
         function obj = parse_variables(obj)
             vars = get_variables({obj.objective, obj.constraints{:}});
             for k=1:length(vars)
@@ -264,14 +324,14 @@ classdef ocp < handle
             
             obj.set_box_bnd(...
                 'independent_initial', 'lb', 'ub', ...
-                yop.defaults().independent_lb, ...
-                yop.defaults().independent_ub ...
+                yop.defaults().independent_lb0, ...
+                yop.defaults().independent_ub0 ...
                 );
             
             obj.set_box_bnd(...
                 'independent_final', 'lb', 'ub', ...
-                yop.defaults().independent_lb, ...
-                yop.defaults().independent_ub ...
+                yop.defaults().independent_lbf, ...
+                yop.defaults().independent_ubf ...
                 );
             
             obj.set_box_bnd(...
@@ -600,6 +660,8 @@ classdef ocp < handle
         end
         
         function obj = print_box(obj, varstr)
+            % Should replace this implementation with box_timed and then
+            % remove box timed.
             for v=obj.(varstr)
                 var_name = v.var.name;
                 ub = char(sym(v.ub));
@@ -611,9 +673,7 @@ classdef ocp < handle
         
         function print_box_timed(obj, varstr, lbstr, ubstr, timestr)
             for v=obj.(varstr)
-                
                 var_name = [v.var.name, timestr];
-                
                 ub = char(sym(v.(ubstr)));
                 lb = char(sym(v.(lbstr)));
                 bc = ['\t', lb, ' <= ', var_name, ' <= ', ub, '\n'];

@@ -3,7 +3,7 @@ classdef defaults
         
         independent_ub0 = 0;
         independent_lb0 = 0;
-        independent_ub  = inf;  % semantics. t = [lb, ub], fixed time?
+        independent_ub  = 0;
         independent_lb  = 0;
         independent_ubf = inf;
         independent_lbf = 0;
@@ -27,6 +27,8 @@ classdef defaults
         
         parameter_ub = inf;
         parameter_lb = -inf;
+        
+        rk4_steps = 4;
         
     end
 end
