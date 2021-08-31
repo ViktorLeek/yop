@@ -22,22 +22,22 @@ for k=1:length(vnf.vn)
     tx = ~t0 & ~tf & is_tp; % Numerical timepoints
     
     if ~all(is_tp)
-        dtp.add_vn_t( get_subrelation(rk, ~is_tp) );
+        dtp.add_vn_t( yop.get_subrelation(rk, ~is_tp) );
     end
     
     if ~all(~t0) % Do not add if t0 is all false
-        dtp.add_vn_t0( get_subrelation(rk, t0) );
+        dtp.add_vn_t0( yop.get_subrelation(rk, t0) );
     end
     
     if ~all(~tf) 
-        dtp.add_vn_tf( get_subrelation(rk, tf) );
+        dtp.add_vn_tf( yop.get_subrelation(rk, tf) );
     end
     
     if ~all(~tx)
         % Numerical timepoint are not box constraints (yet, at least) so
         % they are moved to the general category of expression-variable
         % relation
-        dtp.add_ve( get_subrelation(rk, tx) );
+        dtp.add_ve( yop.get_subrelation(rk, tx) );
     end
     
     assert(all(~is_tp | t0 | tf | tx), '[Yop] Unexpected error.');
@@ -54,22 +54,22 @@ for k=1:length(vnf.nv)
     tx = ~t0 & ~tf & is_tp; % Numerical timepoints
     
     if ~all(is_tp)
-        dtp.add_nv_t( get_subrelation(rk, ~is_tp) );
+        dtp.add_nv_t( yop.get_subrelation(rk, ~is_tp) );
     end
     
-    if ~all(~t0) % Do not add if t0 is all false
-        dtp.add_nv_t0( get_subrelation(rk, t0) );
+    if ~all(t0==false)
+        dtp.add_nv_t0( yop.get_subrelation(rk, t0) );
     end
     
-    if ~all(~tf) 
-        dtp.add_nv_tf( get_subrelation(rk, tf) );
+    if ~all(tf==false) 
+        dtp.add_nv_tf( yop.get_subrelation(rk, tf) );
     end
     
-    if ~all(~tx)
+    if ~all(tx==false)
         % Numerical timepoint are not box constraints (yet, at least) so
         % they are moved to the general category of expression-variable
         % relation
-        dtp.add_ev( get_subrelation(rk, tx) );
+        dtp.add_ev( yop.get_subrelation(rk, tx) );
     end
     
     assert(all(~is_tp | t0 | tf | tx), '[Yop] Unexpected error.');
@@ -77,24 +77,24 @@ end
 
 end
 
-function sr = get_subrelation(relation, idx)
-% Since indices might be scaled and variables can be scalars it is
-% necessary to test if it is possible to take the subindices of the
-% relations.
-
-if isscalar(relation.rhs)
-    rhs = relation.rhs;
-else
-    rhs = relation.rhs(idx);
-end
-
-if isscalar(relation.lhs)
-    lhs = relation.lhs;
-else
-    lhs = relation.lhs(idx);
-end
-
-f  = get_constructor(relation);
-sr = f(lhs, rhs);
-
-end
+% function sr = get_subrelation(relation, idx)
+% % Since indices might be scaled and variables can be scalars it is
+% % necessary to test if it is possible to take the subindices of the
+% % relations.
+% 
+% if isscalar(relation.rhs)
+%     rhs = relation.rhs;
+% else
+%     rhs = relation.rhs(idx);
+% end
+% 
+% if isscalar(relation.lhs)
+%     lhs = relation.lhs;
+% else
+%     lhs = relation.lhs(idx);
+% end
+% 
+% f  = get_constructor(relation);
+% sr = f(lhs, rhs);
+% 
+% end

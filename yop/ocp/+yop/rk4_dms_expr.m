@@ -1,5 +1,7 @@
-function rk4 = rk4_integrator(f, nx, nu, np, steps)
-% YOP.RK4_INTEGRATOR - Parameterizes a rk4 integrator.
+function rk4 = rk4_dms_expr(f, nx, nu, np, nw, steps)
+% YOP.RK4_DMS_EXPR - Parameterizes a rk4 integrator that is tailored to 
+% integrating mixed timepoints and timedependent values for the 
+% direct multiple shooting method.
 %   rk4 = rk4integrator(f, T, sx, su, sp)
 %   
 %   Parameters:
@@ -29,16 +31,17 @@ h = (tf-t0)/steps;
 x0 = casadi.MX.sym('x0', nx);
 u  = casadi.MX.sym('U', nu);
 p  = casadi.MX.sym('P', np);
+w = casadi.MX.sym('w', nw);
 t = t0;
 x = x0;
 for j=1:steps
-    k1 = f(t      , x           , u, p);
-    k2 = f(t + h/2, x + h/2 * k1, u, p);
-    k3 = f(t + h/2, x + h/2 * k2, u, p);
-    k4 = f(t + h  , x + h   * k3, u, p);
+    k1 = f(t      , x           , u, p, w);
+    k2 = f(t + h/2, x + h/2 * k1, u, p, w);
+    k3 = f(t + h/2, x + h/2 * k2, u, p, w);
+    k4 = f(t + h  , x + h   * k3, u, p, w);
     t = t + h;
     x = x + h/6*(k1 +2*k2 +2*k3 +k4);
 end
-rk4 = casadi.Function('F', {t0, tf, x0, u, p}, {x});
+rk4 = casadi.Function('F', {t0, tf, x0, u, p, w}, {x});
 
 end

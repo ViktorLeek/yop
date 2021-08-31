@@ -25,8 +25,8 @@ for k=1:length(hsrf.ve)
         vnf.add_ve(rk);
         
     else
-        vnf.add_vn( get_subrelation(rk,  nums) );
-        vnf.add_ve( get_subrelation(rk, ~nums) );
+        vnf.add_vn( yop.get_subrelation(rk,  nums) );
+        vnf.add_ve( yop.get_subrelation(rk, ~nums) );
     end 
     
 end
@@ -43,31 +43,31 @@ for k=1:length(hsrf.ev)
         vnf.add_ev(rk);
         
     else
-        vnf.add_nv( get_subrelation(rk,  nums) );
-        vnf.add_ev( get_subrelation(rk, ~nums) );
+        vnf.add_nv( yop.get_subrelation(rk,  nums) );
+        vnf.add_ev( yop.get_subrelation(rk, ~nums) );
     end 
 end
 
 end
 
-function sr = get_subrelation(relation, idx)
-% Since indices might be scaled and variables can be scalars it is
-% necessary to test if it is possible to take the subindices of the
-% relations.
-
-if isscalar(relation.rhs)
-    rhs = relation.rhs;
-else
-    rhs = relation.rhs(idx);
-end
-
-if isscalar(relation.lhs)
-    lhs = relation.lhs;
-else
-    lhs = relation.lhs(idx);
-end
-
-f  = get_constructor(relation);
-sr = f(lhs, rhs);
-
-end
+% function sr = get_subrelation(relation, idx)
+% % Since indices might be scaled and variables can be scalars it is
+% % necessary to test if it is possible to take the subindices of the
+% % relations.
+% 
+% if isscalar(relation.rhs)
+%     rhs = relation.rhs;
+% else
+%     rhs = relation.rhs(idx);
+% end
+% 
+% if isscalar(relation.lhs)
+%     lhs = relation.lhs;
+% else
+%     lhs = relation.lhs(idx);
+% end
+% 
+% f  = get_constructor(relation);
+% sr = f(lhs, rhs);
+% 
+% end

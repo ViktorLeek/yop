@@ -35,6 +35,87 @@ classdef ocp < handle
             end
         end
         
+        function [bool, T] = fixed_horizon(obj)
+            bool = true;
+            for k=1:length(obj.independent_initial)
+                bool = bool && (obj.independent_initial(k).lb == ...
+                    obj.independent_initial(k).ub);
+            end
+            for k=1:length(obj.independent_final)
+                bool = bool && (obj.independent_final(k).lb == ...
+                    obj.independent_final(k).ub);
+            end
+            T = obj.independent_final(1).lb-obj.independent_initial(1).lb;
+        end
+        
+        function t_vec = t0(obj)
+            t_vec = [];
+            for v=obj.independent_initial
+                t_vec = [t_vec(:); v.sym(:).'];
+            end
+        end
+        
+        function t_vec = tf(obj)
+            t_vec = [];
+            for v=obj.independent_final
+                t_vec = [t_vec(:); v.sym(:).'];
+            end
+        end
+        
+        function t_vec = t(obj)
+            t_vec = [];
+            for v=obj.independent
+                t_vec = [t_vec(:); v.sym(:).'];
+            end
+        end
+        
+        function x_vec = x(obj)
+            x_vec = [];
+            for v=obj.states
+                x_vec = [x_vec(:); v.sym(:).'];
+            end
+        end
+        
+        function u_vec = u(obj)
+            u_vec = [];
+            for v=obj.controls
+                u_vec = [u_vec(:); v.sym(:).'];
+            end
+        end
+        
+        function p_vec = p(obj)
+            p_vec = [];
+            for v=obj.parameters
+                p_vec = [p_vec(:); v.sym(:).'];
+            end
+        end
+        
+        function fn = fn(obj, expr)
+            obj.set_sym();
+            e = forward_evaluate(expr);
+            obj.reset_variables();
+            fn = casadi.Function('fn', {obj.t, obj.x, obj.u, obj.p}, {e});
+        end
+        
+        function [ode_expr, ode_var] = ode(obj)
+            obj.set_sym();
+            var = []; expr = [];
+            for ode = ocp.odes
+                % .var expected short, .expr expected longer
+                lhs = evaluate(ode.var);
+                rhs = forward_evaluate(ode.expr);
+                var = [var(:); lhs(:).'];
+                expr = [expr(:); rhs(:).'];
+            end
+            obj.reset_variables();
+            
+            ode_var = casadi.Function('ode_var', ...
+                {obj.t, obj.x, obj.u, obj.p}, {var});
+            
+            ode_expr = casadi.Function('ode_expr', ...
+                {obj.t, obj.x, obj.u, obj.p}, {expr});
+        end
+        
         function obj = min(obj, objective)
             obj.objective = objective;
         end
@@ -52,17 +133,24 @@ classdef ocp < handle
             obj.parse_variables().parse_constraints();
         end
         
-        function nx = n_states(obj)
-            nx = 0;
+        function n = nx(obj)
+            n = 0;
             for k=1:length(obj.states)
-                nx = nx + prod(size(obj.states(k).var));
+                n = n + prod(size(obj.states(k).var));
             end
         end
         
-        function nu = n_controls(obj)
-            nu = 0;
+        function n = n_controls(obj)
+            n = 0;
             for k=1:length(obj.controls)
-                nu = nu + prod(size(obj.controls(k).var));
+                n = n + prod(size(obj.controls(k).var));
+            end
+        end
+        
+        function np = n_parameters(obj)
+            np = 0;
+            for k=1:length(obj.parameters)
+                np = np + prod(size(obj.parameters(k).var));
             end
         end
         
@@ -290,8 +378,11 @@ classdef ocp < handle
                         elseif all(~dl) % expr == ??
                             r = pck; % remaining relations
                         else % (der(x), expr) == (expr, ??)
-                            obj.add_ode(pck.lhs(dl), pck.rhs(dl));
-                            r = yop.ast_eq(pck.lhs(~dl), pck.rhs(~dl));
+                            tmp = yop.get_subrelation(pck, dl);
+                            obj.add_ode(tmp.lhs, rmp.rhs);
+                            r = yop.ast_eq(yop.get_subrelation(pck, ~dl));
+                            % obj.add_ode(pck.lhs(dl), pck.rhs(dl));
+                            %r = yop.ast_eq(pck.lhs(~dl), pck.rhs(~dl));
                         end
                         
                         dr = isa_der(r.rhs);
@@ -300,9 +391,12 @@ classdef ocp < handle
                         elseif all(~dr)
                             obj.add_equality(yop.ast_eq(r.lhs-r.rhs, 0));
                         else
-                            obj.add_ode(r.rhs(dr), r.lhs(dr));
-                            obj.add_equality(...
-                                yop.ast_eq(r.lhs(~dr)-r.rhs(~dr), 0));
+                            tmp = yop.get_subrelation(r, dr);
+                            obj.add_ode(tmp.rhs, tmp.lhs);
+                            obj.add_equality(yop.get_subrelation(r, ~dr));
+                            %obj.add_ode(r.rhs(dr), r.lhs(dr));
+                            %obj.add_equality(...
+                            %    yop.ast_eq(r.lhs(~dr)-r.rhs(~dr), 0));
                         end
                         
                     case {'yop.ast_le', 'yop.ast_lt'}
@@ -659,9 +753,119 @@ classdef ocp < handle
 
         end
         
+        
+        function obj = set_sym(obj)
+            for v=obj.variables()
+                v.set_sym();
+            end
+        end
+        
+        function obj = set_variables(obj, t, t0, tf, x, u, p)
+            obj.set_independent(t);
+            obj.set_independent_initial(t0);
+            obj.set_independent_final(tf);
+            obj.set_states(x);
+            obj.set_controls(u);
+            obj.set_parameters(p);
+        end
+        
+        function obj = reset_variables(obj)
+            obj.set_independent();
+            obj.set_independent_initial();
+            obj.set_independent_final();
+            obj.set_states();
+            obj.set_controls();
+            obj.set_parameters();
+        end
+        
+        function obj = set_independent(obj, t)
+            for k=1:length(obj.independent)
+                obj.independent(k).set_value(t);
+            end
+        end
+        
+        function obj = reset_independent(obj)
+            for k=1:length(obj.independent)
+                obj.independent(k).reset_value();
+            end
+        end
+        
+        function obj = set_independent_initial(obj, t0)
+            for k=1:length(obj.independent_initial)
+                obj.independent_initial(k).set_value(t0);
+            end
+        end
+        
+        function obj = reset_independent_initial(obj)
+            for k=1:length(obj.independent_initial)
+                obj.independent_initial(k).reset_value();
+            end
+        end
+        
+        function obj = set_independent_final(obj, tf)
+            for k=1:length(obj.independent_final)
+                obj.independent_final(k).set_value(tf);
+            end
+        end
+        
+        function obj = reset_independent_final(obj)
+            for k=1:length(obj.independent_final)
+                obj.independent_final(k).reset_value();
+            end
+        end
+        
+        function obj = set_states(obj, x)
+            for k=1:length(obj.states)
+                obj.states(k).set_value(x{k});
+            end
+        end
+        
+        function obj = reset_states(obj)
+            for k=1:length(obj.states)
+                obj.states(k).reset_value();
+            end
+        end
+        
+        function obj = set_algebraics(obj, z)
+            for k=1:length(obj.algebraics)
+                obj.algebraics(k).set_value(z{k});
+            end
+        end
+        
+        function obj = reset_algebraics(obj)
+            for k=1:length(obj.algebraics)
+                obj.algebraics(k).set_value();
+            end
+        end
+        
+        function obj = set_controls(obj, u)
+            for k=1:length(obj.controls)
+                obj.controls(k).set_value(u{k});
+            end
+        end
+        
+        function obj = reset_controls(obj)
+            for k=1:length(obj.controls)
+                obj.controls(k).reset_value();
+            end
+        end
+        
+        function obj = set_parameters(obj, p)
+            for k=1:length(obj.parameters)
+                obj.parameters(k).set_value(p{k});
+            end
+        end
+        
+        function obj = reset_parameters(obj)
+            for k=1:length(obj.parameters)
+                obj.parameters(k).reset_value();
+            end
+        end
+        
+        
         function obj = print_box(obj, varstr)
             % Should replace this implementation with box_timed and then
-            % remove box timed.
+            % remove box_timed as function name.
             for v=obj.(varstr)
                 var_name = v.var.name;
                 ub = char(sym(v.ub));
