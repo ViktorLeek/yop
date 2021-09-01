@@ -25,6 +25,11 @@ classdef ast_subsasgn < yop.ast_expression
             boolv(idx) = isa_numeric(obj.b);
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.node, obj);
+            add_pred(obj.b, obj);
+        end
+        
         function boolv = isa_der(obj)
             boolv = isa_der(obj.node);
             idx = get_indices(obj);

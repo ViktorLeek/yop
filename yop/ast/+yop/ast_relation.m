@@ -16,6 +16,11 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
             obj.rhs = rhs;
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.lhs, obj);
+            add_pred(obj.rhs, obj);
+        end
+        
         function sz = size(obj, varargin)
             sz = size(ones(obj.dim), varargin{:});
         end

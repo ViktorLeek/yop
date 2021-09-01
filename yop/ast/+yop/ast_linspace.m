@@ -23,6 +23,12 @@ classdef ast_linspace < yop.ast_expression
             end
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.x1, obj);
+            add_pred(obj.x2, obj);
+            add_pred(obj.n, obj);
+        end
+        
         function value = evaluate(obj)
             value = linspace(...
                 evaluate(obj.x1), ...

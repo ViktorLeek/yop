@@ -21,6 +21,11 @@ classdef ast_mod < yop.ast_expression
             end
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.a, obj);
+            add_pred(obj.m, obj);
+        end
+        
         function value = evaluate(obj)
             value = mod(evaluate(obj.a), evaluate(obj.m));
         end

@@ -25,6 +25,11 @@ classdef ast_norm < yop.ast_expression
             end
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.expr, obj);
+            add_pred(obj.p, obj);
+        end
+        
         function value = evaluate(obj)
             if obj.nargs == 1
                 value = norm(evaluate(obj.expr));

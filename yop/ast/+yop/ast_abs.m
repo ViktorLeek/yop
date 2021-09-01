@@ -24,6 +24,10 @@ classdef ast_abs < yop.ast_expression
             v = obj.m_value;
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.expr, obj);
+        end
+        
         function draw(obj)
             fprintf('abs(expr)\n');
             last_child(obj);

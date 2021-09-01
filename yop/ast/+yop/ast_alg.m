@@ -24,6 +24,10 @@ classdef ast_alg < yop.ast_expression
                 ]);
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.var, obj);
+        end
+        
         function boolv = isa_numeric(obj)
             % Potentially very slow. If it turns out to be too slow an
             % alternative solution, such as a DFS can be used.

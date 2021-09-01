@@ -46,6 +46,10 @@ classdef ast_sum < yop.ast_expression
             end
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.expr, obj);
+        end
+        
         function value = evaluate(obj)
             switch obj.nargs
                 case 1

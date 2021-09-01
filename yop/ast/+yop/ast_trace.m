@@ -19,6 +19,10 @@ classdef ast_trace < yop.ast_expression
             end
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.expr, obj);
+        end
+        
         function value = evaluate(obj)
             value = trace(evaluate(obj.expr));
         end

@@ -38,6 +38,12 @@ classdef ast_horzcat < yop.ast_expression
             end
         end
         
+        function obj = set_pred(obj)
+            for k=1:length(obj.args)
+                add_pred(obj.args{k}, obj);
+            end
+        end
+        
         function [bool, tp] = isa_timepoint(obj)
             [bool, tp] = isa_timepoint(obj.args{1});
             for k=2:length(obj.args)

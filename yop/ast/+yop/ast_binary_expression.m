@@ -22,6 +22,11 @@ classdef ast_binary_expression < yop.ast_expression
             end
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.lhs, obj);
+            add_pred(obj.rhs, obj);
+        end
+        
         function draw(obj)
             fprintf([obj.name, '(lhs, rhs)\n']);
             

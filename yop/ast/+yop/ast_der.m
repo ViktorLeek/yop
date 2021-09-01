@@ -21,6 +21,10 @@ classdef ast_der < yop.ast_expression
             boolv = isa_numeric(obj.var);
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.var, obj);
+        end
+        
         function value = evaluate(obj)
             value = evaluate(obj.var);
         end

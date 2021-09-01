@@ -4,6 +4,8 @@ classdef node < handle
     properties 
         id
         m_value
+        pred = {} % predecessors
+        dom = {} % dominators
     end
     
     properties (Constant)
@@ -18,8 +20,35 @@ classdef node < handle
             obj.id = yop.node.get_id();
         end
         
-        function reset_stream(obj)
-            reset(obj.stream);
+        function obj = add_pred(obj, node)
+            if isa(obj, 'yop.node')
+                obj.pred{end+1} = node;
+            end
+        end
+        
+        function obj = reset_pred(obj)
+            obj.pred = {};
+        end
+        
+        function obj = comp_dom(obj)
+            % COMP_DOM - Compute dominators
+            
+            if isempty(obj.pred)
+                obj.dom = {obj};
+                return;
+            end
+            
+            % Definition: dom(n0) = {n0}
+            %             dom(n) = {n} U {ISEC_{p in pred(n)} dom(p)}
+            ds = obj.pred{1}.dom;
+            ids = yop.get_ids(ds);
+            for k=2:length(obj.pred)
+                dk = obj.pred{k}.dom;
+                idk = yop.get_ids(dk);
+                [ids, idx, ~] = intersect(ids, idk);
+                ds = ds(idx);
+            end
+            obj.dom = {obj, ds{:}};
         end
         
         function vars = get_variables(obj)
@@ -30,6 +59,10 @@ classdef node < handle
                     vars = {vars{:}, tsort{k}};
                 end
             end
+        end
+        
+        function reset_stream(obj)
+            reset(obj.stream);
         end
         
         function indent(obj)

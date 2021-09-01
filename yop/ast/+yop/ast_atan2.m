@@ -21,6 +21,11 @@ classdef ast_atan2 < yop.ast_expression
             end
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.y, obj);
+            add_pred(obj.x, obj);
+        end
+        
         function value = evaluate(obj)
             value = atan2(evaluate(obj.y), evaluate(obj.x));
         end

@@ -15,6 +15,10 @@ classdef ast_tanh < yop.ast_expression
             boolv = isa_numeric(obj.expr);
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.expr, obj);
+        end
+        
         function value = evaluate(obj)
             value = tanh(evaluate(obj.expr));
         end

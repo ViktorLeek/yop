@@ -90,7 +90,7 @@ classdef ocp < handle
             end
         end
         
-        function fn = fn(obj, expr)
+        function fn = expr_fn(obj, expr)
             obj.set_sym();
             e = forward_evaluate(expr);
             obj.reset_variables();

@@ -24,6 +24,10 @@ classdef ast_sumsqr < yop.ast_expression
             end
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.expr, obj);
+        end
+        
         function value = evaluate(obj)
             value = sumsqr(evaluate(obj.expr));
         end

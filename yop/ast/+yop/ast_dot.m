@@ -46,6 +46,11 @@ classdef ast_dot < yop.ast_expression
             end
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.A, obj);
+            add_pred(obj.B, obj);
+        end
+        
         function value = evaluate(obj)
             switch obj.nargs
                 case 2

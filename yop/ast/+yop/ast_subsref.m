@@ -13,6 +13,10 @@ classdef ast_subsref < yop.ast_expression
             obj.dim = size( subsref( ones(size(node)), s ) );
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.node, obj);
+        end
+        
         function value = evaluate(obj)
             value = subsref(evaluate(obj.node), obj.s);
         end

@@ -73,6 +73,10 @@ classdef ast_timepoint < yop.ast_expression
             boolv = isa_numeric(obj.expr);
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.expr, obj);
+        end
+        
         function [bool, tp] = isa_timepoint(obj)
             bool = true(size(obj.expr));
             switch class(obj.timepoint)    

@@ -15,6 +15,10 @@ classdef ast_det < yop.ast_expression
             boolv = isa_numeric(obj.A);
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.A, obj);
+        end
+        
         function value = evaluate(obj)
             value = det(evaluate(obj.A));
         end

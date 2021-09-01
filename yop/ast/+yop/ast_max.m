@@ -68,6 +68,13 @@ classdef ast_max < yop.ast_expression
             end
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.A, obj);
+            add_pred(obj.B, obj);
+            add_pred(obj.d, obj);
+            add_pred(obj.flag, obj);
+        end
+        
         function value = evaluate(obj)
             switch obj.nargs
                 case 1

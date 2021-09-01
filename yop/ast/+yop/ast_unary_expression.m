@@ -16,6 +16,10 @@ classdef ast_unary_expression < yop.ast_expression
             boolv = isa_numeric(obj.expr);
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.expr, obj);
+        end
+        
         function draw(obj)
             fprintf([obj.name, '(expr)\n']);
             last_child(obj);

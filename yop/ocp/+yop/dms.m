@@ -42,7 +42,6 @@ classdef dms < handle
                 return;
             end
             
-            
             h = T/obj.N; % grid step_length
             
             if isa(tp, 'yop.independent_initial')
@@ -156,30 +155,58 @@ classdef dms < handle
             end
         end
         
-        function fn = parameterize_expression(obj, expr)
+        function param_expr(obj, expr)
+            [tsort, n_elem] = topological_sort(expr);
+            
+            % Reset all predecessors so that only nodes in expr is included
+            for k=1:n_elem
+                reset_pred(tsort{k});
+            end
+            
+            % Set predecessors
+            for k=1:n_elem
+                set_pred(tsort{k});
+            end
+            
+            % Compute dominators
+            for k=n_elem:-1:1
+                comp_dom(tsort{k});
+            end
+            
+        end
+        
+        function e = parameterize_expression(obj, expr)
             % PARAMETERIZE_EXPRESSION
-            % Parameterize a function which in turn is used to transcribe
-            % the ocp expression into an nlp one. Because it handles
-            % timepoints, it lives in both the ocp and nlp domain, so the
-            % parameter list is: t, x, u, p, w. I.e. the function is called
-            % using fn(t, x, u, p, w). The first four arguments specifies
-            % the current time, and w specifies timepoints and integrals.
+            % Transcribe an ocp expression from the continuous time domain
+            % of the ocp to the static domain of the NLP.
             %
             % The implementation is based on a toplogical sort of all the
-            % nodes in the expression. Because a the sort is topological it
-            % does only depend on nodes that has been processed earlier or
-            % or is not dependent on any other node. 
+            % nodes in the expression. Because the sort is topological it
+            % only depends on nodes that has been processed earlier or
+            % itself, which makes it possible to transcribe the nodes as
+            % they are processed
             
+            % 1. First make a topological sort
             [topsort, n_elem] = topological_sort(expr);
             
+            % 2. Parameterize static parts using the nlp variables at that
+            % time instant, integrals using the nlp variables for the
+            % entire horizon, and simple time dependent variables using 
             args = {obj.ocp.t, obj.ocp.x, obj.ocp.u, obj.ocp.p, obj.w};
             
             obj.ocp.set_sym();
             for k=1:n_elem
                 if isa(topsort{k}, 'yop.ast_timepoint')
-                    fn = obj.ode.fn(topsort{k}.expr);
-                    [t, x, u, p] = obj.vars_at(topsort{k}.timepoint);
-                    topsort{k}.m_value = fn(t, x, u, p);
+                    % Parametrization of timepoint. 
+                    % To parameterize it with the values at the timepoint,
+                    % the ocp first generates an expression function for
+                    % the timepoint expression. The function is evaluated
+                    % with values at the timepoint, and the node value is
+                    % set to that value. If we don't call forward on this
+                    % node (m_value is not set) 
+                    fn = obj.ocp.expr_fn(topsort{k}.expr);
+                    [tt, xx, uu, pp] = obj.vars_at(topsort{k}.timepoint);
+                    topsort{k}.m_value = fn(tt, xx, uu, pp);
                     
                 elseif isa(topsort{k}, 'yop.ast_int')
                     integrand = forward(obj);
@@ -189,17 +216,29 @@ classdef dms < handle
                     
                 else
                     forward(topsport{k});
-                    % Här borde man hålla koll på om det finns några
-                    % uttryck kvar eller bara är konstanter, eftersom det
-                    % annars riskerar att bli sjukt mågna onödiga bivillkor
-                    %.
                     
                 end
             end
-            e = topsort{k}.m_value;
-            fn = casadi.Function('e', args, {e});            
             obj.ocp.reset_variables();
             
+            
+            
+            if istimeindependent
+                e = {topsort{k}.m_value};
+            else
+                e = cell(obj.N+1, 1);
+                fn = casadi.Function('e', args, {e});
+                for k=1:(obj.N)
+                    e{k} = ...
+                        fn(obj.t{k}, obj.x{k}, obj.u{k}, obj.p{k}, obj.w);
+                end
+                e{obj.N+1} = fn(...
+                    obj.t{obj.N+1}, ...
+                    obj.x{obj.N+1}, ...
+                    obj.u{obj.N}, ...
+                    obj.p{obj.N+1}, ...
+                    obj.w);
+            end
             
         end
     end

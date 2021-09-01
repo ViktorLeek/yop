@@ -41,6 +41,10 @@ classdef ast_cumsum < yop.ast_expression
             end
         end
         
+        function obj = set_pred(obj)
+            add_pred(obj.A, obj);
+        end
+        
         function value = evaluate(obj)
             switch obj.nargs
                 case 1
