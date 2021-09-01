@@ -22,6 +22,15 @@ classdef ast_binary_expression < yop.ast_expression
             end
         end
         
+        function boolv = is_transcription_invariant(obj)
+            if all(is_transcription_invariant(obj.lhs)) && ...
+                    all(is_transcription_invariant(obj.rhs))
+                boolv = true(size(obj));
+            else
+                boolv = false(size(obj));
+            end
+        end
+        
         function obj = set_pred(obj)
             add_pred(obj.lhs, obj);
             add_pred(obj.rhs, obj);

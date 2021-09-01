@@ -21,6 +21,15 @@ classdef ast_atan2 < yop.ast_expression
             end
         end
         
+        function boolv = is_transcription_invariant(obj)
+            if all(is_transcription_invariant(obj.y)) && ...
+                    all(is_transcription_invariant(obj.x))
+                boolv = true(size(obj));
+            else
+                boolv = false(size(obj));
+            end
+        end
+        
         function obj = set_pred(obj)
             add_pred(obj.y, obj);
             add_pred(obj.x, obj);

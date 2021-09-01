@@ -25,6 +25,14 @@ classdef ast_norm < yop.ast_expression
             end
         end
         
+        function boolv = is_transcription_invariant(obj)
+            if all(is_transcription_invariant(obj.expr))
+                boolv = true(size(obj));
+            else
+                boolv = false(size(obj));
+            end
+        end
+        
         function obj = set_pred(obj)
             add_pred(obj.expr, obj);
             add_pred(obj.p, obj);

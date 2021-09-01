@@ -617,10 +617,6 @@ classdef ocp < handle
         
         function present(obj)
             
-            for k=obj.variables
-                k.store_value();
-            end
-            
             for t=obj.independent
                 t.set_value(sym(t.var.name));
             end
@@ -748,7 +744,7 @@ classdef ocp < handle
             end
             
             for k=obj.variables
-                k.restore_value();
+                k.reset_value();
             end
 
         end

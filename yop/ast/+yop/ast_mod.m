@@ -21,6 +21,15 @@ classdef ast_mod < yop.ast_expression
             end
         end
         
+        function boolv = is_transcription_invariant(obj)
+            if all(is_transcription_invariant(obj.a)) && ...
+                    all(is_transcription_invariant(obj.m))
+                boolv = true(size(obj));
+            else
+                boolv = false(size(obj));
+            end
+        end
+        
         function obj = set_pred(obj)
             add_pred(obj.a, obj);
             add_pred(obj.m, obj);

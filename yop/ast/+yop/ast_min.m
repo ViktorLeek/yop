@@ -68,6 +68,25 @@ classdef ast_min < yop.ast_expression
             end
         end
         
+        function boolv = is_transcription_invariant(obj)
+            switch obj.nargs
+                case 1
+                    if all(is_transcription_invariant(obj.A))
+                        boolv = true(size(obj));
+                    else
+                        boolv = false(size(obj));
+                    end
+                    
+                case {2, 3, 4}
+                    if all(is_transcription_invariant(obj.A)) && ...
+                            all(is_transcription_invariant(obj.B))
+                        boolv = true(size(obj));
+                    else
+                        boolv = false(size(obj));
+                    end
+            end
+        end
+        
         function obj = set_pred(obj)
             add_pred(obj.A, obj);
             add_pred(obj.B, obj);

@@ -15,6 +15,10 @@ classdef ast_abs < yop.ast_expression
             boolv = isa_numeric(obj.expr);
         end
         
+        function boolv = is_transcription_invariant(obj)
+            boolv = is_transcription_invariant(obj.expr);
+        end
+        
         function value = evaluate(obj)
             value = abs(evaluate(obj.expr));
         end

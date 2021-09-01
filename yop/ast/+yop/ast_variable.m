@@ -25,6 +25,11 @@ classdef ast_variable < yop.ast_expression
             id = obj.id*ones(size(obj));
         end
         
+        function boolv = is_transcription_invariant(obj)
+            % overloaded for states, algebraics and controls
+            boolv = true(size(obj));
+        end
+        
         function boolv = isa_numeric(obj)
             boolv = false(size(obj));
         end
@@ -35,7 +40,7 @@ classdef ast_variable < yop.ast_expression
         end
         
         function draw(obj)
-            fprintf([obj.name, '\n']);
+            fprintf(['[', num2str(obj.id), ']:', obj.name, '\n']);
         end
         
         function value = evaluate(obj)

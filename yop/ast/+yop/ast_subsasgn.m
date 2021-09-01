@@ -25,6 +25,12 @@ classdef ast_subsasgn < yop.ast_expression
             boolv(idx) = isa_numeric(obj.b);
         end
         
+        function boolv = is_transcription_invariant(obj)
+            boolv = is_transcription_invariant(obj.node);
+            idx = get_indices(obj);
+            boolv(idx) = is_transcription_invariant(obj.b);
+        end
+        
         function obj = set_pred(obj)
             add_pred(obj.node, obj);
             add_pred(obj.b, obj);
@@ -90,7 +96,7 @@ classdef ast_subsasgn < yop.ast_expression
             end_child(obj);
             
             last_child(obj);
-            draw(obj.node);
+            draw(obj.b);
             end_child(obj);
         end
         

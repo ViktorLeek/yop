@@ -6,6 +6,7 @@ classdef node < handle
         m_value
         pred = {} % predecessors
         dom = {} % dominators
+        %idom = {} % immediate dominators
     end
     
     properties (Constant)
@@ -17,7 +18,7 @@ classdef node < handle
     methods
         
         function obj = node()
-            obj.id = yop.node.get_id();
+            obj.id = yop.node.get_uid();
         end
         
         function obj = add_pred(obj, node)
@@ -28,6 +29,10 @@ classdef node < handle
         
         function obj = reset_pred(obj)
             obj.pred = {};
+        end
+        
+        function i = get_id(obj)
+            i = obj.id;
         end
         
         function obj = comp_dom(obj)
@@ -50,6 +55,14 @@ classdef node < handle
             end
             obj.dom = {obj, ds{:}};
         end
+        
+%         function s = sdom(obj)
+%             if length(obj.dom) == 1
+%                 s = {};
+%             else
+%                 s = {obj.dom{2:end}};
+%             end
+%         end
         
         function vars = get_variables(obj)
             [tsort, n_elem] = topological_sort(obj);
@@ -114,7 +127,7 @@ classdef node < handle
     end
     
     methods (Static)
-        function id = get_id()
+        function id = get_uid()
             persistent ID
             if isempty(ID)
                 ID = 1;

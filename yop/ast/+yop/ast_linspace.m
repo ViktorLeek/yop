@@ -16,7 +16,18 @@ classdef ast_linspace < yop.ast_expression
         function boolv = isa_numeric(obj)
             % Potentially very slow. If it turns out to be too slow an
             % alternative solution, such as a DFS can be used.
-            if all(isa_numeric(obj.x1)) && all(isa_numeric(obj.x2)) && isa_numeric(obj.n)
+            if all(isa_numeric(obj.x1)) && all(isa_numeric(obj.x2)) ...
+                    && all(isa_numeric(obj.n))
+                boolv = true(size(obj));
+            else
+                boolv = false(size(obj));
+            end
+        end
+        
+        function boolv = is_transcription_invariant(obj)
+            if all(is_transcription_invariant(obj.x1)) ...
+                    && all(is_transcription_invariant(obj.x2)) ...
+                    && all(is_transcription_invariant(obj.n))
                 boolv = true(size(obj));
             else
                 boolv = false(size(obj));

@@ -14,6 +14,10 @@ classdef ast_erf < yop.ast_expression
             boolv = isa_numeric(obj.expr);
         end
         
+        function boolv = is_transcription_invariant(obj)
+            boolv = is_transcription_invariant(obj.expr);
+        end
+        
         function obj = set_pred(obj)
             add_pred(obj.expr, obj);
         end

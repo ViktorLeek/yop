@@ -73,6 +73,10 @@ classdef ast_timepoint < yop.ast_expression
             boolv = isa_numeric(obj.expr);
         end
         
+        function boolv = is_transcription_invariant(obj)
+            boolv = true(size(obj));
+        end
+        
         function obj = set_pred(obj)
             add_pred(obj.expr, obj);
         end
@@ -112,7 +116,8 @@ classdef ast_timepoint < yop.ast_expression
         end
         
         function draw(obj)
-            fprintf('timepoint(timepoint, expr)\n');
+            fprintf(['[', num2str(obj.id), ']:', ...
+                'timepoint(timepoint, expr)\n']);
             
             begin_child(obj);
             draw(obj.timepoint);

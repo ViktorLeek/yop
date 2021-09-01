@@ -41,6 +41,14 @@ classdef ast_cumsum < yop.ast_expression
             end
         end
         
+        function boolv = is_transcription_invariant(obj)
+            if all(is_transcription_invariant(obj.A))
+                boolv = true(size(obj));
+            else
+                boolv = false(size(obj));
+            end
+        end
+        
         function obj = set_pred(obj)
             add_pred(obj.A, obj);
         end

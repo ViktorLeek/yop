@@ -54,6 +54,11 @@ classdef ast_subsref < yop.ast_expression
             bool = bool(get_indices(obj));            
         end
         
+        function boolv = is_transcription_invariant(obj)
+            boolv = is_transcription_invariant(obj.node);
+            boolv = boolv(get_indices(obj));
+        end
+        
         function [bool, tp] = isa_timepoint(obj)
             [bool, tp] = isa_timepoint(obj.node);
             idx = get_indices(obj);

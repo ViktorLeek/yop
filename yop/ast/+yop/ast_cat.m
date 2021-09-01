@@ -25,6 +25,14 @@ classdef ast_cat < yop.ast_expression
             boolv = cat(obj.d, tmp{:});
         end
         
+        function boolv = is_transcription_invariant(obj)
+            tmp = {is_transcription_invariant(obj.args{1})};
+            for k=2:length(obj.args)
+                tmp = {tmp{:}, is_transcription_invariant(obj.args{k})};
+            end
+            boolv = cat(obj.d, tmp{:});
+        end
+        
         function obj = set_pred(obj)
             for k=1:length(obj.args)
                 add_pred(obj.args{k}, obj);

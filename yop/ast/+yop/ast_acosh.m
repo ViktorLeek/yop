@@ -28,6 +28,10 @@ classdef ast_acosh < yop.ast_expression
             boolv = isa_numeric(obj.expr);
         end
         
+        function boolv = is_transcription_invariant(obj)
+            boolv = is_transcription_invariant(obj.expr);
+        end
+        
         function [topsort, n_elem, visited] = ...
                 topological_sort(obj, visited, topsort, n_elem)
             % Topological sort of expression graph by a dfs.
