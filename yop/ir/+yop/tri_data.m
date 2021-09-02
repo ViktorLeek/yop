@@ -1,10 +1,10 @@
 classdef tri_data < handle
     % trancscription invariant data
     properties
-        eq_inv  % equality constraint, transcription invariant
-        ieq_inv % inequality constraint, transcription invariant
-        eq_var  % equality constraint, transcription variant
-        ieq_var % inequality constraint, transcription variant
+        eq_inv = {}  % equality constraint, transcription invariant
+        ieq_inv = {} % inequality constraint, transcription invariant
+        eq_var = {}  % equality constraint, transcription variant
+        ieq_var = {} % inequality constraint, transcription variant
     end
     methods
         

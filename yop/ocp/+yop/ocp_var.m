@@ -32,17 +32,22 @@ classdef ocp_var < handle
         
         function obj = reset_value(obj)
             % Set the value to stack top and pop the stack
-            obj.var.m_value = obj.tmp_value{end};
-            if length(obj.tmp_value) == 1
+            if isempty(obj.tmp_value)
+                obj.var.m_value = [];
                 obj.tmp_value = {};
             else
-                obj.tmp_value = obj.tmp_value{1:end-1};
+                obj.var.m_value = obj.tmp_value{end};
+                if length(obj.tmp_value) == 1
+                    obj.tmp_value = {};
+                else
+                    obj.tmp_value = obj.tmp_value{1:end-1};
+                end
             end
         end
         
         function obj = set_sym(obj)
             % Push the old value onto the stack
-            obj.tmp_value{end+1} = obj.var.m_value;
+            %obj.tmp_value{end+1} = obj.var.m_value;
             obj.var.m_value = obj.sym;
         end
     end

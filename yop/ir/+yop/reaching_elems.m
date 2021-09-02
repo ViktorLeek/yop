@@ -25,7 +25,7 @@ function re = reaching_elems(expr)
 
 
 % Get the variables that make up the expression
-vars = get_vars(expr);
+vars = yop.get_vars(expr);
 
 re(length(vars)) = yop.re_data();
 

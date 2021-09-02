@@ -36,25 +36,15 @@ classdef node < handle
             
         end
         
-%         function obj = add_pred(obj, node)
-%             if isa(obj, 'yop.node')
-%                 obj.pred{end+1} = node;
+%         function vars = get_vars(obj)
+%             [tsort, n_elem] = topological_sort(obj);
+%             vars = {};
+%             for k=1:n_elem
+%                 if isa(tsort{k}, 'yop.ast_variable')
+%                     vars = {vars{:}, tsort{k}};
+%                 end
 %             end
 %         end
-        
-%         function i = get_id(obj) % keep this?
-%             i = obj.id;
-%         end
-        
-        function vars = get_vars(obj)
-            [tsort, n_elem] = topological_sort(obj);
-            vars = {};
-            for k=1:n_elem
-                if isa(tsort{k}, 'yop.ast_variable')
-                    vars = {vars{:}, tsort{k}};
-                end
-            end
-        end
         
         function reset_stream(obj)
             reset(obj.stream);
@@ -107,33 +97,6 @@ classdef node < handle
         end
         
     end
-    
-    %     methods % (To remove?)
-    %         function obj = reset_pred(obj)
-    %             obj.pred = {};
-    %         end
-    %
-    %         function obj = comp_dom(obj)
-    %             % COMP_DOM - Compute dominators
-    %
-    %             if isempty(obj.pred)
-    %                 obj.dom = {obj};
-    %                 return;
-    %             end
-    %
-    %             % Definition: dom(n0) = {n0}
-    %             %             dom(n) = {n} U {ISEC_{p in pred(n)} dom(p)}
-    %             ds = obj.pred{1}.dom;
-    %             ids = yop.get_ids(ds);
-    %             for k=2:length(obj.pred)
-    %                 dk = obj.pred{k}.dom;
-    %                 idk = yop.get_ids(dk);
-    %                 [ids, idx, ~] = intersect(ids, idk);
-    %                 ds = ds(idx);
-    %             end
-    %             obj.dom = {obj, ds{:}};
-    %         end
-    %     end
     
     methods (Static)
         function id = get_uid()

@@ -1,7 +1,7 @@
 function value = prop_num(expr)
 % PROP_NUM - Propagate numerical values
 
-vars = get_vars(expr);
+vars = yop.get_vars(expr);
 
 old_values = cell(size(vars));
 for k=1:length(vars)

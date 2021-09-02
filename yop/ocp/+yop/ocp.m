@@ -23,8 +23,8 @@ classdef ocp < handle
         constraints
         
         % Parsed constraints
-        equality = {}; % Temporary cell
-        inequality = {}; % Temporary cell
+        eq = {}; % Temporary cell
+        ieq = {}; % Temporary cell
     end
     
     %% Formulate ocp
@@ -82,8 +82,9 @@ classdef ocp < handle
             
             % 7) Convert to transcription invariant/variant form
             tri = yop.tr_invar(nbc); 
-            
-            % !!!!!!! Spara in tri information !!!!!!!!!!
+            obj.eq = {tri.eq_inv{:}, tri.eq_var{:}};
+            obj.ieq = {tri.ieq_inv{:}, tri.ieq_var{:}};
+                        
         end
         
         function obj = parse_variables(obj)
@@ -109,6 +110,41 @@ classdef ocp < handle
                         error('[Yop] Error: Unknown variable type');
                 end
             end
+            
+            % If we do not have some of the variables, they are set to
+            % something in order for the transcription methods to query
+            % them, and also to be able to set bound on independent
+            % variables.
+            if isempty(obj.independent)
+                obj.add_independent(yop.ast_independent('t'));
+            end
+            
+            if isempty(obj.independent_initial)
+                obj.add_independent_initial( ...
+                    yop.ast_independent_initial('t0'));
+            end
+            
+            if isempty(obj.independent_final)
+                obj.add_independent_final( ...
+                    yop.ast_independent_final('tf'));
+            end
+            
+            if isempty(obj.states)
+                obj.add_state(yop.ast_state('x', 0, 0));
+            end
+            
+            if isempty(obj.algebraics)
+                obj.add_algebraic(yop.ast_algebraic('z', 0, 0));
+            end
+            
+            if isempty(obj.controls)
+                obj.add_control(yop.ast_control('u', 0, 0));
+            end
+            
+            if isempty(obj.parameters)
+                obj.add_parameter(yop.ast_parameter('p', 0, 0));
+            end
+            
         end
         
         function obj = parse_box_constraints(obj, dtp)
@@ -391,14 +427,6 @@ classdef ocp < handle
                 obj.parameters(:).'];
         end
         
-%         function obj = add_inequality(obj, pc)
-%             obj.inequality = {obj.inequality{:}, pc};
-%         end
-%         
-%         function obj = add_equality(obj, pc)
-%             obj.equality = {obj.equality{:}, pc};
-%         end
-        
     end
     
     %% Transcription
@@ -427,84 +455,95 @@ classdef ocp < handle
         
         
         function [bool, T] = fixed_horizon(obj)
-            bool = true;
-            for k=1:length(obj.independent_initial)
-                bool = bool && (obj.independent_initial(k).lb == ...
-                    obj.independent_initial(k).ub);
-            end
-            for k=1:length(obj.independent_final)
-                bool = bool && (obj.independent_final(k).lb == ...
-                    obj.independent_final(k).ub);
-            end
-            T = obj.independent_final(1).lb-obj.independent_initial(1).lb;
+            
+            t0_lb = obj.independent_initial.lb;
+            t0_ub = obj.independent_initial.ub;
+            tf_lb = obj.independent_final.lb;
+            tf_ub = obj.independent_final.ub;
+            
+            if t0_lb==t0_ub && tf_lb==tf_ub && ~isinf(t0_lb) && ...
+                    ~isinf(t0_ub) && ~isinf(tf_lb) && ~isinf(tf_ub)
+                bool = true;
+            else
+                bool = false;
+            end    
+            T = tf_lb - t0_lb;
         end
         
-        function t_vec = t0(obj)
-            t_vec = [];
-            for v=obj.independent_initial
-                t_vec = [t_vec(:); v.sym(:).'];
-            end
+        function t = t0(obj)
+            t = obj.independent_initial.sym;
         end
         
-        function t_vec = tf(obj)
-            t_vec = [];
-            for v=obj.independent_final
-                t_vec = [t_vec(:); v.sym(:).'];
-            end
+        function t = tf(obj)
+            t = obj.independent_final.sym;
         end
         
-        function t_vec = t(obj)
-            t_vec = [];
-            for v=obj.independent
-                t_vec = [t_vec(:); v.sym(:).'];
+        function tt = t(obj)
+            if isempty(obj.independent)
+                tt = [];
+            else
+                tt = obj.independent.sym;
             end
         end
         
         function x_vec = x(obj)
-            x_vec = [];
-            for v=obj.states
-                x_vec = [x_vec(:); v.sym(:).'];
+            if length(obj.states)==1
+                x_vec = obj.states.sym;
+            else
+                x_vec = [];
+                for v=obj.states
+                    x_vec = [x_vec(:); v.sym(:).'];
+                end
             end
         end
         
         function u_vec = u(obj)
-            u_vec = [];
-            for v=obj.controls
-                u_vec = [u_vec(:); v.sym(:).'];
+            if length(obj.controls) == 1
+                u_vec = obj.controls.sym;
+            else
+                u_vec = [];
+                for v=obj.controls
+                    u_vec = [u_vec(:); v.sym(:).'];
+                end
             end
         end
         
         function p_vec = p(obj)
-            p_vec = [];
-            for v=obj.parameters
-                p_vec = [p_vec(:); v.sym(:).'];
+            if length(obj.parameters) == 1
+                p_vec = obj.parameters.sym;
+            else
+                p_vec = [];
+                for v=obj.parameters
+                    p_vec = [p_vec(:); v.sym(:).'];
+                end
             end
         end
         
         function fn = expr_fn(obj, expr)
             obj.set_sym();
             e = fw_eval(expr);
-            obj.reset_variables();
-            fn = casadi.Function('fn', {obj.t, obj.x, obj.u, obj.p}, {e});
+            fn = casadi.Function('fn', ...
+                {obj.t0, obj.tf, obj.t, obj.x, obj.u, obj.p}, {e});
+            %obj.reset_sym();
         end
         
         function [ode_expr, ode_var] = ode(obj)
             obj.set_sym();
             var = []; expr = [];
-            for ode = ocp.odes
+            for ode = obj.odes
                 % .var expected short, .expr expected longer
                 lhs = evaluate(ode.var);
                 rhs = fw_eval(ode.expr);
                 var = [var(:); lhs(:).'];
                 expr = [expr(:); rhs(:).'];
             end
-            obj.reset_sym();
+            %obj.reset_sym();
             
             ode_var = casadi.Function('ode_var', ...
-                {obj.t, obj.x, obj.u, obj.p}, {var});
+                {obj.t0, obj.tf, obj.t, obj.x, obj.u, obj.p}, {var});
             
             ode_expr = casadi.Function('ode_expr', ...
-                {obj.t, obj.x, obj.u, obj.p}, {expr});
+                {obj.t0, obj.tf, obj.t, obj.x, obj.u, obj.p}, {expr});
         end
         
         function [t0_lb, t0_ub, tf_lb, tf_ub] = t_bd(obj)
@@ -562,7 +601,6 @@ classdef ocp < handle
                 v.reset_value();
             end
         end
-        
         
     end
         
@@ -624,7 +662,11 @@ classdef ocp < handle
             end
             fprintf(['[Yop] ', title, '\n']);
             fprintf('  min\t');
-            fprintf(char(x));
+            if isnumeric(x)
+                fprintf(num2str(x));
+            else
+                fprintf(char(x));
+            end
             fprintf('\n');
             
             % Constraints
@@ -667,7 +709,7 @@ classdef ocp < handle
                 fprintf(') == ');
                 rhs = char(fw_eval(obj.odes(k).expr));
                 if length(rhs) > 40
-                    vs = get_vars(obj.odes(k).expr);
+                    vs = yop.get_vars(obj.odes(k).expr);
                     args = '';
                     for n=1:length(vs)
                         args = [args(:).', vs{n}.name, ', '];
@@ -679,21 +721,21 @@ classdef ocp < handle
                 fprintf('\n');
             end
             
-            if ~isempty(obj.equality)
+            if ~isempty(obj.eq)
                 fprintf('  Equality\n');
             end
-            for k=1:length(obj.equality)
+            for k=1:length(obj.eq)
                 fprintf('\t');
-                fprintf(char(fw_eval(obj.equality{k})));
+                fprintf(char(fw_eval(obj.eq{k})));
                 fprintf('\n');
             end
             
-            if ~isempty(obj.inequality)
+            if ~isempty(obj.ieq)
                 fprintf('  Inequality\n');
             end
-            for k=1:length(obj.inequality)
+            for k=1:length(obj.ieq)
                 fprintf('\t');
-                fprintf(char(fw_eval(obj.inequality{k})));
+                fprintf(char(fw_eval(obj.ieq{k})));
                 fprintf('\n');
             end
             
@@ -739,12 +781,12 @@ end
 %         end
 %         
 %         function obj = reset_vars(obj)
-%             obj.set_independent();
-%             obj.set_independent_initial();
-%             obj.set_independent_final();
-%             obj.set_states();
-%             obj.set_controls();
-%             obj.set_parameters();
+%             obj.reset_independent();
+%             obj.reset_independent_initial();
+%             obj.reset_independent_final();
+%             obj.reset_states();
+%             obj.reset_controls();
+%             obj.reset_parameters();
 %         end
 %         
 %         function obj = set_independent(obj, t)
