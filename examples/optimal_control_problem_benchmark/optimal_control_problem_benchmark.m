@@ -1,5 +1,5 @@
 %% Optimal Control Problem Benchmark
-import yop.*
+clear; import yop.*
 
 [t, t0, tf] = yop.time();
 
