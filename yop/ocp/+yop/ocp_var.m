@@ -1,4 +1,4 @@
-classdef ocp_variable < yop.node
+classdef ocp_var < handle
     properties
         var
         sym
@@ -13,8 +13,7 @@ classdef ocp_variable < yop.node
         tmp_value = {}
     end
     methods
-        function obj = ocp_variable(var)
-            obj@yop.node();            
+        function obj = ocp_var(var)       
             obj.var = var;
             obj.sym = casadi.MX.sym(var.name, size(var,1), size(var,2));
             obj.ub0 = nan(size(var));
@@ -23,38 +22,6 @@ classdef ocp_variable < yop.node
             obj.lb  = nan(size(var));
             obj.ubf = nan(size(var));
             obj.lbf = nan(size(var));
-        end
-        
-        function draw(obj)
-            fprintf('ocp_variable(var, ub0, lb0, ub, lb, ubf, lbf)\n');
-            
-            begin_child(obj);
-            draw(obj.var);
-            end_child(obj);
-            
-            begin_child(obj);
-            draw(obj.ub0);
-            end_child(obj);
-            
-            begin_child(obj);
-            draw(obj.lb0);
-            end_child(obj);
-            
-            begin_child(obj);
-            draw(obj.ub);
-            end_child(obj);
-            
-            begin_child(obj);
-            draw(obj.lb);
-            end_child(obj);
-            
-            begin_child(obj);
-            draw(obj.ubf);
-            end_child(obj);
-            
-            last_child(obj);
-            draw(obj.lbf);
-            end_child(obj);
         end
         
         function obj = set_value(obj, value)

@@ -1,5 +1,5 @@
-function re = reaching_elements(expr)
-% re = reaching_elements(expr)
+function re = reaching_elems(expr)
+% re = reaching_elems(expr)
 % Get the elements of a variable that reaches a certain expression.
 %   expr - The expression the elements reach
 %   re   - A vector of yop.re_data with one element per variable that
@@ -25,7 +25,7 @@ function re = reaching_elements(expr)
 
 
 % Get the variables that make up the expression
-vars = get_variables(expr);
+vars = get_vars(expr);
 
 re(length(vars)) = yop.re_data();
 
@@ -40,7 +40,7 @@ for k=1:length(re)
 end
 
 % Evaluate in order to find reaching variables
-reaching_expr = forward_evaluate(expr);
+reaching_expr = fw_eval(expr);
 
 % Elements that are not variables are set to -1
 reaching_expr(~isa_variable(expr)) = -1;

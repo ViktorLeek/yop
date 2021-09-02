@@ -4,10 +4,13 @@ classdef node < handle
     properties 
         id
         m_value
-        pred = {} % predecessors
-        dom = {} % dominators
-        %idom = {} % immediate dominators
     end
+    
+    %     properties %(to remove?)
+    %         pred = {} % predecessors
+    %         dom = {} % dominators
+    %         %idom = {} % immediate dominators
+    %     end
     
     properties (Constant)
         % reference to handle is constant, but not the value itself.
@@ -21,50 +24,29 @@ classdef node < handle
             obj.id = yop.node.get_uid();
         end
         
-        function obj = add_pred(obj, node)
-            if isa(obj, 'yop.node')
-                obj.pred{end+1} = node;
-            end
-        end
-        
-        function obj = reset_pred(obj)
-            obj.pred = {};
-        end
-        
-        function i = get_id(obj)
-            i = obj.id;
-        end
-        
-        function obj = comp_dom(obj)
-            % COMP_DOM - Compute dominators
+        function value = fw_eval(expr)
+            % FW_EVAL - Forward evaluate
             
-            if isempty(obj.pred)
-                obj.dom = {obj};
-                return;
-            end
+            [sort, n] = topological_sort(expr);
             
-            % Definition: dom(n0) = {n0}
-            %             dom(n) = {n} U {ISEC_{p in pred(n)} dom(p)}
-            ds = obj.pred{1}.dom;
-            ids = yop.get_ids(ds);
-            for k=2:length(obj.pred)
-                dk = obj.pred{k}.dom;
-                idk = yop.get_ids(dk);
-                [ids, idx, ~] = intersect(ids, idk);
-                ds = ds(idx);
+            for k=1:(n-1)
+                forward(sort{k});
             end
-            obj.dom = {obj, ds{:}};
+            value = forward(sort{n});
+            
         end
         
-%         function s = sdom(obj)
-%             if length(obj.dom) == 1
-%                 s = {};
-%             else
-%                 s = {obj.dom{2:end}};
+%         function obj = add_pred(obj, node)
+%             if isa(obj, 'yop.node')
+%                 obj.pred{end+1} = node;
 %             end
 %         end
         
-        function vars = get_variables(obj)
+%         function i = get_id(obj) % keep this?
+%             i = obj.id;
+%         end
+        
+        function vars = get_vars(obj)
             [tsort, n_elem] = topological_sort(obj);
             vars = {};
             for k=1:n_elem
@@ -125,6 +107,33 @@ classdef node < handle
         end
         
     end
+    
+    %     methods % (To remove?)
+    %         function obj = reset_pred(obj)
+    %             obj.pred = {};
+    %         end
+    %
+    %         function obj = comp_dom(obj)
+    %             % COMP_DOM - Compute dominators
+    %
+    %             if isempty(obj.pred)
+    %                 obj.dom = {obj};
+    %                 return;
+    %             end
+    %
+    %             % Definition: dom(n0) = {n0}
+    %             %             dom(n) = {n} U {ISEC_{p in pred(n)} dom(p)}
+    %             ds = obj.pred{1}.dom;
+    %             ids = yop.get_ids(ds);
+    %             for k=2:length(obj.pred)
+    %                 dk = obj.pred{k}.dom;
+    %                 idk = yop.get_ids(dk);
+    %                 [ids, idx, ~] = intersect(ids, idk);
+    %                 ds = ds(idx);
+    %             end
+    %             obj.dom = {obj, ds{:}};
+    %         end
+    %     end
     
     methods (Static)
         function id = get_uid()

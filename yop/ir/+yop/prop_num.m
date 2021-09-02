@@ -1,8 +1,7 @@
-function value = dummy_evaluate(expr)
-% Set variables to dummy values in order to propagte values for numerical
-% constants.
+function value = prop_num(expr)
+% PROP_NUM - Propagate numerical values
 
-vars = get_variables(expr);
+vars = get_vars(expr);
 
 old_values = cell(size(vars));
 for k=1:length(vars)

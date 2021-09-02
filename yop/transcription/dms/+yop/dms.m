@@ -219,7 +219,7 @@ classdef dms < handle
                     
                 end
             end
-            obj.ocp.reset_variables();
+            obj.ocp.reset_vars();
             
             
             
