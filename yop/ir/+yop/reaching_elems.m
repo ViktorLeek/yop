@@ -1,4 +1,4 @@
-function re = reaching_elems(expr)
+function [re, nr] = reaching_elems(expr, vars)
 % re = reaching_elems(expr)
 % Get the elements of a variable that reaches a certain expression.
 %   expr - The expression the elements reach
@@ -25,7 +25,14 @@ function re = reaching_elems(expr)
 
 
 % Get the variables that make up the expression
-vars = yop.get_vars(expr);
+if nargin == 1
+    % This way it is possible to include, manually, the variables that you
+    % want to test if they reach the expression. For instance to answer the
+    % question of how many of the state variables the reached the ode rhs
+    % expression. Note that the manual vars class should include the
+    % get_vars class for proper analysis.
+    vars = yop.get_vars(expr);
+end
 
 re(length(vars)) = yop.re_data();
 
@@ -56,6 +63,9 @@ for k=1:length(re)
 end
 
 % Remove variables that do not reach the final expression.
-re = re(arrayfun(@(v) ~isempty(v.reaching), re));
+reaching = arrayfun(@(v) ~isempty(v.reaching), re);
+
+nr = re(~reaching);
+re = re( reaching);
 
 end

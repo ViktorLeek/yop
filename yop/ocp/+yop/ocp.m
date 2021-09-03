@@ -3,6 +3,9 @@ classdef ocp < handle
         % Misc
         name
         
+        % objective
+        objective
+        
         % Variables
         independent
         independent_initial
@@ -11,16 +14,45 @@ classdef ocp < handle
         algebraics
         controls
         parameters
-        
-        % odes and algebraic eq's
-        alg_eqs
-        odes
-        
-        % objective
-        objective
-        
-        % Unparsed constraints
+        differetial_eqs
         constraints
+        
+        % Vectorized form
+        Px % State perturbation function
+        t0
+        tf
+        t
+        x
+        z
+        u
+        p
+        ode
+        
+        % Vectorized bounds
+        t0_ub
+        t0_lb
+        tf_ub
+        tf_lb
+                
+        x0_ub
+        x0_lb
+        x_ub
+        x_lb
+        xf_ub
+        xf_lb
+        
+        z_ub
+        z_lb
+        
+        u0_ub
+        u0_lb
+        u_ub
+        u_lb
+        uf_ub
+        uf_lb
+        
+        p_ub
+        p_lb
         
         % Parsed constraints
         eq = {}; % Temporary cell
@@ -71,19 +103,26 @@ classdef ocp < handle
             % 4) Convert to value-numeric form
             vnf = yop.to_vnf(hsrf);
             
-            % 5) convert to distinct timepoint form (final form for boxcon)
+            % 5) Convert to distinct timepoint form (final form for boxcon)
             dtp = yop.to_dtp(vnf);
             obj.parse_box_constraints(dtp);
             obj.set_box_bounds();
             
             % 6) Sort the nonbox constraints: ode, inequality, equality
             nbc = yop.sort_nonbox(dtp.get_pathcon());
-            obj.odes = nbc.odes;
+            obj.differetial_eqs = nbc.odes;
             
             % 7) Convert to transcription invariant/variant form
             tri = yop.tr_invar(nbc); 
             obj.eq = {tri.eq_inv{:}, tri.eq_var{:}};
             obj.ieq = {tri.ieq_inv{:}, tri.ieq_var{:}};
+            
+            % 8) vectorize ocp
+            obj.vectorize();
+            
+            % 9) Error checking
+            
+            % 10) OCP built
                         
         end
         
@@ -157,12 +196,12 @@ classdef ocp < handle
                 var = obj.find_variable(re.var.id);
                 switch class(bc)
                     case 'yop.ast_eq' % var == bnd
-                        var.ub(re.idx_var) = bnd(re.idx_expr);
-                        var.lb(re.idx_var) = bnd(re.idx_expr);
+                        var.ub(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
+                        var.lb(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     case {'yop.ast_le', 'yop.ast_lt'} % var < bnd
-                        var.ub(re.idx_var) = bnd(re.idx_expr);
+                        var.ub(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     case {'yop.ast_ge', 'yop.ast_gt'} % var > bnd
-                        var.lb(re.idx_var) = bnd(re.idx_expr);
+                        var.lb(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     otherwise
                         error('[Yop] Error: Wrong constraint class.');
                 end
@@ -177,12 +216,12 @@ classdef ocp < handle
                 var = obj.find_variable(re.var.id);
                 switch class(bc)
                     case 'yop.ast_eq' % var == bnd
-                        var.ub0(re.idx_var) = bnd(re.idx_expr);
-                        var.lb0(re.idx_var) = bnd(re.idx_expr);
+                        var.ub0(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
+                        var.lb0(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     case {'yop.ast_le', 'yop.ast_lt'} % var < bnd
-                        var.ub0(re.idx_var) = bnd(re.idx_expr);
+                        var.ub0(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     case {'yop.ast_ge', 'yop.ast_gt'} % var > bnd
-                        var.lb0(re.idx_var) = bnd(re.idx_expr);
+                        var.lb0(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     otherwise
                         error('[Yop] Error: Wrong constraint class.');
                 end
@@ -197,12 +236,12 @@ classdef ocp < handle
                 var = obj.find_variable(re.var.id);
                 switch class(bc)
                     case 'yop.ast_eq' % var == bnd
-                        var.ubf(re.idx_var) = bnd(re.idx_expr);
-                        var.lbf(re.idx_var) = bnd(re.idx_expr);
+                        var.ubf(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
+                        var.lbf(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     case {'yop.ast_le', 'yop.ast_lt'} % var < bnd
-                        var.ubf(re.idx_var) = bnd(re.idx_expr);
+                        var.ubf(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     case {'yop.ast_ge', 'yop.ast_gt'} % var > bnd
-                        var.lbf(re.idx_var) = bnd(re.idx_expr);
+                        var.lbf(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     otherwise
                         error('[Yop] Error: Wrong constraint class.');
                 end
@@ -217,12 +256,12 @@ classdef ocp < handle
                 var = obj.find_variable(re.var.id);
                 switch class(bc)
                     case 'yop.ast_eq' % bnd == var
-                        var.ub(re.idx_var) = bnd(re.idx_expr);
-                        var.lb(re.idx_var) = bnd(re.idx_expr);
+                        var.ub(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
+                        var.lb(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     case {'yop.ast_le', 'yop.ast_lt'} % bnd < var
-                        var.lb(re.idx_var) = bnd(re.idx_expr);
+                        var.lb(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     case {'yop.ast_ge', 'yop.ast_gt'} % bnd > var
-                        var.ub(re.idx_var) = bnd(re.idx_expr);
+                        var.ub(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     otherwise
                         error('[Yop] Error: Wrong constraint class.');
                 end
@@ -237,12 +276,12 @@ classdef ocp < handle
                 var = obj.find_variable(re.var.id);
                 switch class(bc)
                     case 'yop.ast_eq' % bnd == var
-                        var.ub0(re.idx_var) = bnd(re.idx_expr);
-                        var.lb0(re.idx_var) = bnd(re.idx_expr);
+                        var.ub0(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
+                        var.lb0(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     case {'yop.ast_le', 'yop.ast_lt'} % bnd < var
-                        var.lb0(re.idx_var) = bnd(re.idx_expr);
+                        var.lb0(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     case {'yop.ast_ge', 'yop.ast_gt'} % bnd > var
-                        var.ub0(re.idx_var) = bnd(re.idx_expr);
+                        var.ub0(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     otherwise
                         error('[Yop] Error: Wrong constraint class.');
                 end
@@ -257,12 +296,12 @@ classdef ocp < handle
                 var = obj.find_variable(re.var.id);
                 switch class(bc)
                     case 'yop.ast_eq' % bnd == var
-                        var.ubf(re.idx_var) = bnd(re.idx_expr);
-                        var.lbf(re.idx_var) = bnd(re.idx_expr);
+                        var.ubf(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
+                        var.lbf(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     case {'yop.ast_le', 'yop.ast_lt'} % bnd < var
-                        var.lbf(re.idx_var) = bnd(re.idx_expr);
+                        var.lbf(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     case {'yop.ast_ge', 'yop.ast_gt'} % bnd > var
-                        var.ubf(re.idx_var) = bnd(re.idx_expr);
+                        var.ubf(re.idx_var) = yop.get_subexpr(bnd, re.idx_expr);
                     otherwise
                         error('[Yop] Error: Wrong constraint class.');
                 end
@@ -427,168 +466,238 @@ classdef ocp < handle
                 obj.parameters(:).'];
         end
         
+        function obj = vectorize(obj)
+            obj.vectorize_independent();
+            obj.vectorize_state();
+            obj.vectorize_algebraic();
+            obj.vectorize_control();
+            obj.vectorize_parameters();
+        end
+        
+        function obj = vectorize_independent(obj)
+            obj.t = obj.independent_initial.mx;
+            obj.t0 = obj.independent_initial.mx;
+            obj.tf = obj.independent_final.mx;
+            
+            obj.t0_lb = obj.independent_initial.lb;
+            obj.t0_ub = obj.independent_initial.ub;
+            obj.tf_lb = obj.independent_final.lb;
+            obj.tf_ub = obj.independent_final.ub;
+        end
+        
+        function obj = vectorize_state(obj)
+            %  VECTORIZE_STATE - Vectorize state and ode
+            %  This function is the reason why the ocp needs to be
+            %  vectorized. The odes governing the states may have have the
+            %  variable vector (lhs of 'der(x) == f(t,x,z,u,p)') in any 
+            %  order (x can be permuted or lack some of the sates on the 
+            %  lhs). This becomes a problem in integration, where the
+            %  righthandside is evaluated and added to the current step in
+            %  order to compute the next (x_next = x_cur + h*f(.)). Unless
+            %  the order match, the integration will not be correct. For
+            %  that reason it is necessary to permute the state vector, x,
+            %  so that the elements come in the same order as their
+            %  derivatives.
+            
+            %  1) Vectorize ode expression
+            ode_var = obj.differetial_eqs(1).var;
+            ode_expr = obj.differetial_eqs(1).expr;
+            for k=2:length(obj.differetial_eqs)
+                ode_var = [ode_var(:); obj.differetial_eqs(k).var(:)];
+                ode_expr = [ode_expr(:); obj.differetial_eqs(k).expr(:)];
+            end
+            
+            assert(all(isa_variable(ode_var)), '[Yop] Unexpected error.');
+            
+            %  2) Perform a reaching elements analysis in order to
+            %  determine what variables, and what exact elements reaches
+            %  the der(...) expression. 
+            x_cell = arrayfun(@(e) e.var, obj.states, ...
+                'UniformOutput', false);
+            [re, nr] = yop.reaching_elems(ode_var, x_cell);
+            
+            %  3) Three cases: 
+            %        i) All elements of the variable reach (nothing to do).
+            %       ii) Some of the elements reach (add not reaching).
+            %      iii) None of the elements reach (add all).
+            % case i && ii
+            for k=1:length(re)
+                if numel(re(k).enum) ~= numel(re(k).reaching)
+                    % Number of elements and the number reaching does not
+                    % match. Pick out the ones not reaching and add them to
+                    % the variable vector and set their derivative to zero.
+                    [~, idx] = setdiff(re(k).enum, re(k).reaching);
+                    vk = re(k).var(idx);
+                    ode_var = [ode_var(:); vk(:)];
+                    ode_expr = [ode_expr(:); zeros(size(vk(:)))];
+                end
+            end
+            %
+            % case iii) do not reach at all, so they are added in full.
+            for k=1:length(nr)
+                vk = nr(k).var;
+                ode_var = [ode_var(:); vk(:)];
+                ode_expr = [ode_expr(:); zeros(size(vk(:)))];
+            end
+            
+            % 4) Create a perturbation function, that takes the
+            % concatenated state variables and perturbes them to mathch the
+            % vectorized ode. It is necessary to complicate this process a
+            % bit, since the ast that make up the lhs may contain variables
+            % that never reach the end, there is a risk that these are free
+            % variables on the casadi function, so to avoid this, the
+            % perturbation function is created in two steps. First,
+            % deriving an expression for the lhs, given all arguments as
+            % input. And in the second step use the first function to
+            % derive a function that only takes the concatenated states as
+            % input.
+            obj.set_mx(); % use of casadi for convenience, other ways poss.
+            [~, ~, t, x, u, p] = obj.mx_vecs();
+            x_fn = casadi.Function('x', {t,x,u,p}, {evaluate(ode_var)});
+            P_expr = x_fn(t, x, u, p); % perturbation expression
+            obj.Px = casadi.Function('P', {x}, {P_expr}); % Perturbation fn
+            obj.x = obj.Px(x);
+            
+            % 5) Set ode_rhs
+            ode_fn = casadi.Function('x', {t,x,u,p}, {evaluate(ode_expr)});
+            obj.ode = ode_fn;
+            
+            % 6) Set state bounds
+            x0_lb=[]; x0_ub=[]; x_lb=[]; x_ub=[]; xf_lb=[]; xf_ub=[];
+            for k=1:length(obj.states)
+                x_lb = [x_lb(:); obj.states(k).lb(:)];
+                x_ub = [x_ub(:); obj.states(k).ub(:)];
+                x0_lb = [x0_lb(:); obj.states(k).lb0(:)];
+                x0_ub = [x0_ub(:); obj.states(k).ub0(:)];
+                xf_lb = [xf_lb(:); obj.states(k).lbf(:)];
+                xf_ub = [xf_ub(:); obj.states(k).ubf(:)];
+            end
+            obj.x0_lb = full(obj.Px(x0_lb));
+            obj.x0_ub = full(obj.Px(x0_ub));
+            obj.x_lb  = full(obj.Px(x_lb));
+            obj.x_ub  = full(obj.Px(x_ub));
+            obj.xf_lb = full(obj.Px(xf_lb));
+            obj.xf_ub = full(obj.Px(xf_ub));
+        end
+        
+        function obj = vectorize_algebraic(obj)
+            obj.z = obj.algebraics.mx_vec();
+            z_lb=[]; z_ub=[];
+            for k=1:length(obj.algebraics)
+                z_lb = [z_lb(:); obj.algebraics(k).lb(:)];
+                z_ub = [z_ub(:); obj.algebraics(k).ub(:)];
+            end
+            obj.z_lb  = z_lb;
+            obj.z_ub  = z_ub;
+        end
+        
+        function obj = vectorize_control(obj)
+            obj.u = obj.controls.mx_vec();
+            u0_lb=[]; u0_ub=[]; u_lb=[]; u_ub=[]; uf_lb=[]; uf_ub=[];
+            for k=1:length(obj.controls)
+                u_lb = [u_lb(:); obj.controls(k).lb(:)];
+                u_ub = [u_ub(:); obj.controls(k).ub(:)];
+                u0_lb = [u0_lb(:); obj.controls(k).lb0(:)];
+                u0_ub = [u0_ub(:); obj.controls(k).ub0(:)];
+                uf_lb = [uf_lb(:); obj.controls(k).lbf(:)];
+                uf_ub = [uf_ub(:); obj.controls(k).ubf(:)];
+            end
+            obj.u0_lb = u0_lb;
+            obj.u0_ub = u0_ub;
+            obj.u_lb  = u_lb;
+            obj.u_ub  = u_ub;
+            obj.uf_lb = uf_lb;
+            obj.uf_ub = uf_ub;
+        end
+        
+        function obj = vectorize_parameters(obj)
+            obj.p = obj.parameters.mx_vec();
+            p_lb=[]; p_ub=[];
+            for k=1:length(obj.parameters)
+                p_lb = [p_lb(:); obj.parameters(k).lb(:)];
+                p_ub = [p_ub(:); obj.parameters(k).ub(:)];
+            end
+            obj.p_lb  = p_lb;
+            obj.p_ub  = p_ub;
+        end
+        
+        function [t0, tf, t, x, u, p] = mx_vecs(obj)
+            t0 = obj.independent_initial.mx_vec();
+            tf = obj.independent_final.mx_vec();
+            t = obj.independent.mx_vec();
+            x = obj.states.mx_vec();
+            u = obj.controls.mx_vec();
+            p = obj.parameters.mx_vec();
+        end
+        
     end
     
     %% Transcription
     methods
         
         function n = nx(obj)
-            n = 0;
-            for k=1:length(obj.states)
-                n = n + prod(size(obj.states(k).var));
-            end
+            n = numel(obj.x);
         end
         
         function n = nu(obj)
-            n = 0;
-            for k=1:length(obj.controls)
-                n = n + prod(size(obj.controls(k).var));
-            end
+            n = numel(obj.u);
         end
         
-        function np = np(obj)
-            np = 0;
-            for k=1:length(obj.parameters)
-                np = np + prod(size(obj.parameters(k).var));
-            end
+        function n = np(obj)
+            n = numel(obj.p);
         end
         
-        
-        function [bool, T] = fixed_horizon(obj)
-            
-            t0_lb = obj.independent_initial.lb;
-            t0_ub = obj.independent_initial.ub;
-            tf_lb = obj.independent_final.lb;
-            tf_ub = obj.independent_final.ub;
-            
-            if t0_lb==t0_ub && tf_lb==tf_ub && ~isinf(t0_lb) && ...
-                    ~isinf(t0_ub) && ~isinf(tf_lb) && ~isinf(tf_ub)
-                bool = true;
-            else
-                bool = false;
-            end    
-            T = tf_lb - t0_lb;
-        end
-        
-        function t = t0(obj)
-            t = obj.independent_initial.sym;
-        end
-        
-        function t = tf(obj)
-            t = obj.independent_final.sym;
-        end
-        
-        function tt = t(obj)
-            if isempty(obj.independent)
-                tt = [];
-            else
-                tt = obj.independent.sym;
-            end
-        end
-        
-        function x_vec = x(obj)
-            if length(obj.states)==1
-                x_vec = obj.states.sym;
-            else
-                x_vec = [];
-                for v=obj.states
-                    x_vec = [x_vec(:); v.sym(:).'];
-                end
-            end
-        end
-        
-        function u_vec = u(obj)
-            if length(obj.controls) == 1
-                u_vec = obj.controls.sym;
-            else
-                u_vec = [];
-                for v=obj.controls
-                    u_vec = [u_vec(:); v.sym(:).'];
-                end
-            end
-        end
-        
-        function p_vec = p(obj)
-            if length(obj.parameters) == 1
-                p_vec = obj.parameters.sym;
-            else
-                p_vec = [];
-                for v=obj.parameters
-                    p_vec = [p_vec(:); v.sym(:).'];
-                end
-            end
+        function [t0, tf, t, x, u, p] = get_paramlist(obj)
+            t0 = obj.t0;
+            tf = obj.tf;
+            t = obj.t;
+            x = obj.x;
+            u = obj.u;
+            p = obj.p;
         end
         
         function fn = expr_fn(obj, expr)
-            obj.set_sym();
+            obj.set_mx();
             e = fw_eval(expr);
             fn = casadi.Function('fn', ...
                 {obj.t0, obj.tf, obj.t, obj.x, obj.u, obj.p}, {e});
-            %obj.reset_sym();
-        end
-        
-        function [ode_expr, ode_var] = ode(obj)
-            obj.set_sym();
-            var = []; expr = [];
-            for ode = obj.odes
-                % .var expected short, .expr expected longer
-                lhs = evaluate(ode.var);
-                rhs = fw_eval(ode.expr);
-                var = [var(:); lhs(:).'];
-                expr = [expr(:); rhs(:).'];
-            end
-            %obj.reset_sym();
-            
-            ode_var = casadi.Function('ode_var', ...
-                {obj.t0, obj.tf, obj.t, obj.x, obj.u, obj.p}, {var});
-            
-            ode_expr = casadi.Function('ode_expr', ...
-                {obj.t0, obj.tf, obj.t, obj.x, obj.u, obj.p}, {expr});
         end
         
         function [t0_lb, t0_ub, tf_lb, tf_ub] = t_bd(obj)
             t0_lb=[]; t0_ub=[]; tf_lb=[]; tf_ub=[];
             for k=1:length(obj.independent_initial)
-                t0_lb = [t0_lb(:); obj.independent_initial(k).lb(:).'];
-                t0_ub = [t0_ub(:); obj.independent_initial(k).ub(:).'];
+                t0_lb = [t0_lb(:); obj.independent_initial(k).lb(:)];
+                t0_ub = [t0_ub(:); obj.independent_initial(k).ub(:)];
             end
             for k=1:length(obj.independent_final)
-                tf_lb = [tf_lb(:); obj.independent_final(k).lb(:).'];
-                tf_ub = [tf_ub(:); obj.independent_final(k).ub(:).'];
-            end
-        end
-        
-        function [x0_lb, x0_ub, x_lb, x_ub, xf_lb, xf_ub] = x_bd(obj)
-            x0_lb=[]; x0_ub=[]; x_lb=[]; x_ub=[]; xf_lb=[]; xf_ub=[];
-            for k=1:length(obj.states)
-                x_lb = [x_lb(:); obj.states(k).lb(:).'];
-                x_ub = [x_ub(:); obj.states(k).ub(:).'];
-                x0_lb = [x0_lb(:); obj.states(k).lb0(:).'];
-                x0_ub = [x0_ub(:); obj.states(k).ub0(:).'];
-                xf_lb = [xf_lb(:); obj.states(k).lbf(:).'];
-                xf_ub = [xf_ub(:); obj.states(k).ubf(:).'];
-            end
-        end
-        
-        function [u0_lb, u0_ub, u_lb, u_ub, uf_lb, uf_ub] = u_bd(obj)
-            u0_lb=[]; u0_ub=[]; u_lb=[]; u_ub=[]; uf_lb=[]; uf_ub=[];
-            for k=1:length(obj.controls)
-                u_lb = [u_lb(:); obj.controls(k).lb(:).'];
-                u_ub = [u_ub(:); obj.controls(k).ub(:).'];
-                u0_lb = [u0_lb(:); obj.controls(k).lb0(:).'];
-                u0_ub = [u0_ub(:); obj.controls(k).ub0(:).'];
-                uf_lb = [uf_lb(:); obj.controls(k).lbf(:).'];
-                uf_ub = [uf_ub(:); obj.controls(k).ubf(:).'];
+                tf_lb = [tf_lb(:); obj.independent_final(k).lb(:)];
+                tf_ub = [tf_ub(:); obj.independent_final(k).ub(:)];
             end
         end
         
         function [p_lb, p_ub] = p_bd(obj)
             p_lb=[]; p_ub=[];
             for k=1:length(obj.parameters)
-                p_lb = [p_lb(:); obj.parameters(k).lb(:).'];
-                p_ub = [p_ub(:); obj.parameters(k).ub(:).'];
+                p_lb = [p_lb(:); obj.parameters(k).lb(:)];
+                p_ub = [p_ub(:); obj.parameters(k).ub(:)];
             end
         end
+        
+        function [bool, T] = fixed_horizon(obj)
+            if obj.t0_lb==obj.t0_ub && obj.tf_lb==obj.tf_ub && all( ...
+                    ~isinf( [obj.t0_lb; obj.t0_ub; obj.tf_lb; obj.tf_ub] ))
+                bool = true;
+            else
+                bool = false;
+            end    
+            T = obj.tf_lb - obj.t0_lb;
+        end
+        
+        function obj = set_mx(obj)
+            for v=obj.variables()
+                v.set_mx();
+            end
+        end 
         
         function obj = set_sym(obj)
             for v=obj.variables()
@@ -609,52 +718,16 @@ classdef ocp < handle
         
         function present(obj)
             
-            for t=obj.independent
-                t.set_value(sym(t.var.name));
-            end
-            
-            for t0=obj.independent_initial
-                t0.set_value(sym(t0.var.name));
-            end
-            
-            for tf=obj.independent_final
-                tf.set_value(sym(tf.var.name));
-            end
-            
-            for x=obj.states
-                if isscalar(x.var.size)
-                    x.set_value(sym(x.var.name));
-                else
-                    x.set_value(sym(x.var.name, size(x.var)));
-                end
-            end
-            
-            for z=obj.algebraics
-                if isscalar(z.var.size)
-                    z.set_value(sym(z.var.name));
-                else
-                    z.set_value(sym(z.var.name, size(z.var)));
-                end
-            end
-            
-            for u=obj.controls
-                if isscalar(u.var.size)
-                    u.set_value(sym(u.var.name));
-                else
-                    u.set_value(sym(u.var.name, size(u.var)));
-                end
-            end
-            
-            for p=obj.parameters
-                if isscalar(p.var.size)
-                    p.set_value(sym(p.var.name));
-                else
-                    p.set_value(sym(p.var.name, size(p.var)));
-                end
-            end
+            obj.independent.set_sym();
+            obj.independent_initial.set_sym();
+            obj.independent_final.set_sym();
+            obj.states.set_sym();
+            obj.algebraics.set_sym();
+            obj.controls.set_sym();
+            obj.parameters.set_sym();
             
             % objective function
-            x = fw_eval(obj.objective);
+            val = fw_eval(obj.objective);
             if isempty(obj.name)
                 title = 'Optimal Control Problem';
             else
@@ -662,10 +735,10 @@ classdef ocp < handle
             end
             fprintf(['[Yop] ', title, '\n']);
             fprintf('  min\t');
-            if isnumeric(x)
-                fprintf(num2str(x));
+            if isnumeric(val)
+                fprintf(num2str(val));
             else
-                fprintf(char(x));
+                fprintf(char(val));
             end
             fprintf('\n');
             
@@ -700,23 +773,27 @@ classdef ocp < handle
             obj.print_box('parameters');
             
             
-            if ~isempty(obj.odes)
+            if ~isempty(obj.differetial_eqs)
                 fprintf('  ODE\n');
             end
-            for k=1:length(obj.odes)
-                fprintf('\tder(');
-                fprintf(char(fw_eval(obj.odes(k).var)));
+            for k=1:length(obj.differetial_eqs)
+                fprintf('\tder(');                                
+                fprintf(char(fw_eval(obj.differetial_eqs(k).var)));
                 fprintf(') == ');
-                rhs = char(fw_eval(obj.odes(k).expr));
-                if length(rhs) > 40
-                    vs = yop.get_vars(obj.odes(k).expr);
+                rhs = fw_eval(obj.differetial_eqs(k).expr);
+                if length(char(rhs)) > 40
+                    vs = yop.get_vars(obj.differetial_eqs(k).expr);
                     args = '';
                     for n=1:length(vs)
                         args = [args(:).', vs{n}.name, ', '];
                     end
                     fprintf(['f(', args(1:end-2), ')']);
                 else
-                    fprintf(rhs);
+                    if isnumeric(rhs)
+                        fprintf(num2str(rhs));
+                    else
+                        fprintf(char(rhs));
+                    end
                 end
                 fprintf('\n');
             end
@@ -739,10 +816,6 @@ classdef ocp < handle
                 fprintf('\n');
             end
             
-            for k=obj.variables
-                k.reset_value();
-            end
-
         end
         
         function obj = print_box(obj, varstr)
@@ -769,151 +842,3 @@ classdef ocp < handle
         
     end
 end
-
-
-% function obj = set_variables(obj, t, t0, tf, x, u, p)
-%             obj.set_independent(t);
-%             obj.set_independent_initial(t0);
-%             obj.set_independent_final(tf);
-%             obj.set_states(x);
-%             obj.set_controls(u);
-%             obj.set_parameters(p);
-%         end
-%         
-%         function obj = reset_vars(obj)
-%             obj.reset_independent();
-%             obj.reset_independent_initial();
-%             obj.reset_independent_final();
-%             obj.reset_states();
-%             obj.reset_controls();
-%             obj.reset_parameters();
-%         end
-%         
-%         function obj = set_independent(obj, t)
-%             for k=1:length(obj.independent)
-%                 obj.independent(k).set_value(t);
-%             end
-%         end
-%         
-%         function obj = reset_independent(obj)
-%             for k=1:length(obj.independent)
-%                 obj.independent(k).reset_value();
-%             end
-%         end
-%         
-%         function obj = set_independent_initial(obj, t0)
-%             for k=1:length(obj.independent_initial)
-%                 obj.independent_initial(k).set_value(t0);
-%             end
-%         end
-%         
-%         function obj = reset_independent_initial(obj)
-%             for k=1:length(obj.independent_initial)
-%                 obj.independent_initial(k).reset_value();
-%             end
-%         end
-%         
-%         function obj = set_independent_final(obj, tf)
-%             for k=1:length(obj.independent_final)
-%                 obj.independent_final(k).set_value(tf);
-%             end
-%         end
-%         
-%         function obj = reset_independent_final(obj)
-%             for k=1:length(obj.independent_final)
-%                 obj.independent_final(k).reset_value();
-%             end
-%         end
-%         
-%         function obj = set_states(obj, x)
-%             for k=1:length(obj.states)
-%                 obj.states(k).set_value(x{k});
-%             end
-%         end
-%         
-%         function obj = reset_states(obj)
-%             for k=1:length(obj.states)
-%                 obj.states(k).reset_value();
-%             end
-%         end
-%         
-%         function obj = set_algebraics(obj, z)
-%             for k=1:length(obj.algebraics)
-%                 obj.algebraics(k).set_value(z{k});
-%             end
-%         end
-%         
-%         function obj = reset_algebraics(obj)
-%             for k=1:length(obj.algebraics)
-%                 obj.algebraics(k).set_value();
-%             end
-%         end
-%         
-%         function obj = set_controls(obj, u)
-%             for k=1:length(obj.controls)
-%                 obj.controls(k).set_value(u{k});
-%             end
-%         end
-%         
-%         function obj = reset_controls(obj)
-%             for k=1:length(obj.controls)
-%                 obj.controls(k).reset_value();
-%             end
-%         end
-%         
-%         function obj = set_parameters(obj, p)
-%             for k=1:length(obj.parameters)
-%                 obj.parameters(k).set_value(p{k});
-%             end
-%         end
-%         
-%         function obj = reset_parameters(obj)
-%             for k=1:length(obj.parameters)
-%                 obj.parameters(k).reset_value();
-%             end
-%         end
-
-
-% % Path constraints
-% pc = dtp.get_pathcon();
-% for k=1:length(pc)
-%     pck = pc{k};
-%     switch class(pck)
-%         case 'yop.ast_eq'
-%             
-%             dl = isa_der(pck.lhs);
-%             if all(dl) % der(v) == expr
-%                 obj.add_ode(pck.lhs, pck.rhs);
-%                 continue;
-%             elseif all(~dl) % expr == ??
-%                 r = pck; % remaining relations
-%             else % (der(x), expr) == (expr, ??)
-%                 tmp = yop.get_subrelation(pck, dl);
-%                 obj.add_ode(tmp.lhs, tmp.rhs);
-%                 r = yop.ast_eq(yop.get_subrelation(pck, ~dl));
-%                 % obj.add_ode(pck.lhs(dl), pck.rhs(dl));
-%                 %r = yop.ast_eq(pck.lhs(~dl), pck.rhs(~dl));
-%             end
-%             
-%             dr = isa_der(r.rhs);
-%             if all(dr)
-%                 obj.add_ode(r.rhs, r.lhs);
-%             elseif all(~dr)
-%                 obj.add_equality(yop.ast_eq(r.lhs-r.rhs, 0));
-%             else
-%                 tmp = yop.get_subrelation(r, dr);
-%                 obj.add_ode(tmp.rhs, tmp.lhs);
-%                 obj.add_equality(yop.get_subrelation(r, ~dr));
-%                 %obj.add_ode(r.rhs(dr), r.lhs(dr));
-%                 %obj.add_equality(...
-%                 %    yop.ast_eq(r.lhs(~dr)-r.rhs(~dr), 0));
-%             end
-%             
-%         case {'yop.ast_le', 'yop.ast_lt'}
-%             c = yop.ast_le(pck.lhs - pck.rhs, 0);
-%             obj.add_inequality(c);
-%         case {'yop.ast_ge', 'yop.ast_gt'}
-%             c = yop.ast_le(pck.rhs - pck.lhs, 0);
-%             obj.add_inequality(c);
-%     end
-% end

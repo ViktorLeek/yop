@@ -2,6 +2,8 @@ classdef nlp_int < handle
     properties
         node        
         value = []
+        integrand_expr
+        integrand_fn
     end
     methods
         function obj = nlp_int(ast_int)

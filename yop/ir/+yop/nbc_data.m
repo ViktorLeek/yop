@@ -6,11 +6,11 @@ classdef nbc_data < handle
        ieq = {}; % inequality constraints, h(t,x,z,u,p) <= 0 
     end
     methods
-        function obj = add_ode(obj, var, expr)
+        function obj = add_ode(obj, der, expr)
             if isempty(obj.odes)
-                obj.odes = yop.ocp_ode(var, expr);
+                obj.odes = yop.ocp_ode(der.var, expr);
             else
-                obj.odes(end+1) = yop.ocp_ode(var, expr);
+                obj.odes(end+1) = yop.ocp_ode(der.var, expr);
             end            
         end
         

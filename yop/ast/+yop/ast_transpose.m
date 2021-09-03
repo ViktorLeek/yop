@@ -15,6 +15,23 @@ classdef ast_transpose < yop.ast_expression
             boolv = transpose(isa_numeric(obj.expr));
         end
         
+        function [bool, tp] = isa_timepoint(obj)
+            [bool, tp] = isa_timepoint(obj.expr);
+            bool = transpose(bool);
+            tp = transpose(tp);
+        end
+        
+        function boolv = isa_der(obj)
+            boolv = transpose(isa_der(obj.expr));
+        end
+        
+        function [bool, id] = isa_variable(obj)
+            [bool, id] = isa_variable(obj.expr);
+            bool = transpose(bool);
+            id = transpose(id);
+        end
+        
+        
         function boolv = is_transcription_invariant(obj)
             boolv = transpose(is_transcription_invariant(obj.expr));
         end

@@ -36,6 +36,10 @@ classdef node < handle
             
         end
         
+        function id = get_id(obj)
+            id = obj.id;
+        end
+        
 %         function vars = get_vars(obj)
 %             [tsort, n_elem] = topological_sort(obj);
 %             vars = {};
