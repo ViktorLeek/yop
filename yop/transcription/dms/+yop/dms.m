@@ -165,7 +165,7 @@ classdef dms < handle
         function obj = parameterize_timepoints(obj)
             for k=1:length(obj.timepoints)
                 fn = obj.ocp.expr_fn(obj.timepoints(k).expr);
-                args = cell(6,1);
+                args = cell(4,1);
                 [args{:}] = obj.vars_at(obj.timepoints(k).tp);
                 obj.timepoints(k).value = fn(args{:});
             end
@@ -275,8 +275,8 @@ classdef dms < handle
             p_ = casadi.MX.sym('p', np); % Free parameters
             w  = casadi.MX.sym('w', nw); % NLP variable vector (for tps)
             
-            args = {t_,x_,u_,p_,w};
-            outs = {obj.ocp.ode(t_,x_,u_,p_), qfn(t_,x_,u_,p_,w)};
+            args = {t_,x_,u_,p_,obj.w};
+            outs = {obj.ocp.ode(t_,x_,u_,p_), qfn(t_,x_,u_,p_,obj.w)};
             f = casadi.Function('f', args, outs);
            
             % Expression for RK4 integrator
@@ -287,15 +287,15 @@ classdef dms < handle
             hh = (If-I0)/obj.rk_steps; 
             qq = 0;
             for k=1:obj.rk_steps
-                [k1, q1] = f(tt     , xx        , uu, pp, w);
-                [k2, q2] = f(tt+hh/2, xx+hh/2*k1, uu, pp, w);
-                [k3, q3] = f(tt+hh/2, xx+hh/2*k2, uu, pp, w);
-                [k4, q4] = f(tt+hh  , xx+hh  *k3, uu, pp, w);
+                [k1, q1] = f(tt     , xx        , uu, pp, obj.w);
+                [k2, q2] = f(tt+hh/2, xx+hh/2*k1, uu, pp, obj.w);
+                [k3, q3] = f(tt+hh/2, xx+hh/2*k2, uu, pp, obj.w);
+                [k4, q4] = f(tt+hh  , xx+hh  *k3, uu, pp, obj.w);
                 tt = tt + hh;
                 xx = xx + hh/6*(k1 + 2*k2 + 2*k3 + k4);
                 qq = qq + hh/6*(q1 + 2*q2 + 2*q3 + q4);
             end
-            rk = casadi.Function('Q', {I0,If,x0,uu,pp,w}, {qq});
+            rk = casadi.Function('Q', {I0,If,x0,uu,pp,obj.w}, {qq});
         end
         
         function rk = rk4(obj)            
@@ -335,9 +335,7 @@ classdef dms < handle
             rk = casadi.Function('rk4', {I0, If, x0, uu, pp}, {xx});
         end
         
-        function [t0, tf, t, x, u, p] = vars_at(obj, tp)
-            t0 = obj.t0;
-            tf = obj.tf;
+        function [t, x, u, p] = vars_at(obj, tp)
                 
             if isa(tp, 'yop.independent_initial')
                 t = obj.t0;

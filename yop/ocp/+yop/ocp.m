@@ -559,7 +559,7 @@ classdef ocp < handle
             obj.x = obj.Px(x);
             
             % 5) Set ode_rhs
-            ode_fn = casadi.Function('x', {t,x,u,p}, {evaluate(ode_expr)});
+            ode_fn = casadi.Function('x', {t,obj.x,u,p}, {evaluate(ode_expr)});
             obj.ode = ode_fn;
             
             % 6) Set state bounds
@@ -647,9 +647,7 @@ classdef ocp < handle
             n = numel(obj.p);
         end
         
-        function [t0, tf, t, x, u, p] = get_paramlist(obj)
-            t0 = obj.t0;
-            tf = obj.tf;
+        function [t, x, u, p] = get_paramlist(obj)
             t = obj.t;
             x = obj.x;
             u = obj.u;
@@ -659,8 +657,7 @@ classdef ocp < handle
         function fn = expr_fn(obj, expr)
             obj.set_mx();
             e = fw_eval(expr);
-            fn = casadi.Function('fn', ...
-                {obj.t0, obj.tf, obj.t, obj.x, obj.u, obj.p}, {e});
+            fn = casadi.Function('fn', {obj.t, obj.x, obj.u, obj.p}, {e});
         end
         
         function [t0_lb, t0_ub, tf_lb, tf_ub] = t_bd(obj)

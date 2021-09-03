@@ -15,8 +15,8 @@ m  = yop.state('m');  % Rocket mass
 Wf = yop.control('Wf');  % Rocket fuel massflow
 
 % Drag force and gravitational acceleration
-F_D = D0 * exp(-beta*max(h, 0)) * v^2;
-g   = g0*(r0/(r0+max(h,0)))^2;
+F_D = D0 * exp(-beta*h) * v^2;
+g   = g0*(r0/(r0+h))^2;
 
 % Mass boundaries
 m_min = 68; m_max = 215; 
@@ -26,8 +26,8 @@ Wfmin = 0; Wfmax = 9.5;
 
 % Optimal control problem
 grp = yop.ocp('Goddard''s Rocket Problem');
-grp.max( h(tf) );
-% grp.max( int(v) );
+% grp.max( h(tf) );
+grp.max( int(v) );
 grp.st( ...
     t0 == 0, tf==210, ...
     ... Rocket model
@@ -39,8 +39,8 @@ grp.st( ...
     v(t0)==0, ...
     m(t0)==m_max, ...
     ... Box constraints
-    ...h >=0, ...
-    ...v >=0, ...
+    h >=0, ...
+    v >=0, ...
     m_min <= m  <= m_max, ...
     Wfmin <= Wf <= Wfmax ...
     );
@@ -48,9 +48,9 @@ grp.build.present();
 
 %% Transcription
 
-nlp = yop.dms(grp, 100, 4);
+nlp = yop.dms(grp, 100, 10);
 
-w0 = ones(size(nlp.w));
+w0 = 10*ones(size(nlp.w));
 
 g = vertcat(nlp.eq{:});
 h = vertcat(nlp.ieq{:});
