@@ -107,7 +107,8 @@ grp.st( ...
 grp.build();
 grp.present();
 
-
+dms = yop.dms(ocp, 40, 4);
+sol = dms.solve();
 
 
 

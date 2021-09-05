@@ -96,18 +96,21 @@ classdef ast_timepoint < yop.ast_expression
             end
         end
         
-        function value = evaluate(obj)
-            % This simply propagates through. The purpose is to be able to
-            % go to single variable form by enumaration, so this function
-            % must be able to propagate indices.
-            value = evaluate(obj.expr);
+        function value = evaluate(obj)            
+            % Evaluates like an ast_variable. The reason is that it does
+            % not have the semantics of a timevarying expression, so it
+            % needs to be parameterized separately. Before parametrization
+            % has occured, the idea is that an MX/sym variable (of the
+            % right size) is used to represent its value.
+            value = obj.m_value;
         end
         
         function v = forward(obj)
-            % This simply propagates through. The purpose is to be able to
-            % go to single variable form by enumaration, so this function
-            % must be able to propagate indices.
-            obj.m_value = value(obj.expr);
+            % Evaluates like an ast_variable. The reason is that it does
+            % not have the semantics of a timevarying expression, so it
+            % needs to be parameterized separately. Before parametrization
+            % has occured, the idea is that an MX/sym variable (of the
+            % right size) is used to represent its value.
             v = obj.m_value;
         end
         

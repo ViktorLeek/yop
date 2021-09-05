@@ -44,7 +44,7 @@ classdef ast_variable < yop.ast_expression
         end
         
         function value = evaluate(obj)
-            value = obj.value;
+            value = obj.m_value;
         end
         
         function v = forward(obj)

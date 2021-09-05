@@ -1,4 +1,4 @@
-function [re, nr] = reaching_elems(expr, vars)
+function [re, nr, reaching_elements] = reaching_elems(expr, vars)
 % re = reaching_elems(expr)
 % Get the elements of a variable that reaches a certain expression.
 %   expr - The expression the elements reach
@@ -47,19 +47,15 @@ for k=1:length(re)
 end
 
 % Evaluate in order to find reaching variables
-reaching_expr = fw_eval(expr);
+reaching_elements = propagate_value(expr);
 
 % Elements that are not variables are set to -1
-reaching_expr(~isa_variable(expr)) = -1;
+reaching_elements(~isa_variable(expr)) = -1;
 
 % Compute the index in the expression that matches the elements the
 % variable takes.
 for k=1:length(re)
-    re(k).set_expr_idx(reaching_expr);
-end
-
-for k=1:length(re)
-    re(k).restore_value();
+    re(k).set_expr_idx(reaching_elements);
 end
 
 % Remove variables that do not reach the final expression.

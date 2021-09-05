@@ -5,15 +5,14 @@ classdef re_data < handle
         enum % The enumeration of the elements of the variable
         reaching  % The enumerations that reaches the end expression
         idx_expr % The indices in the expression that corresponds to the enum
-        tmp_value
     end
     methods
-        function idx0 = enumerate(obj, idx0)
+        function [idx0, idx] = enumerate(obj, idx0)
             % Enumerate all elements, starting with idx0
             n = prod(size(obj.var));
-            obj.enum = idx0:(idx0+n-1);
+            idx = idx0:(idx0+n-1);
+            obj.enum = idx;
             obj.set_value();
-            
             idx0 = idx0 + n;
         end
         
@@ -21,7 +20,6 @@ classdef re_data < handle
             % Set the value of the underlying variable to the enumeration
             % with the same shape as the variable in order for the
             % evaluation to work as it should.
-            obj.tmp_value = obj.var.m_value;
             obj.var.m_value = reshape(obj.enum, size(obj.var));
         end
         
@@ -47,12 +45,6 @@ classdef re_data < handle
         function obj = set_reaching(obj, re)
             % re - elements that reaches the expression
             obj.reaching = re(re >= obj.enum(1) & re <= obj.enum(end));
-        end
-        
-        function obj = restore_value(obj)
-            % Do not wish to have any side effects on the value, so it is
-            % reset.
-            obj.var.m_value = obj.tmp_value;
         end
         
     end

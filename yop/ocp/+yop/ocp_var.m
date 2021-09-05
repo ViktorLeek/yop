@@ -11,12 +11,12 @@ classdef ocp_var < handle
         lbf  % final lower bound
     end
     properties (Hidden)
-        tmp_value = {}
+        enum
     end
     methods
         function obj = ocp_var(var)       
             obj.var = var;
-            obj.mx = casadi.MX.sym(var.name, size(var,1), size(var,2));
+            obj.mx = casadi.MX.sym(['ocp_', var.name], size(var,1), size(var,2));
             obj.sym = sym(var.name, size(var));
             obj.ub0 = nan(size(var));
             obj.lb0 = nan(size(var));
@@ -27,25 +27,9 @@ classdef ocp_var < handle
         end
         
         function obj = set_value(obj, value)
-            % Push the old value onto the stack
-%             obj.tmp_value{end+1} = obj.var.m_value;
             obj.var.m_value = value;
         end
         
-%         function obj = reset_value(obj)
-%             % Set the value to stack top and pop the stack
-%             if isempty(obj.tmp_value)
-%                 obj.var.m_value = [];
-%                 obj.tmp_value = {};
-%             else
-%                 obj.var.m_value = obj.tmp_value{end};
-%                 if length(obj.tmp_value) == 1
-%                     obj.tmp_value = {};
-%                 else
-%                     obj.tmp_value = obj.tmp_value{1:end-1};
-%                 end
-%             end
-%         end
         
         function obj = set_sym(obj)
             for k=1:length(obj)
@@ -56,6 +40,13 @@ classdef ocp_var < handle
         function obj = set_mx(obj)
             for k=1:length(obj)
                 obj(k).var.m_value = obj(k).mx;
+            end
+        end
+        
+        function e = get_enum(obj)
+            e = [];
+            for k=1:length(obj)
+                e = [e(:); obj(k).enum(:)];
             end
         end
         

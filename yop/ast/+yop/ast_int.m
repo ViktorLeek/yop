@@ -24,11 +24,20 @@ classdef ast_int < yop.ast_expression
         end
         
         function value = evaluate(obj)
-            value = evaluate(obj.expr);
+            % Evaluates like an ast_variable. The reason is that it does
+            % not have the semantics of a timevarying expression, so it
+            % needs to be parameterized separately. Before parametrization
+            % has occured, the idea is that an MX/sym variable (of the
+            % right size) is used to represent its value.
+            value = obj.m_value;
         end
         
-        function v = forward(obj)
-            obj.m_value = value(obj.expr);
+        function v = forward(obj)            
+            % Evaluates like an ast_variable. The reason is that it does
+            % not have the semantics of a timevarying expression, so it
+            % needs to be parameterized separately. Before parametrization
+            % has occured, the idea is that an MX/sym variable (of the
+            % right size) is used to represent its value.
             v = obj.m_value;
         end
         

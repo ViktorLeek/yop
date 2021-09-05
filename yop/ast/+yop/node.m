@@ -26,29 +26,44 @@ classdef node < handle
         
         function value = fw_eval(expr)
             % FW_EVAL - Forward evaluate
+            [sort, K] = topological_sort(expr);
             
-            [sort, n] = topological_sort(expr);
-            
-            for k=1:(n-1)
+            for k=1:(K-1)
                 forward(sort{k});
             end
-            value = forward(sort{n});
-            
+            value = forward(sort{K});
         end
+        
+        function val = propagate_value(expr)
+            [sort, K] = topological_sort(expr);
+            for k=1:K
+                switch class(sort{k})
+                    case {'yop.ast_int', 'yop.ast_timepoint'}
+                        % These do not propagate values, so we need a 
+                        % manual bridge here.
+                        sort{k}.m_value = value(sort{k}.expr);
+                    otherwise
+                        forward(sort{k});
+                end
+            end
+            val = value(sort{K});
+        end
+        
+        
         
         function id = get_id(obj)
             id = obj.id;
         end
         
-%         function vars = get_vars(obj)
-%             [tsort, n_elem] = topological_sort(obj);
-%             vars = {};
-%             for k=1:n_elem
-%                 if isa(tsort{k}, 'yop.ast_variable')
-%                     vars = {vars{:}, tsort{k}};
-%                 end
-%             end
-%         end
+        function vars = get_vars(obj)
+            [tsort, n_elem] = topological_sort(obj);
+            vars = {};
+            for k=1:n_elem
+                if isa(tsort{k}, 'yop.ast_variable')
+                    vars = {vars{:}, tsort{k}};
+                end
+            end
+        end
         
         function reset_stream(obj)
             reset(obj.stream);

@@ -534,7 +534,6 @@ classdef ocp < handle
             % Ready to vectorize state
             % 5) Set ode_rhs
             [tt, xx, uu, pp] = obj.mx_parameter_list();
-            obj.set_mx();
             ode_fn = casadi.Function('x', {tt,xx,uu,pp}, ...
                 {fw_eval(ode_expr)});
             obj.ode = casadi.Function('ode', {tt,xx,uu,pp}, ...
@@ -604,9 +603,9 @@ classdef ocp < handle
                elseif isa(tp.timepoint, 'yop.ast_independent_final')
                    tp_text = 'tf';
                else
-                   tp_text = num2str(floor(tp.timepoint));% shouold relace . with _
+                   tp_text = num2str(tp.timepoint);
                end
-               nme = ['expr', num2str(k), '_t_eq_', tp_text]; 
+               nme = ['expr', num2str(k), '_t_eq_', tp_text];
                tp.mx= casadi.MX.sym(nme, size(tp.node,1), size(tp.node,2));
                tp.sym = sym(nme, size(tp.node));
                k = k+1;
@@ -706,8 +705,6 @@ classdef ocp < handle
         
         function obj = set_mx(obj)
            obj.variables.set_mx();
-           obj.timepoints.set_mx();
-           obj.integrals.set_mx();
         end
         
         function [tt, xx, uu, pp] = mx_parameter_list(obj)
@@ -722,7 +719,7 @@ classdef ocp < handle
         end
         
         function fn = mx_function_object(obj, expr)
-            obj.set_mx();
+            o
             [tt, xx, uu, pp] = obj.mx_parameter_list();
             tps = obj.timepoints.mx_vec();
             ints = obj.integrals.mx_vec();
@@ -889,7 +886,7 @@ classdef ocp < handle
             end
             for k=1:length(obj.eq)
                 fprintf('\t');
-%                 fprintf(char(propagate_value(obj.eq{k})));
+                fprintf(char(propagate_value(obj.eq{k})));
                 fprintf('\n');
             end
             
