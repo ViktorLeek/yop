@@ -27,6 +27,28 @@ ocp.st(...
     );
 ocp.build().present();
 
+dms = yop.dms(ocp, 100, 4);
+sol = dms.solve();
+
+time = casadi.Function('x', {dms.w}, {vertcat(dms.t{:})});
+t_sol = full(time(sol.x));
+
+state = casadi.Function('x', {dms.w}, {horzcat(dms.x{:})});
+x_sol = full(state(sol.x))';
+
+control = casadi.Function('x', {dms.w}, {horzcat(dms.u{:})});
+u_sol = full(control(sol.x))';
+
+figure(1)
+subplot(411); hold on;
+plot(t_sol, x_sol(:,1))
+subplot(412); hold on;
+plot(t_sol, x_sol(:,2))
+subplot(413); hold on;
+plot(t_sol, x_sol(:,3))
+subplot(414); hold on;
+stairs(t_sol, [u_sol; nan])
+
 %% Formulation 2
 [t, t0, tf] = yop.time('t');
 v = yop.state('v');
@@ -52,12 +74,31 @@ ocp.st( ...
     h >= 0, ...
     v >= 0, ...
     m_min <= m <= m_max, ...
-    2*u == 0, ...
-    2*u <= 0, ...
     0 <= Wf <= Wf_max ...
     );
 ocp.build().present();
 
+dms = yop.dms(ocp, 100, 4);
+sol = dms.solve();
+
+time = casadi.Function('x', {dms.w}, {vertcat(dms.t{:})});
+t_sol = full(time(sol.x));
+
+state = casadi.Function('x', {dms.w}, {horzcat(dms.x{:})});
+x_sol = full(state(sol.x))';
+
+control = casadi.Function('x', {dms.w}, {horzcat(dms.u{:})});
+u_sol = full(control(sol.x))';
+
+figure(1)
+subplot(411); hold on;
+plot(t_sol, x_sol(:,1))
+subplot(412); hold on;
+plot(t_sol, x_sol(:,2))
+subplot(413); hold on;
+plot(t_sol, x_sol(:,3))
+subplot(414); hold on;
+stairs(t_sol, [u_sol; nan])
 
 %% Formulation 3
 % Time
@@ -96,7 +137,7 @@ grp.st( ...
     ... Initial conditions
     h(t0)==0, ...
     v(t0)==0, ...
-    m(t0)==m_min, ...
+    m(t0)==m_max, ...
     ... Box constraints
     h >= 0, ...
     v >=0, ...
@@ -104,11 +145,29 @@ grp.st( ...
     Wfmin <= Wf <= Wfmax ...
     );
 
-grp.build();
-grp.present();
+grp.build().present();
 
-dms = yop.dms(ocp, 40, 4);
+dms = yop.dms(grp, 100, 4);
 sol = dms.solve();
+
+time = casadi.Function('x', {dms.w}, {vertcat(dms.t{:})});
+t_sol = full(time(sol.x));
+
+state = casadi.Function('x', {dms.w}, {horzcat(dms.x{:})});
+x_sol = full(state(sol.x))';
+
+control = casadi.Function('x', {dms.w}, {horzcat(dms.u{:})});
+u_sol = full(control(sol.x))';
+
+figure(1)
+subplot(411); hold on;
+plot(t_sol, x_sol(:,1))
+subplot(412); hold on;
+plot(t_sol, x_sol(:,2))
+subplot(413); hold on;
+plot(t_sol, x_sol(:,3))
+subplot(414); hold on;
+stairs(t_sol, [u_sol; nan])
 
 
 

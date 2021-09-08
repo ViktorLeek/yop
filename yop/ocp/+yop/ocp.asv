@@ -21,16 +21,6 @@ classdef ocp < handle
         vars
         
         % Vectorized form
-%         t0
-%         tf
-%         t
-%         x
-%         z
-%         u
-%         p
-        ode
-        
-        % Vectorized bounds
         t0_ub
         t0_lb
         tf_ub
@@ -56,14 +46,14 @@ classdef ocp < handle
         p_ub
         p_lb
         
-        % Path constraints
+        ode
+        
         eq
         ieq
-        Px
     end
     
     properties (Hidden, Access=private)
-        %Px
+        Px
     end
   
     
@@ -529,11 +519,13 @@ classdef ocp < handle
             end
             
             % 4) State perturbation vector
+            [~, ]
             obj.Px = output_idx;
             
-            % Ready to vectorize state
+            % -- Vectorize state --
             % 5) Set ode_rhs
             [tt, xx, uu, pp] = obj.mx_parameter_list();
+            obj.set_mx();
             ode_fn = casadi.Function('x', {tt,xx,uu,pp}, ...
                 {fw_eval(ode_expr)});
             obj.ode = casadi.Function('ode', {tt,xx,uu,pp}, ...
@@ -603,9 +595,9 @@ classdef ocp < handle
                elseif isa(tp.timepoint, 'yop.ast_independent_final')
                    tp_text = 'tf';
                else
-                   tp_text = num2str(tp.timepoint);
+                   tp_text = num2str(floor(tp.timepoint));% shouold relace . with _
                end
-               nme = ['expr', num2str(k), '_t_eq_', tp_text];
+               nme = ['expr', num2str(k), '_t_eq_', tp_text]; 
                tp.mx= casadi.MX.sym(nme, size(tp.node,1), size(tp.node,2));
                tp.sym = sym(nme, size(tp.node));
                k = k+1;
@@ -705,6 +697,8 @@ classdef ocp < handle
         
         function obj = set_mx(obj)
            obj.variables.set_mx();
+           obj.timepoints.set_mx();
+           obj.integrals.set_mx();
         end
         
         function [tt, xx, uu, pp] = mx_parameter_list(obj)
@@ -719,7 +713,7 @@ classdef ocp < handle
         end
         
         function fn = mx_function_object(obj, expr)
-            o
+            obj.set_mx();
             [tt, xx, uu, pp] = obj.mx_parameter_list();
             tps = obj.timepoints.mx_vec();
             ints = obj.integrals.mx_vec();
@@ -776,11 +770,11 @@ classdef ocp < handle
         end
         
         function n = n_tp(obj)
-            n = numel(obj.timepoints);
+            n = numel(obj.timepoints.mx_vec);
         end
         
         function n = n_int(obj)
-            n = numel(obj.integrals);
+            n = numel(obj.integrals.mx_vec);
         end
         
         function [bool, T] = fixed_horizon(obj)
@@ -886,7 +880,7 @@ classdef ocp < handle
             end
             for k=1:length(obj.eq)
                 fprintf('\t');
-                fprintf(char(propagate_value(obj.eq{k})));
+%                 fprintf(char(propagate_value(obj.eq{k})));
                 fprintf('\n');
             end
             

@@ -5,17 +5,21 @@ s = yop.state('s'); % speed
 a = yop.control('a'); % acceleration
 l = yop.parameter('l'); % maximum position of the cart
 
-bdp = yop.ocp('Bryson-Denham Problem');
-bdp.min( 1/2 * int(a^2) );
-bdp.st( ...
+ocp = yop.ocp('Bryson-Denham Problem');
+ocp.min( 1/2 * int(a^2) );
+ocp.st( ...
     t0==0, tf==1, ... Yop specific
     der(p) == s, ...
     der(s) == a, ...
-    p(t0) == p(tf) == 1, ...
+    p(t0) == p(tf) == 0, ...
     s(t0) == -s(tf) == 1, ...
     p <= l == 1/9 ... An interesting variation is to balance l and control effort
     );
-bdp.build().present();
+ocp.build().present();
+
+dms = yop.dms(ocp, 40, 4);
+sol = dms.solve();
+plot_res(dms, sol);
 
 %% Guaranteed box constraints for boundary conditions
 
@@ -25,18 +29,23 @@ s = yop.state('s'); % speed
 a = yop.control('a'); % acceleration
 l = yop.parameter('l'); % maximum position of the cart
 
-bdp = yop.ocp('Bryson-Denham Problem');
-bdp.min( 1/2 * int(a^2) );
-bdp.st( ...
+ocp = yop.ocp('Bryson-Denham Problem');
+ocp.min( 1/2 * int(a^2) );
+ocp.st( ...
     t0==0, tf==1, ...
     der(p) == s, ...
     der(s) == a, ...
-    p(t0) == 1 == p(tf), ... % SRF -> {p(t0)==1, 1==p(tf)}
+    p(t0) == 0 == p(tf), ... % SRF -> {p(t0)==1, 1==p(tf)}
     s(t0) ==  1, ...
     s(tf) == -1, ...
     p <= l == 1/9 ...
     );
-bdp.build().present();
+ocp.build().present();
+
+dms = yop.dms(ocp, 40, 4);
+sol = dms.solve();
+plot_res(dms, sol);
+
 
 %% Removal of unncessary parameter
 
@@ -46,14 +55,38 @@ s = yop.state('s'); % speed
 a = yop.control('a'); % acceleration
 l = 1/9;
 
-bdp = yop.ocp('Bryson-Denham Problem');
-bdp.min( 1/2 * int(a^2) );
-bdp.st( ...
+ocp = yop.ocp('Bryson-Denham Problem');
+ocp.min( 1/2 * int(a^2) );
+ocp.st( ...
     t0==0, tf==1, ...
     der(p) == s, ...
     der(s) == a, ...
-    p(t0) == 1, s(t0) ==  1, ...
-    p(tf) == 1, s(tf) == -1, ...
+    p(t0) == 0, s(t0) ==  1, ...
+    p(tf) == 0, s(tf) == -1, ...
     p <= l ...
     );
-bdp.build().present();
+ocp.build().present();
+
+dms = yop.dms(ocp, 40, 4);
+sol = dms.solve();
+plot_res(dms, sol);
+
+%%
+function plot_res(dms, sol)
+time = casadi.Function('x', {dms.w}, {vertcat(dms.t{:})});
+t_sol = full(time(sol.x));
+
+state = casadi.Function('x', {dms.w}, {horzcat(dms.x{:})});
+x_sol = full(state(sol.x))';
+
+control = casadi.Function('x', {dms.w}, {horzcat(dms.u{:})});
+u_sol = full(control(sol.x))';
+
+figure(1)
+subplot(311); hold on;
+plot(t_sol, x_sol(:,1))
+subplot(312); hold on;
+plot(t_sol, x_sol(:,2))
+subplot(313); hold on;
+stairs(t_sol, [u_sol; nan])
+end

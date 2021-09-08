@@ -11,7 +11,7 @@ classdef tri_data < handle
         end
         
         function obj = add_ieq(obj, e)
-            obj.eq(end+1) = yop.ocp_expr(e.lhs);
+            obj.ieq(end+1) = yop.ocp_expr(e.lhs);
         end
         
     end

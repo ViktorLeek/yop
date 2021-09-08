@@ -8,9 +8,9 @@ classdef nbc_data < handle
     methods
         function obj = add_ode(obj, der, expr)
             if isempty(obj.odes)
-                obj.odes = yop.ocp_ode(der.var, expr);
+                obj.odes = yop.ocp_ode(der, expr);
             else
-                obj.odes(end+1) = yop.ocp_ode(der.var, expr);
+                obj.odes(end+1) = yop.ocp_ode(der, expr);
             end            
         end
         

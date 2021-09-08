@@ -1,40 +1,44 @@
 classdef ast_der < yop.ast_expression
     properties
-        var
+        expr
     end
     methods
         function obj = ast_der(var)
             obj@yop.ast_expression();
-            obj.var = var;
+            obj.expr = var;
             obj.dim = size(var);
         end
         
         % Overload all illegal operations here!! which should be most!
         
         function boolv = isa_der(obj)
-            boolv = true(size(obj.var));
+            boolv = true(size(obj.expr));
         end
         
         function boolv = isa_numeric(obj)
             % Potentially very slow. If it turns out to be too slow an
             % alternative solution, such as a DFS can be used.
-            boolv = isa_numeric(obj.var);
+            boolv = isa_numeric(obj.expr);
+        end
+        
+        function [bool, id] = isa_variable(obj)
+            [bool, id] = isa_variable(obj.expr);
         end
         
         function boolv = is_transcription_invariant(obj)
-            boolv = is_transcription_invariant(obj.var);
+            boolv = is_transcription_invariant(obj.expr);
         end
         
         function obj = set_pred(obj)
-            add_pred(obj.var, obj);
+            add_pred(obj.expr, obj);
         end
         
         function value = evaluate(obj)
-            value = evaluate(obj.var);
+            value = evaluate(obj.expr);
         end
         
         function v = forward(obj)
-            obj.m_value = value(obj.var);
+            obj.m_value = value(obj.expr);
             v = obj.m_value;
         end
         
@@ -45,7 +49,7 @@ classdef ast_der < yop.ast_expression
         function draw(obj)
             fprintf('der(var)\n');
             last_child(obj);
-            draw(obj.var);
+            draw(obj.expr);
             end_child(obj);
         end
         
@@ -85,7 +89,7 @@ classdef ast_der < yop.ast_expression
             
             % Visit child
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.var, visited, topsort, n_elem);
+                topological_sort(obj.expr, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;

@@ -21,16 +21,6 @@ classdef ocp < handle
         vars
         
         % Vectorized form
-%         t0
-%         tf
-%         t
-%         x
-%         z
-%         u
-%         p
-        ode
-        
-        % Vectorized bounds
         t0_ub
         t0_lb
         tf_ub
@@ -56,14 +46,29 @@ classdef ocp < handle
         p_ub
         p_lb
         
-        % Path constraints
+        ode
+        
         eq
         ieq
-        Px
+        
+        e2i
+        i2e
     end
     
     properties (Hidden, Access=private)
-        %Px
+        % Pertmutation of the state vector:
+        %e2i        % Go from the order in which the states are found to how 
+                   % the are orderered in the dynamics. This is the 
+                   % internal order, becuase then it makes senso to do
+                   % dx + x, which is used by the explicit rk integrators.
+                   
+        %i2e        % Go from how they are ordered in the derivative vector
+                   % to the order in which the states are found. This is
+                   % the order that is obtained by the formulation of the
+                   % problem and is generally random. Here it is possible
+                   % that the state variables are found in a different
+                   % order than their derivatives, so it does not makes
+                   % sense to use this order internally.
     end
   
     
@@ -529,16 +534,18 @@ classdef ocp < handle
             end
             
             % 4) State perturbation vector
-            obj.Px = output_idx;
+            [~, idx] = sort(output_idx);
+            obj.e2i = output_idx;% ordering: Ord(der(x))==Ord(xx(P))
+            obj.i2e = idx;       % ordering: Ord(der(x(P)))==Ord(xx)
             
-            % Ready to vectorize state
+            % -- Vectorize state --
             % 5) Set ode_rhs
             [tt, xx, uu, pp] = obj.mx_parameter_list();
             obj.set_mx();
             ode_fn = casadi.Function('x', {tt,xx,uu,pp}, ...
                 {fw_eval(ode_expr)});
             obj.ode = casadi.Function('ode', {tt,xx,uu,pp}, ...
-                {ode_fn(tt,xx(obj.Px),uu,pp)});
+                {ode_fn(tt,xx(obj.i2e),uu,pp)});
             
             % 6) Set state bounds
             x0lb=[]; x0ub=[]; xlb=[]; xub=[]; xflb=[]; xfub=[];
@@ -550,12 +557,12 @@ classdef ocp < handle
                 xflb = [xflb(:); obj.states(k).lbf(:)];
                 xfub = [xfub(:); obj.states(k).ubf(:)];
             end
-            obj.x0_lb = x0lb(obj.Px);
-            obj.x0_ub = x0ub(obj.Px);
-            obj.x_lb  = xlb(obj.Px);
-            obj.x_ub  = xub(obj.Px);
-            obj.xf_lb = xflb(obj.Px);
-            obj.xf_ub = xfub(obj.Px);
+            obj.x0_lb = x0lb(obj.e2i);
+            obj.x0_ub = x0ub(obj.e2i);
+            obj.x_lb  = xlb(obj.e2i);
+            obj.x_ub  = xub(obj.e2i);
+            obj.xf_lb = xflb(obj.e2i);
+            obj.xf_ub = xfub(obj.e2i);
         end        
         
         function obj = vectorize_algebraic(obj)
@@ -730,7 +737,7 @@ classdef ocp < handle
             mx_expr = fw_eval(expr);
             innr = casadi.Function('i', {tt,xx,uu,pp,tps,ints}, {mx_expr});
             fn = casadi.Function('o', {tt,xx,uu,pp,tps,ints}, ...
-                {innr(tt,xx(obj.Px),uu,pp,tps,ints)});
+                {innr(tt,xx(obj.i2e),uu,pp,tps,ints)});
         end
         
         function [re, nr, reaching_elements] = reaching_states(obj, expr)
@@ -779,11 +786,11 @@ classdef ocp < handle
         end
         
         function n = n_tp(obj)
-            n = numel(obj.timepoints);
+            n = numel(obj.timepoints.mx_vec);
         end
         
         function n = n_int(obj)
-            n = numel(obj.integrals);
+            n = numel(obj.integrals.mx_vec);
         end
         
         function [bool, T] = fixed_horizon(obj)
@@ -898,7 +905,7 @@ classdef ocp < handle
             end
             for k=1:length(obj.ieq)
                 fprintf('\t');
-                fprintf(char(propagate_value(obj.ieq{k})));
+%                 fprintf(char(propagate_value(obj.ieq{k})));
                 fprintf('\n');
             end
             

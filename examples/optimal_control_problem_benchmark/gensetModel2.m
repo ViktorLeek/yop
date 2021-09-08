@@ -1,4 +1,4 @@
-function [dx, y] = genset_model(state, control)
+function [dX, y] = gensetModel2(state, control)
 % MVEM2 - a diesel-electric powertrain model, with the engine modeled using
 % typical engine efficiency characteristic as described in:
 % "MODELLING FOR OPTIMAL CONTROL: A VALIDATED DIESEL-ELECTRIC POWERTRAIN MODEL"
@@ -28,7 +28,6 @@ function [dx, y] = genset_model(state, control)
 % -----------------------------------------------------------------------------
 %
 %     Modified 2019, Viktor Leek
-%     Modified 2021, Viktor Leek
 %
 % -----------------------------------------------------------------------------
 w_ice = state(1);
@@ -41,7 +40,7 @@ u_f = control(1);
 u_wg = control(2);
 P_gen = control(3);
 
-param = genset_parameters();
+param = gensetParameters;
 
 %% Compressor
 % Massflow
@@ -178,47 +177,47 @@ dwtc = (P_t_eta_tm - P_c) / (w_tc * param.J_tc);
 
 dE_gen = P_gen;
 
-dx = [dwice; dpim; dpem; dwtc; dE_gen];
+dX = [dwice; dpim; dpem; dwtc; dE_gen];
 
 %% Signals
 y.compressor.speed = w_tc;
-y.compressor.pressure_ratio = Pi_c;
+y.compressor.pressureRatio = Pi_c;
 y.compressor.efficiency = eta_c;
 y.compressor.power = P_c;
-y.compressor.surge_line = param.c_mc_surge(1) * dot_m_c_corr + param.c_mc_surge(2);
+y.compressor.surgeline = param.c_mc_surge(1) * dot_m_c_corr + param.c_mc_surge(2);
 
 y.intake.pressure = p_im;
 y.intake.temperature = param.T_im;
 
-y.cylinder.volumetric_efficiency = eta_vol;
-y.cylinder.air_massflow = dot_m_ci;
-y.cylinder.fuel_injection = u_f;
-y.cylinder.fuel_massflow = dot_m_f;
-y.cylinder.fuel_to_air_ratio = phi;
-y.cylinder.indicated_efficiency = eta_ig;
-y.cylinder.indicated_torque = W_ig/(4*pi);
-y.cylinder.pumping_torque = W_pump/(4*pi);
-y.cylinder.friction_torque = W_fric/(4*pi);
-y.cylinder.temperature_out = T_eo;
-y.cylinder.fuel_limiter = u_f_max;
-y.cylinder.lambda_min = 1.2;
+y.cylinder.volumetricEfficiency = eta_vol;
+y.cylinder.airMassflow = dot_m_ci;
+y.cylinder.fuelInjection = u_f;
+y.cylinder.fuelMassflow = dot_m_f;
+y.cylinder.fuelToAirRatio = phi;
+y.cylinder.indicatedEfficiency = eta_ig;
+y.cylinder.indicatedTorque = W_ig/(4*pi);
+y.cylinder.pumpingTorque = W_pump/(4*pi);
+y.cylinder.frictionTorque = W_fric/(4*pi);
+y.cylinder.temperatureOut = T_eo;
+y.cylinder.fuelLimiter = u_f_max;
+y.cylinder.lambdaMin = 1.2;
 
 y.engine.speed = w_ice;
-% y.engine.efficiency = if_else(u_f <= 0, 0, P_ice/(dot_m_f*param.Hlhv));
+...y.engine.efficiency = if_else(u_f <= 0, 0, P_ice/(dot_m_f*param.Hlhv));
 y.engine.torque = M_ice;
 y.engine.power = P_ice;
-y.engine.power_limit = [(param.cPice(1)*w_ice^2 + param.cPice(2)*w_ice + param.cPice(3)); ....
+y.engine.powerLimit = [(param.cPice(1)*w_ice^2 + param.cPice(2)*w_ice + param.cPice(3)); ....
                        (param.cPice(4)*w_ice^2 + param.cPice(5)*w_ice + param.cPice(6))];
 
 y.exhaust.pressure = p_em;
 y.exhaust.temperature = T_em;
 
 y.turbine.speed = w_tc;
-y.turbine.pressure_ratio = Pi_t;
+y.turbine.pressureRatio = Pi_t;
 y.turbine.massflow = dot_m_t;
 y.turbine.BSR = BSR;
-y.turbine.BSR_max = param.BSR_max;
-y.turbine.BSR_min = param.BSR_min;
+y.turbine.BSRMax = param.BSR_max;
+y.turbine.BSRMin = param.BSR_min;
 y.turbine.efficiency = eta_tm;
 y.turbine.power = P_t_eta_tm;
 
@@ -231,4 +230,61 @@ y.generator.power = P_gen;
 y.generator.energy = E_gen;
 
 
+end
+
+function param = gensetParameters()
+param.AFs= 14.7500;
+param.A_t_eff= 7.8800e-04;
+param.A_wg_eff= 3.1400e-04;
+param.BSR_max= 1.1000;
+param.BSR_min= 0.1500;
+param.BSR_opt= 0.6220;
+param.Hlhv= 42900000;
+param.J_genset= 2.5000;
+param.J_tc= 1.8695e-04;
+param.P_ice_max= 205000;
+param.Phi_opt= 0.0598;
+param.Psi_max= 1.6380;
+param.Q= [79.2671 0.7985 -1.4358];
+param.R_a= 287;
+param.R_c= 0.0328;
+param.R_e= 286;
+param.R_t= 0.0325;
+param.T_amb= 298.4636;
+param.T_amb_r= 298.8639;
+param.T_c_b= 295.5297;
+param.T_im= 292.0892;
+param.V_D= 0.0067;
+param.V_em= 0.0015;
+param.V_is= 0.0143;
+param.V_tot= 1;
+param.cPice= [3.7461 623.4000 -21721 -3.2003 1.8788e+03 -62537];
+param.c_eta_vol= [1.4393e-04 -0.0239 1.1339];
+param.c_fr= [3.7591e-05 -0.0052 0.7196];
+param.c_m= 2.0245;
+param.c_mc_surge= [12.3530 0.6861];
+param.c_t= [0.6859 2.3633];
+param.c_wg= [0.6666 5.3517];
+param.cp_a= 1011;
+param.cp_e= 1332;
+param.cv_a= 724;
+param.dot_m_c_corr_max= [0.0419 0.3416 0.1918];
+param.eta_c_max= 0.7915;
+param.eta_ig_isl= [0.6650 0.7090 0.4450];
+param.eta_sc= 1.2563;
+param.eta_tm_max= 0.7075;
+param.gamma_a= 1.3964;
+param.gamma_cyl= 1.3500;
+param.gamma_e= 1.2734;
+param.gen2= [2.1584e-06 -6.2603e-04 1.0956 -1.5119e-06 8.0325e-04 0.8229 360.3522];
+param.h_tot= 44.6091;
+param.lambda_min= 1.2;
+param.n_cyl= 6;
+param.p_amb= 1.0111e+05;
+param.p_c_b= 9.9510e+04;
+param.p_es= 1.0587e+05;
+param.r_c= 17.2000;
+param.u_max= [150; 1; 300000];
+param.u_min= [0; 0; 0];
+param.w_tc_corr_opt= 0.5106;
 end

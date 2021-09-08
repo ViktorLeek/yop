@@ -12,10 +12,10 @@ for k=1:length(nbc.eq)
     r = nbc.eq{k};
     invariant = is_transcription_invariant(r.lhs);
     if all(invariant) || all(~invariant)
-        tri.add_eq_inv(r);  
+        tri.add_eq(r);  
     else
-        tri.add_eq_inv(yop.get_subrelation(r, invariant));
-        tri.add_eq_var(yop.get_subrelation(r, ~invariant));
+        tri.add_eq(yop.get_subrelation(r, invariant));
+        tri.add_eq(yop.get_subrelation(r, ~invariant));
     end
 end
 

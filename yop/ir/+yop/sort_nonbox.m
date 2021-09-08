@@ -8,11 +8,11 @@ for k=1:length(con)
         
         case 'yop.ast_eq'
             der_left = isa_der(pck.lhs);
-            if all(der_left) 
+            if all(der_left) % should add: all(isa_variable(pck.lhs))
                 % der(v) == expr (assumed not der(v1) == der(v2))
                 pc.add_ode(pck.lhs, pck.rhs);
                 continue;
-            elseif all(~der_left) 
+            elseif all(der_left == false) 
                 % expr == ??, need to determine rhs
                 r = pck; % remaining relations
             else
@@ -27,7 +27,7 @@ for k=1:length(con)
             der_right = isa_der(r.rhs);
             if all(der_right)
                 pc.add_ode(r.rhs, r.lhs);
-            elseif all(~der_right)
+            elseif all(der_right == false)
                 pc.add_eq(yop.ast_eq(r.lhs-r.rhs, 0));
             else
                 tmp = yop.get_subrelation(r, der_right);

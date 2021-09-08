@@ -44,7 +44,18 @@ classdef dms < handle
         end
         
         function sol = solve_nlp(obj)
-            w0 = ones(size(obj.w));
+            % vertcat(obj.t0, obj.tf, obj.x{:}, obj.u{:}, obj.p);
+            t00 = 0;
+            tf0 = 1;
+            u0 = repmat([50;0.1;1], obj.N, 1);
+            
+            [t_sim, x_sim] = ode45(@(t,x) genset_model(x, u0), [0, 1], obj.ocp.x0_lb(obj.ocp.i2e));
+            t_grid = linspace(t_sim(1), t_sim(end), obj.N+1);
+            x0 = interp1(t_sim, x_sim, t_grid);
+            x0 = x0(:, obj.ocp.e2i)';
+            w0 = [t00; tf0; x0(:); u0];
+            
+            %w0 = ones(size(obj.w));
             d = obj.diffcon;
             g = obj.ocp.eq.vertcat_disc();
             h = obj.ocp.ieq.vertcat_disc();
@@ -181,8 +192,8 @@ classdef dms < handle
                 else
                     grid_val = cell(obj.N+1, 1);
                     for n=1:obj.N
-                        tmp = c.fn(obj.t{n}, obj.x{n}, obj.u{n}, obj.p, ... 
-                            obj.w, tvec, ivec);
+                        tmp = c.fn(obj.t{n}, obj.x{n}, obj.u{n}, obj.p, ...
+                            tvec, ivec);
                         grid_val{n} = tmp(:);
                     end
                     tmp = c.fn(obj.t{obj.N+1}, obj.x{obj.N+1}, ...

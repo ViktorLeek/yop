@@ -7,6 +7,14 @@ classdef ast_subsref < yop.ast_expression
     
     methods
         function obj = ast_subsref(node, s)
+            
+            % Casadi is a bit picky, so logical indices must be converted
+            % to indices.
+            for k=1:length(s.subs)
+                if islogical(s.subs{k})
+                    s.subs{k} = find(s.subs{k});
+                end
+            end
             obj@yop.ast_expression();
             obj.node = node;
             obj.s = s;

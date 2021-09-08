@@ -1,11 +1,11 @@
 classdef ast_alg < yop.ast_expression
     properties
-        var
+        expr
     end
     methods
         function obj = ast_alg(var)
             obj@yop.ast_expression();
-            obj.var = var;
+            obj.expr = var;
             obj.dim = size(var);
         end
         
@@ -13,7 +13,7 @@ classdef ast_alg < yop.ast_expression
         % only allow 0 = alg(expr)!
         
         function value = evaluate(obj)
-            value = evaluate(obj.var);
+            value = evaluate(obj.expr);
         end
         
         function value = forward(obj)
@@ -25,7 +25,7 @@ classdef ast_alg < yop.ast_expression
         end
         
         function obj = set_pred(obj)
-            add_pred(obj.var, obj);
+            add_pred(obj.expr, obj);
         end
         
         function boolv = isa_numeric(obj)
@@ -37,7 +37,7 @@ classdef ast_alg < yop.ast_expression
         function draw(obj)
             fprintf('alg(var)\n');
             last_child(obj);
-            draw(obj.var);
+            draw(obj.expr);
             end_child(obj);
         end
         

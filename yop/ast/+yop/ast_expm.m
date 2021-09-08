@@ -1,41 +1,41 @@
 classdef ast_expm < yop.ast_expression
     properties
-        A
+        expr
     end
     methods
         function obj = ast_expm(A)
             obj@yop.ast_expression();
-            obj.A = A;
+            obj.expr = A;
             obj.dim = size(expm(ones(size(A))));
         end
         
         function boolv = isa_numeric(obj)
             % Potentially very slow. If it turns out to be too slow an
             % alternative solution, such as a DFS can be used.
-            boolv = isa_numeric(obj.A);
+            boolv = isa_numeric(obj.expr);
         end
         
         function boolv = is_transcription_invariant(obj)
-            boolv = is_transcription_invariant(obj.A);
+            boolv = is_transcription_invariant(obj.expr);
         end
         
         function obj = set_pred(obj)
-            add_pred(obj.A, obj);
+            add_pred(obj.expr, obj);
         end
         
         function value = evaluate(obj)
-            value = expm(evaluate(obj.A));
+            value = expm(evaluate(obj.expr));
         end
         
         function v = forward(obj)
-            obj.m_value = expm(value(obj.A));
+            obj.m_value = expm(value(obj.expr));
             v = obj.m_value;
         end
         
         function draw(obj)
             fprintf('expm(A)\n');
             last_child(obj);
-            draw(obj.A);
+            draw(obj.expr);
             end_child(obj);
         end
         
@@ -75,7 +75,7 @@ classdef ast_expm < yop.ast_expression
             
             % Visit child
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.A, visited, topsort, n_elem);
+                topological_sort(obj.expr, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;
