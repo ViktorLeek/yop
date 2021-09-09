@@ -60,8 +60,6 @@ classdef dms < handle
             d = obj.diffcon;
             g = obj.ocp.eq.vertcat_disc();
             h = obj.ocp.ieq.vertcat_disc();
-            opts = struct;
-%             opts.ipopt.linear_solver = 'ma27';
             solver = casadi.nlpsol('solver', 'ipopt', nlp);
             sol = solver( ...
                 'x0', w0, ...

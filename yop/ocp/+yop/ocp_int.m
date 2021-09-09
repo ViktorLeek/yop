@@ -1,4 +1,4 @@
-classdef ocp_int < handle
+classdef ocp_int < handle & matlab.mixin.Copyable
     properties        
         node
         mx

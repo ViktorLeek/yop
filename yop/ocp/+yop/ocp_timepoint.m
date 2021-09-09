@@ -1,4 +1,4 @@
-classdef ocp_timepoint < handle
+classdef ocp_timepoint < handle & matlab.mixin.Copyable
     properties        
         node
         mx
