@@ -39,29 +39,29 @@ classdef dms < handle
             obj.parameterize_expressions();
         end
         
-        function sol = solve(obj)
-            sol = obj.solve_nlp();
+        function sol = solve(obj, w0)
+            if nargin == 1
+                w0 = ones(size(obj.w));
+            end
+            nlp = obj.build();
+            sol = obj.solve_nlp(nlp, w0);
         end
         
-        function sol = solve_nlp(obj)
-            % vertcat(obj.t0, obj.tf, obj.x{:}, obj.u{:}, obj.p);
-            t00 = 0;
-            tf0 = 1;
-            u0 = repmat([50;0.1;1], obj.N, 1);
-            
-            [t_sim, x_sim] = ode45(@(t,x) genset_model(x, u0), [0, 1], obj.ocp.x0_lb(obj.ocp.i2e));
-            t_grid = linspace(t_sim(1), t_sim(end), obj.N+1);
-            x0 = interp1(t_sim, x_sim, t_grid);
-            x0 = x0(:, obj.ocp.e2i)';
-            w0 = [t00; tf0; x0(:); u0];
-            
-            %w0 = ones(size(obj.w));
+        function nlp = build(obj)
             d = obj.diffcon;
             g = obj.ocp.eq.vertcat_disc();
             h = obj.ocp.ieq.vertcat_disc();
             nlp.f = obj.ocp.objective.disc;
             nlp.x = obj.w;
             nlp.g = [d; g; h];
+        end
+        
+        function sol = solve_nlp(obj, nlp, w0)
+            d = obj.diffcon;
+            g = obj.ocp.eq.vertcat_disc();
+            h = obj.ocp.ieq.vertcat_disc();
+            opts = struct;
+%             opts.ipopt.linear_solver = 'ma27';
             solver = casadi.nlpsol('solver', 'ipopt', nlp);
             sol = solver( ...
                 'x0', w0, ...
@@ -245,7 +245,7 @@ classdef dms < handle
         end
         
         function rk = rk4(obj)            
-            nx = obj.ocp.n_x; nu = obj.ocp.n_u; np = obj.ocp.n_p;
+            nx=obj.ocp.n_x; nu=obj.ocp.n_u; np=obj.ocp.n_p;
             
             % Integrator parameters
             I0 = casadi.MX.sym('I0'); % Start of integration
@@ -253,7 +253,6 @@ classdef dms < handle
             x0 = casadi.MX.sym('x0', nx); % Initial value
             
             % ode parameters
-            % (Awkward naming, but otherwise Matlab's linter kills my eyes)
             t_  = casadi.MX.sym('t');  % Independent variable
             x_  = casadi.MX.sym('x', nx); % State variable
             u_  = casadi.MX.sym('u', nu); % Control input

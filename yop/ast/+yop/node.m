@@ -24,6 +24,11 @@ classdef node < handle
             obj.id = yop.node.get_uid();
         end
         
+        function node = at(timepoint, expression)
+            % Alternative syntax for evaluating expression at a timepoint
+            node = yop.ast_timepoint(timepoint, expression);
+        end
+        
         function value = fw_eval(expr)
             % FW_EVAL - Forward evaluate
             [sort, K] = topological_sort(expr);
