@@ -42,7 +42,63 @@ ocp.st( ...
     Wfmin <= Wf <= Wfmax ...
     );
 
-ocp.build();
+ocp.build().present();
 
-obj = yop.dc(ocp, 5, 'legendre', 2);
+%%
+N = 50;
+D = 4;
+obj = yop.dc(ocp, N, 'legendre', D);
 obj.build()
+
+w0 = ones(size(obj.w));
+d = obj.diffcon;
+nlp.f = -obj.x(end).y(1);
+nlp.x = obj.w;
+nlp.g = d;
+solver = casadi.nlpsol('solver', 'ipopt', nlp);
+sol = solver( ...
+    'x0', w0, ...
+    'lbx', obj.w_lb, ...
+    'ubx', obj.w_ub, ...
+    'ubg', zeros(size(d)), ...
+    'lbg', zeros(size(d)) ...
+    );
+
+%%
+
+tt = [];
+for n=1:N
+    for r=1:D+1
+        tt = [tt(:); obj.t{n,r}];
+    end
+end
+tt = [tt(:); obj.t{N+1,1}];
+time = casadi.Function('x', {obj.w}, {tt});
+tx_sol = full(time(sol.x));
+
+tt = [];
+for n=1:N+1
+    tt = [tt(:); obj.t{n,1}];
+end
+time = casadi.Function('x', {obj.w}, {tt});
+tu_sol = full(time(sol.x));
+
+xx = [];
+for xk=obj.x
+    xx = [xx; xk.y'];
+end
+state = casadi.Function('x', {obj.w}, {xx});
+x_sol = full(state(sol.x));
+
+control = casadi.Function('x', {obj.w}, {horzcat(obj.u{:})});
+u_sol = full(control(sol.x))';
+
+figure(1)
+subplot(411); hold on;
+plot(tx_sol, x_sol(:,1))
+subplot(412); hold on;
+plot(tx_sol, x_sol(:,2))
+subplot(413); hold on;
+plot(tx_sol, x_sol(:,3))
+subplot(414); hold on;
+stairs(tu_sol, [u_sol; nan])

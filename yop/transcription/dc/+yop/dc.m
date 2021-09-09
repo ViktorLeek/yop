@@ -65,7 +65,7 @@ classdef dc < handle
            
            % State
            obj.x = yop.collocated_state( ...
-               'x',obj.nx, obj.N+1, obj.d, obj.points);
+               'x', obj.nx, obj.N, obj.d, obj.points);
            
            % Control
            obj.u = cell(obj.N);
@@ -116,9 +116,15 @@ classdef dc < handle
                     xr = obj.x(n).evaluate(obj.tau(r)); % t{n,r}?
                     dxr = dx.evaluate(obj.tau(r));
                     f = obj.ocp.ode(obj.t{n,r}, xr, obj.u{n}, obj.p);
-                    obj.add_diffcon(dxr - f);
+                    obj.add_diffcon(dxr - obj.h*f);
                 end
             end
+            
+            for n=1:obj.N
+                x_end = obj.x(n).evaluate(1);
+                obj.add_diffcon(x_end - obj.x(n+1).evaluate(0));
+            end
+            
         end
         
         function obj = add_diffcon(obj, expr)
@@ -127,6 +133,22 @@ classdef dc < handle
             else
                 obj.diffcon = [obj.diffcon(:); expr(:)];
             end
+        end
+        
+        function v = w(obj)
+            xx = [];
+            for xk=obj.x
+                xx = [xx(:); xk.y(:)];
+            end
+            v = vertcat(obj.t0, obj.tf, xx, obj.u{:}, obj.p);
+        end
+        
+        function bd = w_lb(obj)
+            bd = vertcat(obj.t0_lb, obj.tf_lb, obj.x_lb, obj.u_lb, obj.p_lb);
+        end
+        
+        function bd = w_ub(obj)
+            bd = vertcat(obj.t0_ub, obj.tf_ub, obj.x_ub, obj.u_ub, obj.p_ub);
         end
         
         function n = N(obj)
