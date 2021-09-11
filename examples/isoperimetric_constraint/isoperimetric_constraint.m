@@ -13,7 +13,7 @@ ocp.st( ...
     -4 <= u <= 4 ...
     );
 ocp.build.present()
-
+%%
 dms = yop.dms(ocp, 30, 1);
 sol = dms.solve(zeros(size(dms.w)));
 

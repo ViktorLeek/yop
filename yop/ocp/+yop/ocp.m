@@ -56,7 +56,7 @@ classdef ocp < handle
     end
     
     properties (Hidden, Access=private)
-        % Pertmutation of the state vector:
+        % Permutation of the state vector:
         %e2i        % Go from the order in which the states are found to how 
                    % the are orderered in the dynamics. This is the 
                    % internal order, becuase then it makes senso to do
@@ -486,7 +486,7 @@ classdef ocp < handle
             %  righthandside is evaluated and added to the current step in
             %  order to compute the next (x_next = x_cur + h*f(.)). Unless
             %  the order match, the integration will not be correct. For
-            %  that reason it is necessary to compute a perturbation
+            %  that reason it is necessary to compute a permutation
             %  vector, Px, so that the elements come in the same order as
             %  their derivatives.
             
@@ -533,7 +533,7 @@ classdef ocp < handle
                 output_idx = [output_idx(:); nr(k).enum(:)];
             end
             
-            % 4) State perturbation vector
+            % 4) State permutation vector
             [~, idx] = sort(output_idx);
             obj.e2i = output_idx;% ordering: Ord(der(x))==Ord(xx(P))
             obj.i2e = idx;       % ordering: Ord(der(x(P)))==Ord(xx)
@@ -718,10 +718,10 @@ classdef ocp < handle
         end
         
         function [tt, xx, uu, pp] = mx_parameter_list(obj)
-            % Used to derive function objects. Does not perturb state
+            % Used to derive function objects. Does not permute state
             % vector, which is why this function is private. All outide
             % communication should have no knowledge of that the state
-            % vector needs to be perurbed.
+            % vector needs to be permuted.
             tt = obj.independent.mx_vec();
             xx = obj.states.mx_vec();
             uu = obj.controls.mx_vec();
@@ -744,7 +744,7 @@ classdef ocp < handle
             % Documentation for this function is that of yop.reaching_elems
             % as it is a variation on that one, with the difference that it
             % only does it for the 'states' property only. The reason for
-            % this implementation is that computation of the perturbation
+            % this implementation is that computation of the permutation
             % function for the state vector relies on that the states are
             % enumerated in the order they appear in the state vector.
             % Also, a sligth speed up is obtained by saving the enumerated

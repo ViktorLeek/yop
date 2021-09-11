@@ -46,51 +46,46 @@ ocp.build().present();
 
 %%
 N = 50;
-D = 4;
-obj = yop.dc(ocp, N, 'legendre', D);
-obj.build()
-
-w0 = ones(size(obj.w));
-d = obj.diffcon;
-nlp.f = -obj.x(end).y(1);
-nlp.x = obj.w;
-nlp.g = d;
-solver = casadi.nlpsol('solver', 'ipopt', nlp);
+d = 4;
+dc = yop.dc(ocp, N, d, 'legendre');
+nlp = dc.build();
+prob = struct; prob.f = nlp.f; prob.x = nlp.x; prob.g = nlp.g;
+solver = casadi.nlpsol('solver', 'ipopt', prob);
 sol = solver( ...
-    'x0', w0, ...
-    'lbx', obj.w_lb, ...
-    'ubx', obj.w_ub, ...
-    'ubg', zeros(size(d)), ...
-    'lbg', zeros(size(d)) ...
+    'x0', ones(size(nlp.x)), ...
+    'lbx', nlp.x_lb, ...
+    'ubx', nlp.x_ub, ...
+    'ubg', nlp.g_ub, ...
+    'lbg', nlp.g_lb ...
     );
 
 %%
 
 tt = [];
 for n=1:N
-    for r=1:D+1
-        tt = [tt(:); obj.t{n,r}];
+    for r=1:d+1
+        tt = [tt(:); dc.t{n,r}];
     end
 end
-tt = [tt(:); obj.t{N+1,1}];
-time = casadi.Function('x', {obj.w}, {tt});
+tt = [tt(:); dc.t{N+1,1}];
+time = casadi.Function('x', {dc.w}, {tt});
 tx_sol = full(time(sol.x));
 
 tt = [];
 for n=1:N+1
-    tt = [tt(:); obj.t{n,1}];
+    tt = [tt(:); dc.t{n,1}];
 end
-time = casadi.Function('x', {obj.w}, {tt});
+time = casadi.Function('x', {dc.w}, {tt});
 tu_sol = full(time(sol.x));
 
 xx = [];
-for xk=obj.x
+for xk=dc.x
     xx = [xx; xk.y'];
 end
-state = casadi.Function('x', {obj.w}, {xx});
+state = casadi.Function('x', {dc.w}, {xx});
 x_sol = full(state(sol.x));
 
-control = casadi.Function('x', {obj.w}, {horzcat(obj.u{:})});
+control = casadi.Function('x', {dc.w}, {horzcat(dc.u{:})});
 u_sol = full(control(sol.x))';
 
 figure(1)

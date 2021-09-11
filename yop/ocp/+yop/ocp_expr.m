@@ -1,4 +1,4 @@
-classdef ocp_expr < handle
+classdef ocp_expr < handle & matlab.mixin.Copyable
     properties
         expr
         fn
@@ -16,6 +16,10 @@ classdef ocp_expr < handle
             for k=1:length(obj)
                 vec = [vec(:); obj(k).disc(:)];
             end
+        end
+        function bool = ishard(obj)
+            % Behöver en pass is IR för denna.
+            bool = false(size(obj.expr));
         end
     end
 end

@@ -5,27 +5,24 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
     %    of values using Lagrange polynomials. The Lagrange polynomials are
     %    calculated as:
     %
-    %       L(t) = sum( l_j(t)*x_j )_{j=0}^{d}
-    %       l_j(t) = prod( (t - t_r)/(t_j - t_r) )_{r=0, r/=j}^{d}.
+    %       L(x) = sum( l_j(x)*y_j )_{j=0}^{d}
+    %       l_j(x) = prod( (x - x_r)/(x_j - x_r) )_{r=0, r/=j}^{d}.
     %
     %    where L is the Lagrange polynomial, l_j the basis polynimals,
-    %    t the independent variable, t_i the sampling timepoints, x_j the
+    %    x the independent variable, x_i the sampling timepoints, y_j the
     %    sampled values, and d the polynomial degree.
     %
     % -- Properties --
-    %    timepoint : Row vector describing the sampling timepoints
+    %    x : Row vector describing the sampling timepoints
     %
-    %    value     : Matrix describing the sampling values. Must have
-    %                 equally many rows as in 'timepoint'. E.g. if the
-    %                 sampled signal is scalar-valued, 'value' is a row
-    %                 vector.
+    %    y : Matrix describing the sampling values. Must have equally many
+    %        columns as in 'x'. E.g. if the sampled signal is scalar-
+    %        valued, 'y' is a row vector
     %
-    %    basis     : Matrix containing the Lagrange basis polynomials.
+    %    l : Matrix containing the Lagrange basis polynomials.
     %
     % -- Methods --
     %    obj = lagrange_polynomial() : Constructor.
-    %
-    %    obj = init(obj, timepoints, values) : Initialization method.
     %
     %    obj = calculate_basis(obj) : Calculates the basis polynomials.
     %
@@ -41,15 +38,14 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
     %    % COPY INTO SCRIPT
     %    % Approximate the t^2 and t^3  at the specified timepoints using a
     %    % second order Lagrange polynomial.
-    %    timepoints = [1,2,3]; % Three sample points results in 2:order polynomial.
+    %    timepoints = [0,1,2,3]; % Sample points results in 3nd ord. polyn.
     %    analytical_values = @(t) [t.^2; t.^3];
     %    analytical_derivative = @(t) [2*t; 3*t.^2];
     %    analytical_integral = @(t) [t.^3/3; t.^4/4];
     %
-    %    lp = yop.lagrange_polynomial();
-    %    lp.init(timepoints, analytical_values(timepoints));
+    %    lp = yop.lagrange_polynomial(timepoints, analytical_values(timepoints));
     %
-    %    t = 1:0.05:3;
+    %    t = 0:0.05:4;
     %    figure(1); hold on
     %    plot(t, analytical_values(t))
     %    plot(t, lp.evaluate(t), 'x')
@@ -80,51 +76,33 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
     methods
         
         function obj = lagrange_polynomial(x, y)
-            % LAGRANGE_POLYNOMIAL Class constructor
-            %    Takes no arguments but requires initialization. See the
-            %    lagrange_polynomial.init method for more information
-            %    regarding initialization.
+            % LAGRANGE_POLYNOMIAL Constructor
+            %    Constructs the polynomial from the sampling points x and
+            %    the sampled values y.
             %
             % -- Syntax --
-            %    obj = yop.lagrange_polynomial();
-            %
-            % -- Examples --
-            %    lp = yop.lagrange_polynomial();
-            
-            % INIT Initialize the lagrange polynomial
-            %    Initialize the lagrange polynomial by providing a set of
-            %    timepoints and sample values. The method stores the values
-            %    and calculates a basis for the Lagrange polynomial.
-            %
-            % -- Syntax --
-            %    obj = init(obj, timepoints, values)
-            %    init(obj, timepoints, values)
-            %    obj.init(timepoints, values)
+            %    obj = yop.lagrange_polynomial(x, y);
             %
             % -- Arguments --
-            %    obj        : Handle to the Lagrange polynomial instance.
+            %    x : Sampled timepoints. Specified as a row vector.
             %
-            %    timepoints : Sample timepoints. Specified as a row vector.
-            %
-            %    values     : Sample values. Specified as a Matrix.
-            %                  Must have as many columns as 'timepoints'.
-            %                  Dimension of values are specified in the
-            %                  column direction.
+            %    y : Sampled values. Specified as a Matrix.
+            %        Must have as many columns as 'x' do.
+            %        Dimension of values are specified in the
+            %        column direction.
             %
             % -- Examples --
             %    % Scalar values
-            %    lp = init(lp, [1,2,3], [1,4,9])
-            %    init(lp, [1,2,3], [1,4,9])
-            %    lp.init([1,2,3], [1,4,9])
+            %    obj = yop.lagrange_polynomial([1 2 3], [1 4 9])
             %
             %    % Vector valued values
-            %    lp = init(lp, [1,2,3], [1,4,9; 1,8,27])
-            %    init(lp, [1,2,3], [1,4,9; 1,8,27])
-            %    lp.init([1,2,3], [1,4,9; 1,8,27])
-
+            %    obj = yop.lagrange_polynomial([1 2 3], [1 4 9; 1 8 27])
             
-            assert(size(x,1)==1, 'bad');
-            assert(size(x,2)==size(y,2), 'bad');
+            assert(size(x,1)==1, ...
+                '[Yop] Error: Argument x is not a row vector.');
+            
+            assert(size(x,2)==size(y,2), ['[Yop] Error: Argument y ', ...
+                'does not have equally many columns as x.']);
             
             obj.x = x;
             obj.y = y;
@@ -135,18 +113,18 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             % CALCULATE_BASIS Calculates the Lagrange polynomial basis
             %    For the given Lagrange polynomial:
             %
-            %       L(t) = sum( l_j(t)*x_j )_{j=0}^{d}
+            %       L(x) = sum( l_j(x)*y_j )_{j=0}^{d}
             %
             %    calculates the basis l_j for all j according to:
             %
-            %       l_j(t) = prod( (t - t_r)/(t_j - t_r) )_{r=0, r/=j}^{d}.
+            %       l_j(x) = prod( (x - x_r)/(x_j - x_r) )_{r=0, r/=j}^{d}.
             %
             % -- Syntax --
             %    obj.calulate_basis()
             %    calculate_basis(obj)
             %
             % -- Arguments --
-            %    obj : Handle to the Lagrange polynomial instance.
+            %    obj : Handle to the Lagrange polynomial.
             
             obj.l = zeros(obj.degree+1, obj.degree+1);
             for j=1:obj.degree+1
@@ -157,7 +135,7 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
                         l_j = conv(l_j, Pi_r);
                     end
                 end
-                obj.l(j,:) = l_j;
+                obj.l(j,:) = yop.lagrange_polynomial.filter0(l_j);
             end
         end
         
@@ -166,7 +144,7 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             %    Evaluate the polynomial at time t, by evaluating the
             %    Lagrange polynomial:
             %
-            %       L(t) = sum( l_j(t)*x_j )_{j=0}^{d}
+            %       L(t) = sum( l_j(t)*y_j )_{j=0}^{d}
             %
             %    If t is a vector, it evaluates the polynomial at all
             %    timepoints.
@@ -181,7 +159,7 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             %    t   : Vector with the timepoints the polynomial should be
             %           evaluated at.
             %
-                % -- Examples --
+            % -- Examples --
             %    lp.evaluate(1);
             %    lp.evaluate(0:0.1:1);
             %    evaluate(lp, 2);
@@ -191,7 +169,9 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             for n=1:length(t)
                 v = 0;
                 for j=1:obj.degree+1
-                    v = v + polyval(obj.l(j,:), t(n)) .* obj.y(:,j);
+                    ll = yop.lagrange_polynomial.filter0( ...
+                        polyval(obj.l(j,:), t(n)));
+                    v = v + ll .* obj.y(:,j);
                 end
                 values = [values, v];
             end
@@ -209,14 +189,14 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             %
             % -- Arguments --
             %    obj           : Handle to the Lagrange polynomial to be
-            %                     integrated.
+            %                    integrated.
             %
             %    polynomial    : Integration of the input polynomial
-            %                     described as a new Lagrange polynomial.
+            %                    described as a new Lagrange polynomial.
             %
             % -- Arguments (Optional) --
             %    constant_term : Constant of integration, specified as a
-            %                     numeric scalar. Defaults to 0.
+            %                    numeric scalar. Defaults to 0.
             %
             % -- Examples --
             %    lp_int = lp.integrate(0)
@@ -232,7 +212,7 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
                 new_basis(k,:) = polyint(obj.l(k,:), constant_term);
             end
             polynomial = copy(obj);
-            polynomial.l = new_basis;
+            polynomial.l = yop.lagrange_polynomial.filter0(new_basis);
         end
         
         function polynomial = differentiate(obj)
@@ -247,9 +227,10 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             %
             % -- Arguments --
             %    obj        : Handle to the Lagrange polynomial to be
-            %                  differentiated.
+            %                 differentiated.
+            %
             %    polynomial : Differentiation of the input polynomial
-            %                  described as a new Lagrange Polynomial.
+            %                 described as a new Lagrange Polynomial.
             %
             % -- Examples --
             %    lp_der = lp.differentiate()
@@ -261,7 +242,7 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
                 new_basis(k, :) = polyder(obj.l(k, :));
             end
             polynomial = copy(obj);
-            polynomial.l = new_basis;
+            polynomial.l = yop.lagrange_polynomial.filter0(new_basis);
         end
         
         function deg = degree(obj)
@@ -282,6 +263,24 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             deg = size(obj.x, 2)-1;
         end
         
+    end
+    
+    methods (Static)
+        function A = filter0(A)
+            % FILTER0 Remove numerical noice from values close to zero
+            % 
+            % -- Syntax --
+            %     A = yop.lagrange_polynomial.filter0(A)
+            %
+            % -- Arguments --
+            %    A : Values to be filtered
+            %
+            for n=1:numel(A)
+                if yop.EQ(A(n), 0, 1e-12) % floating point comparison
+                    A(n) = 0;
+                end
+            end
+        end
     end
     
 end

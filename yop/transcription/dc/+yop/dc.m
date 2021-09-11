@@ -7,6 +7,9 @@ classdef dc < handle
         ocp
         timepoints
         integrals
+        eq
+        ieq
+        objective
         
         tau
         t0
@@ -33,19 +36,34 @@ classdef dc < handle
         
     end
     methods
-        function obj = dc(ocp, ivals, points, polydeg)
+        function obj = dc(ocp, ivals, polydeg, points)
             obj.ocp = ocp;
             obj.ivals = ivals;
             obj.points = points;
             obj.polydeg = polydeg;
             obj.timepoints = copy(ocp.timepoints);
             obj.integrals = copy(ocp.integrals);
+            obj.eq = copy(ocp.eq);
+            obj.ieq = copy(ocp.ieq);
+            obj.objective = copy(ocp.objective);
         end
         
-        function obj = build(obj)
+        function nlp = build(obj)
             obj.build_vars();
             obj.set_box_bnd();
             obj.discretize_ode();
+            obj.parameterize_timepoints_and_integrals();
+            obj.parameterize_expressions();
+            d = obj.diffcon;
+            g = obj.eq.vertcat_disc();
+            h = obj.ieq.vertcat_disc();
+            nlp.f = obj.objective.disc;
+            nlp.x = obj.w;
+            nlp.g = [d; g; h];
+            nlp.x_lb = obj.w_lb;
+            nlp.x_ub = obj.w_ub;
+            nlp.g_ub = [zeros(size([d;g])); zeros(size(h))];
+            nlp.g_lb = [zeros(size([d;g])); -inf(size(h))];
         end
         
         function obj = build_vars(obj)
@@ -68,7 +86,7 @@ classdef dc < handle
                'x', obj.nx, obj.N, obj.d, obj.points);
            
            % Control
-           obj.u = cell(obj.N);
+           obj.u = cell(obj.N, 1);
            for n=1:obj.N
                obj.u{n} = casadi.MX.sym(['u_', num2str(n)], obj.nu);
            end
@@ -110,6 +128,14 @@ classdef dc < handle
         end
         
         function obj = discretize_ode(obj)
+            %             for n=1:obj.N
+            %                 xx = obj.x(n).evaluate(obj.tau);
+            %                 dx = obj.x(n).differentiate().evaluate(obj.tau);
+            %                 for r=2:obj.d+1
+            %                     f = obj.ocp.ode(obj.t{n,r}, xx(r), obj.u{n}, obj.p);
+            %                     obj.add_diffcon(dx(r) - obj.h*f);
+            %                 end
+            %             end
             for n=1:obj.N
                 dx = obj.x(n).differentiate();
                 for r=2:obj.d+1
@@ -121,10 +147,117 @@ classdef dc < handle
             end
             
             for n=1:obj.N
-                x_end = obj.x(n).evaluate(1);
-                obj.add_diffcon(x_end - obj.x(n+1).evaluate(0));
+                obj.add_diffcon( ...
+                    obj.x(n).evaluate(1) - obj.x(n+1).evaluate(0));
             end
             
+        end
+        
+        function obj = parameterize_timepoints_and_integrals(obj)
+            for tp_k = obj.timepoints
+                [tt,xx,uu,pp] = obj.vars_at(tp_k.timepoint);
+                tvec = obj.timepoints.get_disc();
+                ivec = obj.integrals.get_disc();
+                tmp = tp_k.fn(tt,xx,uu,pp,tvec, ivec);
+                tp_k.disc = tmp(:);
+            end
+            tvec = obj.timepoints.get_disc();
+            test = casadi.Function('tvec', {obj.w}, {tvec});
+            
+            for int_k = obj.integrals
+                ivec = obj.integrals.get_disc();
+                I = 0;
+                for n=1:obj.N
+                    val = [];
+                    uu = obj.u{n};
+                    pp = obj.p;
+                    for r=1:obj.d+1
+                        tt = obj.t{n,r};
+                        xx = obj.x(n).evaluate(obj.tau(r));
+                        val_r = int_k.fn(tt,xx,uu,pp,tvec,ivec);
+                        val = [val, val_r(:)];
+                    end
+                    lp = yop.lagrange_polynomial(obj.tau, val).integrate();
+                    I = I + lp.evaluate(1);
+                end
+                int_k.disc = I(:);
+            end
+        end
+        
+        function obj = parameterize_expressions(obj)
+            tvec = obj.timepoints.get_disc();
+            ivec = obj.integrals.get_disc();
+            for c = [obj.objective, obj.eq, obj.ieq]
+                if all(is_transcription_invariant(c))
+                    tt = obj.t{1,1};
+                    xx = obj.x(1).evaluate(0);
+                    uu = obj.u{1};
+                    pp = obj.p;
+                    tmp = c.fn(tt,xx,uu,pp,tvec,ivec);
+                    c.disc = tmp(:);
+                else
+                    % IMPLEMENT HARD
+                    grid_val = cell(obj.N+1, 1);
+                    for n=1:obj.N
+                        tt = obj.t{n,1};
+                        xx = obj.x(n).evaluate(0);
+                        uu = obj.u{n};
+                        pp = obj.p;
+                        tmp = c.fn(tt,xx,uu,pp,tvec,ivec);
+                        grid_val{n} = tmp(:);
+                    end
+                    tt = obj.t{n+1,1};
+                    xx = obj.x(n+1).evaluate(0);
+                    uu = obj.u{n};
+                    pp = obj.p;
+                    tmp = c.fn(tt,xx,uu,pp,tvec,ivec);
+                    grid_val{n+1} = tmp(:);
+                    c.disc = vertcat(grid_val{:});
+                end
+            end
+        end
+        
+        function [t, x, u, p] = vars_at(obj, tp)
+                
+            if isa(tp, 'yop.ast_independent_initial')
+                t = obj.t0;
+                x = obj.x(1).y(:,1); % Need an abstraction here
+                u = obj.u{1};
+                p = obj.p;
+                return;
+            elseif isa(tp, 'yop.ast_independent_final')
+                t = obj.tf;
+                x = obj.x(end).y; % y-value at N+1 is a vector 
+                u = obj.u{end};
+                p = obj.p;
+                return;
+            end
+            
+            [fixed, T] = fixed_horizon(obj.ocp);            
+            
+            if ~fixed
+                error('[Yop] Problem does not have a fixed horizon')
+            end
+            
+            dt = T/obj.N; % grid step_length    
+            if yop.EQ(rem(tp,dt), 0, 1e-3) % 1e-3 should be a setting (also for DMS)
+                % grid point
+                n = round(tp/dt);
+                t = obj.t{n};
+                x = obj.x(n).y(:,1);
+                u = obj.u{min(obj.N, n)};
+                p = obj.p;
+                
+            else
+                % With the first statement and this floor operation n!=N+1,
+                % unless t is outside the horizon, in which case an error
+                % is desirable.
+                % Integrate up to timepoint
+                n = floor(tp/dt);
+                x = obj.x(n).evaluate(tp);
+                u = obj.u{n};
+                p = obj.p;
+            end
         end
         
         function obj = add_diffcon(obj, expr)
