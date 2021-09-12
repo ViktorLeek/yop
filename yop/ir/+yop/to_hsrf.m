@@ -21,42 +21,42 @@ end
 for n=1:length(relations)
     %% Split relation into var-unknowns and expr-unknowns
     rn = relations{n};
-    [var, ID] = isa_variable_helper(rn, 'lhs');
+    [isvar, ID] = isa_variable_helper(rn, 'lhs');
     
     % Add variable-unknown relation
-    for u = yop.row_vec( unique(ID(var)) )
+    for u = yop.row_vec( unique(ID(isvar)) )
         hsrf.add_vu( yop.get_subrelation(rn, ID==u) );
     end
     
     % Add expression-unknown relation
-    if ~all(var)
-        hsrf.add_eu( yop.get_subrelation(rn, ~var) );
+    if ~all(isvar)
+        hsrf.add_eu( yop.get_subrelation(rn, ~isvar) );
     end
     
     %% Split var-unknown into var-var and var-expr
     % Process all variable-unknown
     for k=1:length(hsrf.vu)
         ck = hsrf.vu{k};
-        [var, ID] = isa_variable_helper(ck, 'rhs');
-        for u = yop.row_vec(unique(ID(var)))
+        [isvar, ID] = isa_variable_helper(ck, 'rhs');
+        for u = yop.row_vec(unique(ID(isvar)))
             hsrf.add_vv( yop.get_subrelation(ck, ID==u) );
         end
         
-        if ~all(var)
-            hsrf.add_ve( yop.get_subrelation(ck, ~var) );
+        if ~all(isvar)
+            hsrf.add_ve( yop.get_subrelation(ck, ~isvar) );
         end
     end
     
     %% Split expr-unknown into expr-var and expr-expr
     for k=1:length(hsrf.eu)
         ck = hsrf.eu{k};
-        [var, ID] = isa_variable_helper(ck, 'rhs');
-        for u = yop.row_vec( unique(ID(var)) )
+        [isvar, ID] = isa_variable_helper(ck, 'rhs');
+        for u = yop.row_vec( unique(ID(isvar)) )
             hsrf.add_ev( yop.get_subrelation(ck, ID==u) );
         end
         
-        if ~all(var)
-            hsrf.add_ee( yop.get_subrelation(ck, ~var) );
+        if ~all(isvar)
+            hsrf.add_ee( yop.get_subrelation(ck, ~isvar) );
         end
     end
     
@@ -78,30 +78,3 @@ if isscalar(relation.(side))
     ID = ID * ones(size(relation));
 end
 end
-
-% function sr = get_subrelation(relation, idx)
-% % Since indices might be scaled and variables can be scalars it is
-% % necessary to test if it is possible to take the subindices of the
-% % relations.
-% 
-% if all(idx==false)
-%     sr = [];
-%     return;
-% end
-% 
-% if isscalar(relation.rhs) %&& ~all(idx==false)
-%     rhs = relation.rhs;
-% else
-%     rhs = relation.rhs(idx);
-% end
-% 
-% if isscalar(relation.lhs)  %&& ~all(idx==false)
-%     lhs = relation.lhs;
-% else
-%     lhs = relation.lhs(idx);
-% end
-% 
-% f  = get_constructor(relation);
-% sr = f(lhs, rhs);
-% 
-% end

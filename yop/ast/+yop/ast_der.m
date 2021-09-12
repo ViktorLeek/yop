@@ -9,8 +9,6 @@ classdef ast_der < yop.ast_expression
             obj.dim = size(var);
         end
         
-        % Overload all illegal operations here!! which should be most!
-        
         function boolv = isa_der(obj)
             boolv = true(size(obj.expr));
         end

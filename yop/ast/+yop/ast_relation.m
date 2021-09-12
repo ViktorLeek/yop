@@ -7,6 +7,7 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
         lhs
         rhs
         dim % dimensions of 'size'
+        m_hard = false
     end
     
     methods
@@ -19,6 +20,10 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
         function obj = set_pred(obj)
             add_pred(obj.lhs, obj);
             add_pred(obj.rhs, obj);
+        end
+        
+        function obj = hard(obj)
+            obj.m_hard = true;
         end
         
         function sz = size(obj, varargin)
@@ -295,10 +300,6 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
         
         function idx = end(obj, k, n)
             idx = builtin('end', ones(size(obj)), k, n);
-        end
-        
-        function fn_hdl = get_constructor(obj)
-            eval(['fn_hdl = @(lhs, rhs) ', class(obj), '(lhs, rhs);']);
         end
         
         function rels = get_relations(obj)

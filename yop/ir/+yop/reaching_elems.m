@@ -49,8 +49,8 @@ end
 % Evaluate in order to find reaching variables
 reaching_elements = propagate_value(expr);
 
-% Elements that are not variables are set to -1
-reaching_elements(~isa_variable(expr)) = -1;
+% Elements that are not variables are set to 0
+reaching_elements(~isa_variable(expr)) = 0;
 
 % Compute the index in the expression that matches the elements the
 % variable takes.

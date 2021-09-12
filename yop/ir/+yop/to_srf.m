@@ -1,4 +1,8 @@
 function srf = to_srf(constraints_cell, srf)
+% TO_SRF To single relation form.
+%   A pass for trasforming the input form to a form where every constraint
+%   only consist of one relation.
+
 % to_srl - To single relation form
 %   From the current node, finds all relations, and creates a
 %   node with a single relation, for all relations withing this

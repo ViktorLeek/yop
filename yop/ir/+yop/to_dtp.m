@@ -76,25 +76,3 @@ for k=1:length(vnf.nv)
 end
 
 end
-
-% function sr = get_subrelation(relation, idx)
-% % Since indices might be scaled and variables can be scalars it is
-% % necessary to test if it is possible to take the subindices of the
-% % relations.
-% 
-% if isscalar(relation.rhs)
-%     rhs = relation.rhs;
-% else
-%     rhs = relation.rhs(idx);
-% end
-% 
-% if isscalar(relation.lhs)
-%     lhs = relation.lhs;
-% else
-%     lhs = relation.lhs(idx);
-% end
-% 
-% f  = get_constructor(relation);
-% sr = f(lhs, rhs);
-% 
-% end

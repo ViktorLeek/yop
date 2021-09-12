@@ -83,7 +83,7 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             % -- Syntax --
             %    obj = yop.lagrange_polynomial(x, y);
             %
-            % -- Arguments --
+            % -- Parameters --
             %    x : Sampled timepoints. Specified as a row vector.
             %
             %    y : Sampled values. Specified as a Matrix.
@@ -123,7 +123,7 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             %    obj.calulate_basis()
             %    calculate_basis(obj)
             %
-            % -- Arguments --
+            % -- Parameters --
             %    obj : Handle to the Lagrange polynomial.
             
             obj.l = zeros(obj.degree+1, obj.degree+1);
@@ -153,7 +153,7 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             %    obj.evaluate(t)
             %    evaluate(obj, t)
             %
-            % -- Arguments --
+            % -- Parameters --
             %    obj : Handle to the Lagrange polynomial instance.
             %
             %    t   : Vector with the timepoints the polynomial should be
@@ -187,7 +187,7 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             %    polynomial = integrate(obj, constant_term)
             %    polynomial = obj.integrate(constant_term)
             %
-            % -- Arguments --
+            % -- Parameters --
             %    obj           : Handle to the Lagrange polynomial to be
             %                    integrated.
             %
@@ -225,7 +225,7 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             %    polynomial = obj.differentiate()
             %    polynomial = differentiate(obj)
             %
-            % -- Arguments --
+            % -- Parameters --
             %    obj        : Handle to the Lagrange polynomial to be
             %                 differentiated.
             %
@@ -252,7 +252,7 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             %     deg = obj.degree
             %     deg = degree(obj)
             %
-            % -- Arguments --
+            % -- Parameters --
             %    obj : Handle to the Lagrange polynomial
             %    deg : The degree of the polynomial
             %
@@ -272,7 +272,7 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             % -- Syntax --
             %     A = yop.lagrange_polynomial.filter0(A)
             %
-            % -- Arguments --
+            % -- Parameters --
             %    A : Values to be filtered
             %
             for n=1:numel(A)

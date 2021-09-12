@@ -1,7 +1,6 @@
 function vnf = to_vnf(hsrf, vnf)
+% TO_VNF A transformation pass for 
 % To variable-numeric form
-% Last step before it can be distinguhised which constraints are box and
-% which are other constraints
 
 if nargin == 1
     vnf = yop.vnf_data();

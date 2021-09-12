@@ -758,13 +758,189 @@ classdef ocp < handle
                 obj.states(k).enum = idx;
             end
             reaching_elements = propagate_value(expr);
-            reaching_elements(~isa_variable(expr)) = -1;
+            %reaching_elements(~isa_variable(expr)) = 0;
+            reaching_elements(~(isa_der(expr) & isa_state(expr))) = 0;
+            warning('[Yop] Test that isa_der works equally well as isa_variable');
             for k=1:length(re)
                 re(k).set_expr_idx(reaching_elements);
             end
             reaching = arrayfun(@(v) ~isempty(v.reaching), re);            
             nr = re(~reaching);
             re = re( reaching);
+        end
+        
+    end
+    
+    %% Passes
+    methods
+        
+        function obj = add_srf(obj, srf)
+            if isempty(obj.srf)
+                obj.srf = {srf};
+            else
+                obj.srf{end+1} = srf;
+            end
+        end
+        
+    end
+    
+    methods (Static)
+        
+        function srf = to_srf(constraints)
+            %TO_SRF To single relation form.
+            %  to_srf(constraints)
+            %  srf = to_srf(constraints)
+            %
+            %  Description:
+            %    A pass for converting all constraints to a form where 
+            %    there is only one relation per constraint. For instance,
+            %    the constraint expr1 <= expr2 <= expr3 is converted into
+            %       i) expr1 <= expr2
+            %      ii) expr2 <= expr3
+            %    The purspose of this pass is to be simplify the job for
+            %    the remaning passes as they can start from the assumption
+            %    that there is only one relation per constraint.
+            %  
+            %  Parameters:
+            %    constraints - A cell array with constraints
+            %
+            %  Return value:
+            %    srf - A cell array with the constraints on srf.
+            srf = {};
+            for n=1:length(constraints)
+                cn = constraints{n};
+                relations = get_relations(cn);
+                for k=1:length(relations)
+                    rk = relations{k};
+                    fnh = get_constructor(rk);
+                    srf{end+1} = fnh(rmost(rk.lhs), lmost(rk.rhs));
+                end
+            end
+        end
+        
+        function [box, nbox] = get_box(srf)
+            %GET_BOX Separates box and non-box constraints based on srf
+            %  constraints.
+            %
+            %  Description:
+            %    Searches the constraints on srf form for constraints that
+            %    are box constraints. The requirements are dictated by the
+            %    yop.ocp.isa_box function. 
+            %
+            %  Parameters:
+            %    srf - Cell array containing constraints on srf form
+            box = {};
+            nbox = {};
+            for n=1:length(srf)
+                var_num = yop.ocp.isa_box(srf{n}.lhs, srf{n}.rhs);
+                num_var = yop.ocp.isa_box(srf{n}.rhs, srf{n}.lhs);
+                isbox = var_num | num_var;
+                box{end+1} = yop.get_subrel(srf{n}, isbox);
+                nbox{end+1} = yop.get_subrel(srf{n}, ~isbox);
+            end
+            box = box(~cellfun('isempty', box));
+            nbox = nbox(~cellfun('isempty', nbox)); 
+        end
+        
+        function boolv = isa_box(var_cand, num_cand)
+            %ISA_BOX Tests if the variable candidate and numeric candidate
+            %  form a box constraint.
+            %
+            %  Description:
+            %    Box constraints are made up of a variable and a numeric
+            %    bound. The function determines if var_cand is a variable
+            %    and num_cand is a numeric value.
+            %
+            %  Parameters:
+            %    var_cand - The expression for the variable candidate
+            %    num_cand - The expression for the numeric candidate
+            %  
+            %  Return value:
+            %    boolv - A bool vector. If only one argument is a scalar,
+            %            the bool vector has the same dimensions as athe
+            %            vector.
+            t0 = yop.initial_timepoint();
+            tf = yop.final_timepoint();
+            isvar = isa_variable(var_cand);
+            isder = isa_der(var_cand);
+            [istp, tps] = isa_timepoint(var_cand);
+            isnum = isa_numeric(num_cand);
+            boolv = isvar & ~isder & (~istp|tps==t0|tps==tf) & isnum;
+        end
+        
+        function uid_box = unique_box(box)
+            %UNIQUE_BOX Sorts the box constraints so that every constraint
+            %  only refers to one variable.
+            %
+            %  Description:
+            %    Using the unique ID every node has to sort the constraints
+            %    so that every box constraint only refers to one variable.
+            uid_box = {};
+            for k=1:length(box)
+                [~, ID_L] = isa_variable(box{k}.lhs);
+                [~, ID_R] = isa_variable(box{k}.rhs);
+                ID = ID_L + ID_R; % ID==0 if not a variable
+                for uID = yop.row_vec(unique(ID))
+                    uid_box{end+1} = yop.get_subrel(box{k}, ID==uID);
+                end
+            end
+            uid_box = uid_box(~cellfun('isempty', uid_box));
+        end
+        
+        function [bc_t, bc_t0, bc_tf] = timed_box(box)
+            t0 = yop.initial_timepoint();
+            tf = yop.final_timepoint();
+            bc_t={}; bc_t0={}; bc_tf={};
+            for k=1:length(box)
+                % This pass relies on the fact that box constraints only
+                % can be initial or final timepoints (if timepoints).
+                % Because of this it is possible to add the timepoints
+                % togheter, since those that are not timepoints return 0.
+                [istp_L, tp_L] = isa_timepoint(box{k}.lhs);
+                [istp_R, tp_R] = isa_timepoint(box{k}.rhs);
+                istp = istp_L | istp_R;
+                tp = tp_L + tp_R; 
+                bc_t{end+1} = yop.get_subrel(box{k}, ~istp);
+                bc_t0{end+1} = yop.get_subrel(box{k}, tp==t0);
+                bc_tf{end+1} = yop.get_subrel(box{k}, tp==tf);
+            end
+            bc_t = bc_t(~cellfun('isempty', bc_t));
+            bc_t0 = bc_t0(~cellfun('isempty', bc_t0));
+            bc_tf = bc_tf(~cellfun('isempty', bc_tf));
+        end
+        
+        function cbox = canonicalize(box)
+            cbox = {};
+            for k=1:length(box)
+                switch class(box{k})
+                    case {'yop.ast_lt', 'yop.ast_le'}
+                        isvar = isa_variable(box{k}.lhs);
+                        if all(isvar) % var <= num
+                            cbox{end+1} = box{k};
+                        else % num <= var
+                            cbox{end+1} = ...
+                                yop.ast_ge(box{k}.rhs, box{k}.lhs);
+                        end
+                    case {'yop.ast_gt', 'yop.ast_ge'}
+                        isvar = isa_variable(box{k}.lhs);
+                        if all(isvar) % var >= num
+                            cbox{end+1} = box{k};
+                        else % num >= var
+                            cbox{end+1} = ...
+                                yop.ast_le(box{k}.rhs, box{k}.lhs);
+                        end
+                    case 'yop.ast_eq'
+                        isvar = isa_variable(box{k}.lhs);
+                        if all(isvar)
+                            cbox{end+1} = box{k};
+                        else
+                            cbox{end+1} = ...
+                                yop.ast_eq(box{k}.rhs, box{k}.lhs);
+                        end
+                    otherwise
+                        error('[Yop] Unexpected error.');
+                end
+            end
         end
         
     end
