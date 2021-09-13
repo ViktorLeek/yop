@@ -22,6 +22,15 @@ classdef ast_horzcat < yop.ast_expression
             end       
         end
         
+        function [bool, id] = isa_state(obj)
+            [bool, id] = isa_state(obj.args{1});
+            for k=2:length(obj.args)
+                [bk, ik] = isa_state(obj.args{k});
+                bool = [bool, bk];
+                id = [id, ik];
+            end       
+        end
+        
         function boolv = isa_der(obj)
             boolv = isa_der(obj.args{1});
             for k=2:length(obj.args)

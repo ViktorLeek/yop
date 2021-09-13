@@ -26,6 +26,10 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
             obj.m_hard = true;
         end
         
+        function bool = ishard(obj)
+            bool = obj.m_hard;
+        end
+        
         function sz = size(obj, varargin)
             sz = size(ones(obj.dim), varargin{:});
         end

@@ -23,6 +23,10 @@ classdef ast_der < yop.ast_expression
             [bool, id] = isa_variable(obj.expr);
         end
         
+        function [bool, id] = isa_state(obj)
+            [bool, id] = isa_state(obj.expr);
+        end
+        
         function boolv = is_transcription_invariant(obj)
             boolv = is_transcription_invariant(obj.expr);
         end

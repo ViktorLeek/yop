@@ -58,6 +58,14 @@ classdef ast_subsasgn < yop.ast_expression
             id(idx) = idb;
         end
         
+        function [bool, id] = isa_state(obj)
+            [bool, id] = isa_state(obj.node);
+            [boolb, idb] = isa_state(obj.b);
+            idx = get_indices(obj);
+            bool(idx) = boolb;
+            id(idx) = idb;
+        end
+        
         function [bool, tp] = isa_timepoint(obj)
             [bool, tp] = isa_timepoint(obj.node);
             idx = get_indices(obj);

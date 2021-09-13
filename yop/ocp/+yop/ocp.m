@@ -103,49 +103,45 @@ classdef ocp < handle
     methods 
 
         function obj = build(obj)
-            % 1) Find all variables from the relations and expressions that
-            %    make up the problem
+            % Find all variables from the relations and expressions that
+            % make up the problem
             obj.find_variables_timepoints_integrals();
             obj.classify_variables();
             
-            % 2) Convert to single relation form
-            srf = yop.to_srf(obj.constraints);
+            % SRF
+            srf = yop.ocp.to_srf(obj.constraints);
+            [box, nbox] = yop.ocp.get_box(srf)
             
-            % 3) Convert to homogeneous srf
-            hsrf = yop.to_hsrf(srf.get_relations());
-            
-            % 4) Convert to value-numeric form
-            vnf = yop.to_vnf(hsrf);
-            
-            % 5) Convert to distinct timepoint form (final form for boxcon)
-            dtp = yop.to_dtp(vnf);
-            obj.parse_box_constraints(dtp);
+            % Box
+            cbox = yop.ocp.canonicalize_box(box);
+            uid_box = yop.ocp.unique_box(cbox);
+            [box_t, box_t0, box_tf] = timed_box(box);
+            obj.parse_box(box_t, 'lb', 'ub');
+            obj.parse_box(box_t0, 'lb0', 'ub0');
+            obj.parse_box(box_tf, 'lbf', 'ubf');
             obj.set_box_bounds();
             
-            % 6) Sort the nonbox constraints: ode, inequality, equality
-            nbc = yop.sort_nonbox(dtp.get_pathcon());
-            obj.differetial_eqs = nbc.odes;
+            % Sort the nonbox constraints: ode, inequality, equality
+            [odes, alg, eqs, ieqs] = yop.ocp.sort_nonbox(nbox);
+            obj.differetial_eqs = odes;
+            obj.eq = yop.ocp.split_transcription_invariance(eqs);
+            obj.ieq = yop.ocp.split_transcription_invariance(ieqs);
             
-            % 7) vectorize ocp
+            % Vectorize ocp
             obj.vectorize_variables();
             
-            % 8) Compute timepoint and integral functions
+            % Compute timepoint and integral functions
             obj.set_timepoint_placeholders();
             obj.set_integral_placeholders();
             obj.set_timepoint_functions(); % måste komma efter vectorize 
             obj.set_integral_functions();  % för att parameterlistan ska vara rätt
             
-            % 9) Convert to transcription invariant/variant form
-            tri = yop.tr_invar(nbc); 
-            obj.eq = tri.eq;
-            obj.ieq = tri.ieq;
-            
-            % 10) Compute function objects for objective and  
-            %     path constraints
+            % Compute function objects for objective and  
+            % path constraints
             obj.compute_objective_function();
             obj.compute_pathcon_functions();
             
-            % 11) Error checking
+            % Error checking
             
             % OCP built!
         end
@@ -782,6 +778,30 @@ classdef ocp < handle
             end
         end
         
+        function obj = parse_box(obj, box, lb, ub)
+            % Canonicalized, unqiue box
+            for k=1:length(box)
+                re = yop.reaching_elems(box{k}.lhs);
+                bnd = yop.prop_num(box{k}.rhs);
+                var = obj.find_variable(re.var.id);
+                switch class(box{k})
+                    case 'yop.ast_eq' % var == bnd
+                        var.(ub)(re.idx_var) = ...
+                            yop.get_subexpr(bnd, re.idx_expr);
+                        var.(lb)(re.idx_var) = ...
+                            yop.get_subexpr(bnd, re.idx_expr);
+                    case {'yop.ast_le', 'yop.ast_lt'} % var < bnd
+                        var.(ub)(re.idx_var) = ...
+                            yop.get_subexpr(bnd, re.idx_expr);
+                    case {'yop.ast_ge', 'yop.ast_gt'} % var > bnd
+                        var.(lb)(re.idx_var) = ...
+                            yop.get_subexpr(bnd, re.idx_expr);
+                    otherwise
+                        error('[Yop] Error: Wrong constraint class.');
+                end
+            end
+        end
+        
     end
     
     methods (Static)
@@ -868,20 +888,26 @@ classdef ocp < handle
             boolv = isvar & ~isder & (~istp|tps==t0|tps==tf) & isnum;
         end
         
-        function uid_box = unique_box(box)
+        function cbox = canonicalize_box(box)
+            cbox = cell(size(box));
+            for k=1:length(box)
+                cbox{end+1} = canonicalize_box(box{k});
+            end
+        end
+        
+        function uid_box = unique_box(cbox)
             %UNIQUE_BOX Sorts the box constraints so that every constraint
-            %  only refers to one variable.
+            %  only refers to one variable. Requires canonicalized box
+            %  constraints.
             %
             %  Description:
             %    Using the unique ID every node has to sort the constraints
             %    so that every box constraint only refers to one variable.
             uid_box = {};
-            for k=1:length(box)
-                [~, ID_L] = isa_variable(box{k}.lhs);
-                [~, ID_R] = isa_variable(box{k}.rhs);
-                ID = ID_L + ID_R; % ID==0 if not a variable
+            for k=1:length(cbox)
+                [~, ID] = isa_variable(cbox{k}.lhs);
                 for uID = yop.row_vec(unique(ID))
-                    uid_box{end+1} = yop.get_subrel(box{k}, ID==uID);
+                    uid_box{end+1} = yop.get_subrel(cbox{k}, ID==uID);
                 end
             end
             uid_box = uid_box(~cellfun('isempty', uid_box));
@@ -896,10 +922,7 @@ classdef ocp < handle
                 % can be initial or final timepoints (if timepoints).
                 % Because of this it is possible to add the timepoints
                 % togheter, since those that are not timepoints return 0.
-                [istp_L, tp_L] = isa_timepoint(box{k}.lhs);
-                [istp_R, tp_R] = isa_timepoint(box{k}.rhs);
-                istp = istp_L | istp_R;
-                tp = tp_L + tp_R; 
+                [istp, tp] = isa_timepoint(box{k}.lhs);
                 bc_t{end+1} = yop.get_subrel(box{k}, ~istp);
                 bc_t0{end+1} = yop.get_subrel(box{k}, tp==t0);
                 bc_tf{end+1} = yop.get_subrel(box{k}, tp==tf);
@@ -909,36 +932,37 @@ classdef ocp < handle
             bc_tf = bc_tf(~cellfun('isempty', bc_tf));
         end
         
-        function cbox = canonicalize(box)
-            cbox = {};
-            for k=1:length(box)
-                switch class(box{k})
-                    case {'yop.ast_lt', 'yop.ast_le'}
-                        isvar = isa_variable(box{k}.lhs);
-                        if all(isvar) % var <= num
-                            cbox{end+1} = box{k};
-                        else % num <= var
-                            cbox{end+1} = ...
-                                yop.ast_ge(box{k}.rhs, box{k}.lhs);
-                        end
-                    case {'yop.ast_gt', 'yop.ast_ge'}
-                        isvar = isa_variable(box{k}.lhs);
-                        if all(isvar) % var >= num
-                            cbox{end+1} = box{k};
-                        else % num >= var
-                            cbox{end+1} = ...
-                                yop.ast_le(box{k}.rhs, box{k}.lhs);
-                        end
-                    case 'yop.ast_eq'
-                        isvar = isa_variable(box{k}.lhs);
-                        if all(isvar)
-                            cbox{end+1} = box{k};
-                        else
-                            cbox{end+1} = ...
-                                yop.ast_eq(box{k}.rhs, box{k}.lhs);
-                        end
-                    otherwise
-                        error('[Yop] Unexpected error.');
+        function [ode, alg, eq, ieq] = sort_nonbox(nbox)
+            ode={};alg={};eq={};ieq={};
+            for k=1:length(nbox)
+                if is_alg(nbox{k})
+                    alg{end+1} = nbox{k};
+                    
+                elseif isa(nbox{k}, 'yop.ast_eq')
+                    [~, ode_k, eq_k] = isa_ode(obj);
+                    ode{end+1} = ode_k;
+                    eq{end+1} = eq_k;
+                    
+                else
+                    ieq{end+1} = canonicalize(nbox{k});
+                    
+                end
+            end
+            ode = ode(~cellfun('isempty', ode));
+            alg = alg(~cellfun('isempty', alg));
+            ieq = ieq(~cellfun('isempty', ieq));
+            eq  =  eq(~cellfun('isempty', eq));
+        end
+        
+        function trcon = split_transcription_invariance(con)
+            trcon = {};
+            for k=1:length(con)
+                invariant = is_transcription_invariant(con{k}.lhs);
+                if all(invariant) || all(~invariant)
+                    trcon{end+1} = con{k};
+                else
+                    trcon{end+1} = yop.get_subrelation(con{k}, invariant);
+                    trcon{end+1} = yop.get_subrelation(con{k}, ~invariant);
                 end
             end
         end

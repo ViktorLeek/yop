@@ -31,8 +31,66 @@ classdef ast_eq < yop.ast_relation
             obj.m_alg = true;
         end
         
+        function bool = is_alg(obj)
+            bool = obj.m_alg;
+        end
+        
         function fn = get_constructor(obj)
             fn = @(lhs, rhs) yop.ast_eq(lhs, rhs, obj.m_hard, obj.m_alg);
+        end
+        
+        function [isode, ode, expr] = isa_ode(obj)
+            %ISA_ODE
+            isode_lhs = isa_state(obj.lhs) & isa_der(obj.lhs);
+            isode_rhs = isa_state(obj.rhs) & isa_der(obj.rhs);
+            isode = bitxor(isode_lhs, isode_rhs);
+            
+            if all(~isode)
+                ode = [];
+            else
+                ode = canonicalize_ode( ...
+                    yop.get_subrel(obj, isode), ...
+                    isode_lhs(isode), ...
+                    isode_rhs(isode) ...
+                    );
+            end
+            
+            if all(isode)
+                expr = [];
+            else
+                expr = canonicalize(yop.get_subrel(obj, ~isode));
+            end
+            
+            assert( ... that both sides are not ode's
+                all((isode_lhs & isode_rhs &~isode)==false),...
+                ['[Yop] Error: Cannot have ode on both ', ...
+                'sides of ==.']);
+        end
+        
+        function code = canonicalize_ode(ode, is_ode_lhs, is_ode_rhs)
+            if all(is_ode_lhs)
+                code = ode;
+            elseif all(is_ode_rhs)
+                fn = get_constructor(ode);
+                code = fn(ode.rhs, ode.lhs);
+            else
+                error('[Yop] Unexpected error.');
+            end
+        end
+        
+        function ceq = canonicalize(obj)
+            fn = get_constructor(obj);
+            ceq = fn(obj.lhs-obj.rhs, 0);
+        end
+        
+        function cbox = canonicalize_box(box)
+            isvar = isa_variable(box.lhs);
+            if all(isvar) % var == num
+                cbox = box;
+            else % num == var
+                fn = get_constructor(box);
+                cbox = fn(box.rhs, box.lhs);
+            end
         end
     end
     

@@ -25,6 +25,20 @@ classdef ast_lt < yop.ast_relation
         function fn = get_constructor(obj)
             fn = @(lhs, rhs) yop.ast_lt(lhs, rhs, obj.m_hard);
         end
+        
+        function ceq = canonicalize(obj)
+            fn = get_constructor(obj);
+            ceq = fn(obj.lhs-obj.rhs, 0);
+        end
+        
+        function cbox = canonicalize_box(box)
+            isvar = isa_variable(box.lhs);
+            if all(isvar) % var <= num
+                cbox = box;
+            else % num <= var
+                cbox = yop.ast_ge(box.rhs, box.lhs, box.m_hard);
+            end
+        end
     end
     
 end

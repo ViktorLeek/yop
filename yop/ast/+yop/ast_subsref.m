@@ -52,6 +52,13 @@ classdef ast_subsref < yop.ast_expression
             id = id(idx);
         end
         
+        function [bool, id] = isa_state(obj)
+            [bool, id] = isa_state(obj.node);
+            idx = get_indices(obj);
+            bool = bool(idx);
+            id = id(idx);
+        end
+        
         function bool = isa_der(obj)
             bool = isa_der(obj.node);
             bool = bool(get_indices(obj));            

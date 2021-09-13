@@ -31,6 +31,12 @@ classdef ast_ctranspose < yop.ast_expression
             id = ctranspose(id);
         end
         
+        function [bool, id] = isa_state(obj)
+            [bool, id] = isa_state(obj.expr);
+            bool = ctranspose(bool);
+            id = ctranspose(id);
+        end
+        
         function boolv = is_transcription_invariant(obj)
             boolv = is_transcription_invariant(obj.expr);
         end

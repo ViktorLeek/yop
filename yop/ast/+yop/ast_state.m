@@ -7,5 +7,11 @@ classdef ast_state < yop.ast_variable
         function boolv = is_transcription_invariant(obj)
             boolv = false(size(obj));
         end
+        
+        function [bool, id] = isa_state(obj)
+            bool = true(size(obj));
+            id = obj.id*ones(size(obj));
+        end
+        
     end
 end

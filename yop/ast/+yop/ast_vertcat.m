@@ -59,6 +59,15 @@ classdef ast_vertcat < yop.ast_expression
             end       
         end
         
+        function [bool, id] = isa_state(obj)
+            [bool, id] = isa_state(obj.args{1});
+            for k=2:length(obj.args)
+                [bk, ik] = isa_state(obj.args{k});
+                bool = [bool; bk];
+                id = [id; ik];
+            end       
+        end
+        
         function value = evaluate(obj)
             tmp = cell(size(obj.args));
             for k=1:length(tmp)

@@ -186,5 +186,3 @@ stairs(t_sol, [u_sol; nan])
 
 
 
-
-
