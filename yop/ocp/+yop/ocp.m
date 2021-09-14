@@ -14,7 +14,7 @@ classdef ocp < handle
         algebraics          = yop.ocp_var.empty(1,0);
         controls            = yop.ocp_var.empty(1,0);
         parameters          = yop.ocp_var.empty(1,0);
-        differetial_eqs
+        odes
         constraints
         timepoints
         integrals
@@ -110,20 +110,18 @@ classdef ocp < handle
             
             % SRF
             srf = yop.ocp.to_srf(obj.constraints);
-            [box, nbox] = yop.ocp.get_box(srf)
+            [box, nbox] = yop.ocp.separate_box(srf);
             
             % Box
-            cbox = yop.ocp.canonicalize_box(box);
-            uid_box = yop.ocp.unique_box(cbox);
-            [box_t, box_t0, box_tf] = timed_box(box);
+            [box_t, box_t0, box_tf] = yop.ocp.timed_box(box);
             obj.parse_box(box_t, 'lb', 'ub');
             obj.parse_box(box_t0, 'lb0', 'ub0');
             obj.parse_box(box_tf, 'lbf', 'ubf');
-            obj.set_box_bounds();
+            obj.set_box_bounds(); % Includes processing default values
             
             % Sort the nonbox constraints: ode, inequality, equality
-            [odes, alg, eqs, ieqs] = yop.ocp.sort_nonbox(nbox);
-            obj.differetial_eqs = odes;
+            [odes_, alg, eqs, ieqs] = yop.ocp.sort_nonbox(nbox);
+            obj.odes = odes_;
             obj.eq = yop.ocp.split_transcription_invariance(eqs);
             obj.ieq = yop.ocp.split_transcription_invariance(ieqs);
             
@@ -273,152 +271,6 @@ classdef ocp < handle
             obj.parameters(end+1) = yop.ocp_var(p);
         end
         
-        function obj = parse_box_constraints(obj, dtp)
-            % Box constraints: var-num
-            for k=1:length(dtp.vn_t)
-                bc = dtp.vn_t{k};
-                var_expr = bc.lhs;
-                bnd = yop.prop_num(bc.rhs);
-                re = yop.reaching_elems(var_expr);
-                var = obj.find_variable(re.var.id);
-                switch class(bc)
-                    case 'yop.ast_eq' % var == bnd
-                        var.ub(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                        var.lb(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    case {'yop.ast_le', 'yop.ast_lt'} % var < bnd
-                        var.ub(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    case {'yop.ast_ge', 'yop.ast_gt'} % var > bnd
-                        var.lb(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    otherwise
-                        error('[Yop] Error: Wrong constraint class.');
-                end
-            end
-            
-            % Box constraints: var-num, t==t0
-            for k=1:length(dtp.vn_t0)
-                bc = dtp.vn_t0{k};
-                var_expr = bc.lhs;
-                bnd = yop.prop_num(bc.rhs);
-                re = yop.reaching_elems(var_expr);
-                var = obj.find_variable(re.var.id);
-                switch class(bc)
-                    case 'yop.ast_eq' % var == bnd
-                        var.ub0(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                        var.lb0(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    case {'yop.ast_le', 'yop.ast_lt'} % var < bnd
-                        var.ub0(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    case {'yop.ast_ge', 'yop.ast_gt'} % var > bnd
-                        var.lb0(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    otherwise
-                        error('[Yop] Error: Wrong constraint class.');
-                end
-            end
-            
-            % Box constraints: var-num, t==tf
-            for k=1:length(dtp.vn_tf)
-                bc = dtp.vn_tf{k};
-                var_expr = bc.lhs;
-                bnd = yop.prop_num(bc.rhs);
-                re = yop.reaching_elems(var_expr);
-                var = obj.find_variable(re.var.id);
-                switch class(bc)
-                    case 'yop.ast_eq' % var == bnd
-                        var.ubf(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                        var.lbf(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    case {'yop.ast_le', 'yop.ast_lt'} % var < bnd
-                        var.ubf(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    case {'yop.ast_ge', 'yop.ast_gt'} % var > bnd
-                        var.lbf(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    otherwise
-                        error('[Yop] Error: Wrong constraint class.');
-                end
-            end
-            
-            % Box constraints: num-var
-            for k=1:length(dtp.nv_t)
-                bc = dtp.nv_t{k};
-                var_expr = bc.rhs;
-                bnd = yop.prop_num(bc.lhs);
-                re = yop.reaching_elems(var_expr);
-                var = obj.find_variable(re.var.id);
-                switch class(bc)
-                    case 'yop.ast_eq' % bnd == var
-                        var.ub(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                        var.lb(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    case {'yop.ast_le', 'yop.ast_lt'} % bnd < var
-                        var.lb(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    case {'yop.ast_ge', 'yop.ast_gt'} % bnd > var
-                        var.ub(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    otherwise
-                        error('[Yop] Error: Wrong constraint class.');
-                end
-            end
-            
-            % Box constraints: num-var, t==t0
-            for k=1:length(dtp.nv_t0)
-                bc = dtp.nv_t0{k};
-                var_expr = bc.rhs;
-                bnd = yop.prop_num(bc.lhs);
-                re = yop.reaching_elems(var_expr);
-                var = obj.find_variable(re.var.id);
-                switch class(bc)
-                    case 'yop.ast_eq' % bnd == var
-                        var.ub0(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                        var.lb0(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    case {'yop.ast_le', 'yop.ast_lt'} % bnd < var
-                        var.lb0(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    case {'yop.ast_ge', 'yop.ast_gt'} % bnd > var
-                        var.ub0(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    otherwise
-                        error('[Yop] Error: Wrong constraint class.');
-                end
-            end
-            
-            % Box constraints: num-var, t==tf
-            for k=1:length(dtp.nv_tf)
-                bc = dtp.nv_tf{k};
-                var_expr = bc.rhs;
-                bnd = yop.prop_num(bc.lhs);
-                re = yop.reaching_elems(var_expr);
-                var = obj.find_variable(re.var.id);
-                switch class(bc)
-                    case 'yop.ast_eq' % bnd == var
-                        var.ubf(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                        var.lbf(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    case {'yop.ast_le', 'yop.ast_lt'} % bnd < var
-                        var.lbf(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    case {'yop.ast_ge', 'yop.ast_gt'} % bnd > var
-                        var.ubf(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                    otherwise
-                        error('[Yop] Error: Wrong constraint class.');
-                end
-            end
-        end
-        
         function obj = set_box_bounds(obj)
             obj.set_box_bnd('independent', 'lb', 'ub', ...
                 yop.defaults().independent_lb, ...
@@ -472,67 +324,107 @@ classdef ocp < handle
             obj.tf_ub = obj.independent_final.ub;
         end
         
-        function obj = vectorize_state(obj)
-            %  VECTORIZE_STATE - Vectorize state and ode
-            %  This function is the reason why the ocp needs to be
-            %  vectorized. The odes governing the states may have have the
-            %  variable vector (lhs of 'der(x) == f(t,x,z,u,p)') in any 
-            %  order (x can be permuted or lack some of the sates on the 
-            %  lhs). This becomes a problem in integration, where the
-            %  righthandside is evaluated and added to the current step in
-            %  order to compute the next (x_next = x_cur + h*f(.)). Unless
-            %  the order match, the integration will not be correct. For
-            %  that reason it is necessary to compute a permutation
-            %  vector, Px, so that the elements come in the same order as
-            %  their derivatives.
+        function [ode_var, ode_expr] = vectorize_ode(obj)
+            %VECTORIZE_ODE - Vectorize the odes and set default
+            %  derivatives.
+            %
+            %  Description:
+            %    Analyzes which of the state elements the reaches the ode
+            %    rhs: der(var) == ... Those elements of the entire state
+            %    vector that does not reach is given the default derivative
+            %    der(var) == 0.
+            %
+            %  Parameters:
+            %    obj - Handle to a ocp
+            %
+            %  Return values:
+            %    ode_var - Variables of ode rhs (ode(var) == expr) in
+            %              vectorized form.
+            %    ode_expr - Expressions of ode lhs (ode(var) == expr) in
+            %               vectorized form.
             
-            %  1) Vectorize ode expression
-            ode_var = obj.differetial_eqs(1).var;
-            ode_expr = obj.differetial_eqs(1).expr;
-            for k=2:length(obj.differetial_eqs)
-                ode_var = [ode_var(:); obj.differetial_eqs(k).var(:)];
-                ode_expr = [ode_expr(:); obj.differetial_eqs(k).expr(:)];
+            % The ode is canonicalized, so all variables are to the left
+            % and expressions to the right.
+            ode_var = []; ode_expr = [];
+            for k=1:length(obj.odes)
+                ode_var = [ode_var(:); obj.odes{k}.lhs(:)];
+                ode_expr = [ode_expr(:); obj.odes{k}.rhs(:)];
             end
-            assert(all(isa_variable(ode_var)), '[Yop] Unexpected error.');
             
-            %  2) Perform a reaching elements analysis in order to
-            %  determine what variables, and what exact elements reaches
-            %  the der(...) expression. 
-            [re, nr, output_idx] = obj.reaching_states(ode_var);
-            assert(all( diff(obj.states.get_enum()) == 1 ) ...
-                && obj.states(1).enum(1)==1, '[Yop] Unexpected error.');
+            % Analyze the elements that reaches the ode rhs: ode(var)==...
+            % The purpose is to set the ode of those that does not reach to
+            % zero. re - reaching elements, nr - not reaching
+            [re, nr] = obj.reaching_states(ode_var);
             
-            %  3) Three cases: 
-            %        i) All elements of the variable reach (nothing to do).
-            %       ii) Some of the elements reach (add not reaching).
-            %      iii) None of the elements reach (add all).
-            % case i && ii
+            % Test if some of the elements do not reach
             for k=1:length(re)
                 if numel(re(k).enum) ~= numel(re(k).reaching)
-                    % Number of elements and the number reaching does not
-                    % match. Pick out the ones not reaching and add them to
-                    % the variable vector and set their derivative to zero.
                     [~, idx] = setdiff(re(k).enum, re(k).reaching);
                     vk = re(k).var(idx);
+                    ode_var = [ode_var(:); vk(:)];
                     ode_expr = [ode_expr(:); zeros(size(vk(:)))];
-                    obj.differetial_eqs(end+1) = ...
-                        yop.ocp_ode(vk, zeros(size(vk(:))));
-                    output_idx = [output_idx(:); re(k).enum(idx)];
+                    
+                    if yop.settings.warnings
+                        warning(yop.msg.default_der(vk.name));
+                    end
                 end
             end
-            % case iii) do not reach at all, so they are added in full.
+            
+            % Entire variable do not reach, set default ode for all
             for k=1:length(nr)
                 vk = nr(k).var;
+                ode_var = [ode_var(:); vk(:)];
                 ode_expr = [ode_expr(:); zeros(size(vk(:)))];
-                obj.differetial_eqs(end+1) = ...
-                        yop.ocp_ode(vk, zeros(size(vk(:))));
-                output_idx = [output_idx(:); nr(k).enum(:)];
+                
+                if yop.settings.warnings
+                    warning(yop.msg.default_der(vk.name));
+                end
             end
             
-            % 4) State permutation vector
+            % Very important step!
+            obj.compute_permutation_vector(ode_var);
+            
+            % Compute ODE function in two steps
+            [tt,xx,uu,pp] = obj.mx_parameter_list();
+            args = {tt,xx,uu,pp};
+            
+            obj.set_mx();
+            expr = {fw_eval(ode_expr)};
+            ode_fn = casadi.Function('x', args, expr);
+            
+            
+            obj.ode = casadi.Function('ode', args,  {ode_fn(tt,xx(obj.i2e),uu,pp)});
+            
+        end
+        
+        function obj = compute_permutation_vector(obj, ode_var)
+            %COMPUTE_PERMUTATION_VECTOR - Computes vectors that maps the 
+            %  sequence in which the state variables are detected to the 
+            %  order in which their derivatives appear.
+            %
+            %  Description:
+            %    Because the integration methods might add state and
+            %    deriative in order to compute the next step, it is
+            %    important that elements appear in the same order in the
+            %    state variable vector as in the state derivative vector.
+            %    Yop solves that by computing two permutation vectors. One
+            %    maps from external to internal representation (e2i) and
+            %    one maps from internal to external representation (i2e).
+            %    External representation could be any order and is simply
+            %    the order in which the states are detected. Internal order
+            %    is also random to some degree since it might depend on the
+            %    order in which odes are detected. Nevertheless it is
+            %    necessary to work with only one representation internally,
+            %    which is why yop computes these permutation vectors.
+            [~, ~, output_idx] = obj.reaching_states(ode_var);
             [~, idx] = sort(output_idx);
-            obj.e2i = output_idx;% ordering: Ord(der(x))==Ord(xx(P))
-            obj.i2e = idx;       % ordering: Ord(der(x(P)))==Ord(xx)
+            obj.e2i = output_idx;
+            obj.i2e = idx;
+        end
+        
+        function obj = vectorize_state(obj)
+
+            
             
             % -- Vectorize state --
             % 5) Set ode_rhs
@@ -725,41 +617,164 @@ classdef ocp < handle
         end
         
         function fn = mx_function_object(obj, expr)
-            obj.set_mx();
+            %MX_ODE_FUNCTION Compute function object from expression with
+            %  an ode parameter list (t,x,u,p,tps,ints).
+            %
+            %  Description:
+            %    Computes a casadi function object from an ast expression.
+            %    The function object has its state parameter on the
+            %    internal form which means that der(x) == expr, as opposed
+            %    to external form where the states might be permuted so 
+            %    der(x) != expr.
+            %
+            %    Function object parameters are:
+            %      t - independent variable
+            %      x - state vector (internal ordering)
+            %      u - control input
+            %      p - free parameters
+            %      tps  - Timepoint expressions
+            %      ints - Integrals
+            %
+            %  Parameters:
+            %    obj - Handle to a ocp.
+            %    expr - AST of expression to create a function object from.
+            %
+            %  Return values:
+            %    fn - A function object when called with the arguments
+            %         t, x, u, p, tps, ints (in that exact order, empty 
+            %         ones are set to empty: []) computes 'expr'.
             [tt, xx, uu, pp] = obj.mx_parameter_list();
             tps = obj.timepoints.mx_vec();
             ints = obj.integrals.mx_vec();
+            args = {tt,xx,uu,pp,tps,ints};
+            
+            % Since we are seeking an MX expression, all ast_variable in 
+            % the ocp set their values to MX. Otherwise fw_eval could 
+            % result in anything.
             obj.set_mx();
-            mx_expr = fw_eval(expr);
-            innr = casadi.Function('i', {tt,xx,uu,pp,tps,ints}, {mx_expr});
-            fn = casadi.Function('o', {tt,xx,uu,pp,tps,ints}, ...
-                {innr(tt,xx(obj.i2e),uu,pp,tps,ints)});
+            
+            % First a function object is created that maps the expression 
+            % to variables in the order they appear in the state variable
+            % vector. The state element order here is external, as states 
+            % simply appear as they were found. An idea is of course to 
+            % change the order of the elements in the variable vector, but 
+            % that is a bit cumbersome as one needs to keep track of the 
+            % individual elements, not just the state variables themselves.
+            inner_expr = {fw_eval(expr)};
+            innr_fn = casadi.Function('i', args, inner_expr);
+            
+            % To provide the internal interface the argument order is
+            % changed. Here 'args' is reused. Here it simply maps inputs to
+            % parameters in the function call. It could just as well have
+            % been other mx variables with the same dimensions, so do not
+            % be confused by the reuse of variable.
+            outer_expr = {innr_fn(tt, xx(obj.i2e), uu, pp, tps, ints)};
+            fn = casadi.Function('o', args, outer_expr);
+        end
+        
+        function fn = mx_ode_function(obj, expr)
+            %MX_ODE_FUNCTION Compute function object from expression with
+            %  an ode parameter list (t,x,u,p).
+            %
+            %  Description:
+            %    Computes a casadi function object from an ast expression.
+            %    The function object has its state parameter on the
+            %    internal form which means that der(x) == expr, as opposed
+            %    to external form where the states might be permuted so 
+            %    der(x) != expr.
+            %
+            %    Function object parameters are:
+            %      t - independent variable
+            %      x - state vector (internal ordering)
+            %      u - control input
+            %      p - free parameters
+            %
+            %  Parameters:
+            %    obj - Handle to a ocp.
+            %    expr - AST of expression to create a function object from.
+            %
+            %  Return values:
+            %    fn - A function object when called with the arguments
+            %         t, x, u, p (in that exact order, empty ones are set
+            %         to empty: []) computes 'expr'.
+            [tt, xx, uu, pp] = obj.mx_parameter_list();
+            args = {tt,xx,uu,pp};
+            
+            % Since we are seeking an MX expression, all ast_variable in 
+            % the ocp set their values to MX. Otherwise fw_eval could 
+            % result in anything.
+            obj.set_mx();
+            
+            % First a function object is created that maps the expression 
+            % to variables in the order they appear in the state variable
+            % vector. The state element order here is external, as states 
+            % simply appear as they were found. An idea is of course to 
+            % change the order of the elements in the variable vector, but 
+            % that is a bit cumbersome as one needs to keep track of the 
+            % individual elements, not just the state variables themselves.
+            inner_expr = {fw_eval(expr)};
+            innr_fn = casadi.Function('i', args, inner_expr);
+            
+            % To provide the internal interface the argument order is
+            % changed. Here 'args' is reused. Here it simply maps inputs to
+            % parameters in the function call. It could just as well have
+            % been other mx variables with the same dimensions, so do not
+            % be confused by the reuse of variable.
+            outer_expr = {innr_fn(tt, xx(obj.i2e), uu, pp)};
+            fn = casadi.Function('o', args, outer_expr);
         end
         
         function [re, nr, reaching_elements] = reaching_states(obj, expr)
-            % Documentation for this function is that of yop.reaching_elems
-            % as it is a variation on that one, with the difference that it
-            % only does it for the 'states' property only. The reason for
-            % this implementation is that computation of the permutation
-            % function for the state vector relies on that the states are
-            % enumerated in the order they appear in the state vector.
-            % Also, a sligth speed up is obtained by saving the enumerated
-            % index to the states(k) property directly.
+            %REACHING_STATES - Reaching elements analysis of the ocp states
+            %  for an expression.
+            %
+            %  Description:
+            %    Determines which of all state elements reaches expr. Does
+            %    the analysis by enumerating all state elements and then
+            %    propagating them through the expression. Those elements
+            %    that are not state variables are set to zero. The benefit
+            %    of this is that it is possible to add two reaching
+            %    elements analyses and the reaching element's enumeration
+            %    is unaffected by those that are not states.
+            %
+            %  Parameters:
+            %    obj - Handle to ocp
+            %    expr - AST node representing the expression on which to
+            %           perform the analysis.
+            %
+            %  Return values:
+            %    re - Array of re_data objects. One element per reching
+            %         variable (might be several elements reaching).
+            %    nr - Array of re_data objects. One element per not
+            %         reaching variable. For this category not a single
+            %         element is reaching.
+            %    reaching_elements - The reaching enumerations order how
+            %                        they reach the expression.
+            
+            % Cell array with all states (ocp_variable objects)
             xs = arrayfun(@(e) e.var, obj.states, 'UniformOutput', false);
             re(length(xs)) = yop.re_data();
-            e0 = 1;
+            
+            % Enumerate all variable elements
+            e0 = 1; % Enumeration start value.
             for k=1:length(re)
                 re(k).var = xs{k};
                 [e0, idx] = re(k).enumerate(e0); 
                 obj.states(k).enum = idx;
             end
+            
+            % Propagate elements through the expression
             reaching_elements = propagate_value(expr);
-            %reaching_elements(~isa_variable(expr)) = 0;
+            
+            % Filter
             reaching_elements(~(isa_der(expr) & isa_state(expr))) = 0;
-            warning('[Yop] Test that isa_der works equally well as isa_variable');
+            
+            % Store results
             for k=1:length(re)
-                re(k).set_expr_idx(reaching_elements);
+                re(k).set_expr_elements_reached(reaching_elements);
             end
+            
+            % Split reaching and not reaching
             reaching = arrayfun(@(v) ~isempty(v.reaching), re);            
             nr = re(~reaching);
             re = re( reaching);
@@ -786,16 +801,16 @@ classdef ocp < handle
                 var = obj.find_variable(re.var.id);
                 switch class(box{k})
                     case 'yop.ast_eq' % var == bnd
-                        var.(ub)(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
-                        var.(lb)(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
+                        var.(ub)(re.reaching_idx) = ...
+                            yop.get_subexpr(bnd, re.expr_elem);
+                        var.(lb)(re.reaching_idx) = ...
+                            yop.get_subexpr(bnd, re.expr_elem);
                     case {'yop.ast_le', 'yop.ast_lt'} % var < bnd
-                        var.(ub)(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
+                        var.(ub)(re.reaching_idx) = ...
+                            yop.get_subexpr(bnd, re.expr_elem);
                     case {'yop.ast_ge', 'yop.ast_gt'} % var > bnd
-                        var.(lb)(re.idx_var) = ...
-                            yop.get_subexpr(bnd, re.idx_expr);
+                        var.(lb)(re.reaching_idx) = ...
+                            yop.get_subexpr(bnd, re.expr_elem);
                     otherwise
                         error('[Yop] Error: Wrong constraint class.');
                 end
@@ -807,25 +822,29 @@ classdef ocp < handle
     methods (Static)
         
         function srf = to_srf(constraints)
-            %TO_SRF To single relation form.
-            %  to_srf(constraints)
-            %  srf = to_srf(constraints)
-            %
-            %  Description:
-            %    A pass for converting all constraints to a form where 
-            %    there is only one relation per constraint. For instance,
-            %    the constraint expr1 <= expr2 <= expr3 is converted into
-            %       i) expr1 <= expr2
-            %      ii) expr2 <= expr3
-            %    The purspose of this pass is to be simplify the job for
-            %    the remaning passes as they can start from the assumption
-            %    that there is only one relation per constraint.
-            %  
-            %  Parameters:
-            %    constraints - A cell array with constraints
-            %
-            %  Return value:
-            %    srf - A cell array with the constraints on srf.
+            %______________________________________________________________
+            %|YOP.OCP.TO_SRF To single relation form.                     |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   yop.ocp.to_srf(constraints)                              |
+            %|   srf = yop.ocp.to_srf(constraints)                        |
+            %|                                                            |
+            %| Description:                                               |
+            %|   A pass for converting all constraints to a form where    |
+            %|   there is only one relation per constraint. For instance, |
+            %|   the constraint expr1 <= expr2 <= expr3 is converted into |
+            %|      i) expr1 <= expr2                                     |
+            %|     ii) expr2 <= expr3                                     |
+            %|   The purspose of this pass is to be simplify the job for  |
+            %|   the remaning passes as they can start from the assumption|
+            %|   that there is only one relation per constraint.          |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   constraints - A cell array with constraints              |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   srf - A cell array with the constraints on srf.          |
+            %|____________________________________________________________|
             srf = {};
             for n=1:length(constraints)
                 cn = constraints{n};
@@ -838,18 +857,26 @@ classdef ocp < handle
             end
         end
         
-        function [box, nbox] = get_box(srf)
-            %GET_BOX Separates box and non-box constraints based on srf
-            %  constraints.
-            %
-            %  Description:
-            %    Searches the constraints on srf form for constraints that
-            %    are box constraints. The requirements are dictated by the
-            %    yop.ocp.isa_box function. 
-            %
-            %  Parameters:
-            %    srf - Cell array containing constraints on srf form
-            box = {};
+        function [box, nbox] = separate_box(srf)
+            %______________________________________________________________
+            %|YOP.OCP.SEPARATE_BOX Separates box from non-box constraints.|
+            %|                                                            |
+            %| Use:                                                       |
+            %|   [box, nbox] = yop.ocp.separate_box(srf)                  |
+            %|                                                            |
+            %| Description:                                               |
+            %|   Searches the constraints on srf form for constraints     |
+            %|   that are box constraints. The requirements are dictated  |
+            %|   by the yop.ocp.isa_box function.                         |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   box - Cell array with canonicalized box constraints.     |
+            %|   nbox - Cell array with non-box constraints.              |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   srf - Cell array containing constraints on srf form      |
+            %|____________________________________________________________|
+            box = {};                       
             nbox = {};
             for n=1:length(srf)
                 var_num = yop.ocp.isa_box(srf{n}.lhs, srf{n}.rhs);
@@ -858,27 +885,43 @@ classdef ocp < handle
                 box{end+1} = yop.get_subrel(srf{n}, isbox);
                 nbox{end+1} = yop.get_subrel(srf{n}, ~isbox);
             end
-            box = box(~cellfun('isempty', box));
             nbox = nbox(~cellfun('isempty', nbox)); 
+            
+            % Canonicalize
+            box = box(~cellfun('isempty', box));
+            for k=1:length(box)
+                % Canonicalization is handled in the ast_relation node
+                % since it is handled differently depending on class.
+                box{k} = canonicalize_box(box{k});
+            end
+            
+            % Split so that variables do not mix
+            ubox = yop.ocp.unique_box(box);
+            box = ubox;
         end
         
         function boolv = isa_box(var_cand, num_cand)
-            %ISA_BOX Tests if the variable candidate and numeric candidate
-            %  form a box constraint.
-            %
-            %  Description:
-            %    Box constraints are made up of a variable and a numeric
-            %    bound. The function determines if var_cand is a variable
-            %    and num_cand is a numeric value.
-            %
-            %  Parameters:
-            %    var_cand - The expression for the variable candidate
-            %    num_cand - The expression for the numeric candidate
-            %  
-            %  Return value:
-            %    boolv - A bool vector. If only one argument is a scalar,
-            %            the bool vector has the same dimensions as athe
-            %            vector.
+            %______________________________________________________________
+            %|YOP.OCP.ISA_BOX Tests if the variable candidate and numeric |
+            %|candidate form a box constraint.                            |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   boolv = yop.ocp.isa_box(var_cand, num_can)               |
+            %|                                                            |
+            %| Description:                                               |
+            %|   Box constraints are made up of a variable and a numeric  |
+            %|   bound. The function determines if var_cand is a variable |
+            %|   and num_cand is a numeric value.                         |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   var_cand - The expression for the variable candidate     |
+            %|   num_cand - The expression for the numeric candidate      |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   boolv - A bool vector. If only one argument is a scalar, |
+            %|           the bool vector has the same dimensions as athe  |
+            %|           vector.                                          |
+            %|____________________________________________________________|
             t0 = yop.initial_timepoint();
             tf = yop.final_timepoint();
             isvar = isa_variable(var_cand);
@@ -888,29 +931,35 @@ classdef ocp < handle
             boolv = isvar & ~isder & (~istp|tps==t0|tps==tf) & isnum;
         end
         
-        function cbox = canonicalize_box(box)
-            cbox = cell(size(box));
-            for k=1:length(box)
-                cbox{end+1} = canonicalize_box(box{k});
-            end
-        end
-        
-        function uid_box = unique_box(cbox)
-            %UNIQUE_BOX Sorts the box constraints so that every constraint
-            %  only refers to one variable. Requires canonicalized box
-            %  constraints.
-            %
-            %  Description:
-            %    Using the unique ID every node has to sort the constraints
-            %    so that every box constraint only refers to one variable.
-            uid_box = {};
+        function ubox = unique_box(cbox)
+            %______________________________________________________________
+            %|YOP.OCP.UNIQUE_BOX Sorts the box constraints so that every  |
+            %|constraint only refers to one variable. Requires            |
+            %|canonicalized box constraints.                              |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   uid_box = unique_box(cbox)                               |
+            %|                                                            |
+            %| Description:                                               |
+            %|   Uses the unique ID every node has to sort the            |
+            %|   constraints so that every box constraint only refers to  |
+            %|   one variable.                                            |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   cbox - Cell array with canonicalized box constraints.    |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   ubox - Cell array with canonicalized box constraints     |
+            %|          with only one variable per constraint.            |
+            %|____________________________________________________________|
+            ubox = {};
             for k=1:length(cbox)
                 [~, ID] = isa_variable(cbox{k}.lhs);
                 for uID = yop.row_vec(unique(ID))
-                    uid_box{end+1} = yop.get_subrel(cbox{k}, ID==uID);
+                    ubox{end+1} = yop.get_subrel(cbox{k}, ID==uID);
                 end
             end
-            uid_box = uid_box(~cellfun('isempty', uid_box));
+            ubox = ubox(~cellfun('isempty', ubox));
         end
         
         function [bc_t, bc_t0, bc_tf] = timed_box(box)
@@ -918,10 +967,6 @@ classdef ocp < handle
             tf = yop.final_timepoint();
             bc_t={}; bc_t0={}; bc_tf={};
             for k=1:length(box)
-                % This pass relies on the fact that box constraints only
-                % can be initial or final timepoints (if timepoints).
-                % Because of this it is possible to add the timepoints
-                % togheter, since those that are not timepoints return 0.
                 [istp, tp] = isa_timepoint(box{k}.lhs);
                 bc_t{end+1} = yop.get_subrel(box{k}, ~istp);
                 bc_t0{end+1} = yop.get_subrel(box{k}, tp==t0);
@@ -939,7 +984,7 @@ classdef ocp < handle
                     alg{end+1} = nbox{k};
                     
                 elseif isa(nbox{k}, 'yop.ast_eq')
-                    [~, ode_k, eq_k] = isa_ode(obj);
+                    [~, ode_k, eq_k] = isa_ode(nbox{k});
                     ode{end+1} = ode_k;
                     eq{end+1} = eq_k;
                     
@@ -1071,11 +1116,11 @@ classdef ocp < handle
             end
             for k=1:length(obj.differetial_eqs)
                 fprintf('\tder(');                                
-                fprintf(char(propagate_value(obj.differetial_eqs(k).var)));
+                fprintf(char(propagate_value(obj.differetial_eqs{k}.lhs)));
                 fprintf(') == ');
-                rhs = propagate_value(obj.differetial_eqs(k).expr);
+                rhs = propagate_value(obj.differetial_eqs{k}.rhs);
                 if length(char(rhs)) > 40
-                    vs = yop.get_vars(obj.differetial_eqs(k).expr);
+                    vs = yop.get_vars(obj.differetial_eqs{k}.rhs);
                     args = '';
                     for n=1:length(vs)
                         args = [args(:).', vs{n}.name, ', '];

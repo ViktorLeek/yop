@@ -49,8 +49,8 @@ classdef dms < handle
         
         function nlp = build(obj)
             d = obj.diffcon;
-            g = obj.ocp.eq.vertcat_disc();
-            h = obj.ocp.ieq.vertcat_disc();
+            g = vertcat(obj.ocp.eq{:});
+            h = vertcat(obj.ocp.ieq{:});
             nlp.f = obj.ocp.objective.disc;
             nlp.x = obj.w;
             nlp.g = [d; g; h];
@@ -58,8 +58,8 @@ classdef dms < handle
         
         function sol = solve_nlp(obj, nlp, w0)
             d = obj.diffcon;
-            g = obj.ocp.eq.vertcat_disc();
-            h = obj.ocp.ieq.vertcat_disc();
+            g = vertcat(obj.ocp.eq{:});
+            h = vertcat(obj.ocp.ieq{:});
             solver = casadi.nlpsol('solver', 'ipopt', nlp);
             sol = solver( ...
                 'x0', w0, ...

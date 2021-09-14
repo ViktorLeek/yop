@@ -127,9 +127,9 @@ m_min = 68; m_max = 215;
 Wfmin = 0; Wfmax = 9.5;
 
 % Optimal control problem
-grp = yop.ocp();
-grp.max( h(tf) );
-grp.st( ...
+ocp = yop.ocp();
+ocp.max( h(tf) );
+ocp.st( ...
     ... Rocket model
     der(h) == v              , ...
     der(v) == (Wf*c-F_D)/m-g , ...
@@ -145,9 +145,9 @@ grp.st( ...
     Wfmin <= Wf <= Wfmax ...
     );
 
-grp.build().present();
+ocp.build().present();
 
-dms = yop.dms(grp, 100, 4);
+dms = yop.dms(ocp, 100, 4);
 sol = dms.solve();
 
 time = casadi.Function('x', {dms.w}, {vertcat(dms.t{:})});

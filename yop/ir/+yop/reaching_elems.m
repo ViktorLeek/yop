@@ -10,18 +10,18 @@ function [re, nr, reaching_elements] = reaching_elems(expr, vars)
 %                         starts at one for the first variable, and then
 %                         increases by one for every element.
 %          3) .reaching - The elements that reaches the expression.
-%          4) .idx_expr - A logical array the same size as the expression. 
+%          4) .expr_elem - A logical array the same size as the expression. 
 %                         True values are those elements that reaches the
 %                         final expression. That is, expr(res(k).index)
 %                         gives the elements of variable k that reaches the
 %                         expression.
-%          5) .idx_var  - The indices of the variable that reaches the 
-%                         expression. 'var_k(res(k).idx_var)' returns the
+%          5) .reaching_idx  - The indices of the variable that reaches the 
+%                         expression. 'var_k(res(k).reaching_idx)' returns the
 %                         elements of the variable that reaches the
 %                         expression. The benefit of this is if the
 %                         enumeration is 5:8, and [8,5] reaches the
 %                         expression (in that order). Then 
-%                         var(idx_var) == expr(idx_expr).
+%                         var(reaching_idx) == expr(expr_elem).
 
 
 % Get the variables that make up the expression
@@ -55,7 +55,7 @@ reaching_elements(~isa_variable(expr)) = 0;
 % Compute the index in the expression that matches the elements the
 % variable takes.
 for k=1:length(re)
-    re(k).set_expr_idx(reaching_elements);
+    re(k).set_expr_elements_reached(reaching_elements);
 end
 
 % Remove variables that do not reach the final expression.
