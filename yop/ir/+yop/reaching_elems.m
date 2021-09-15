@@ -1,28 +1,33 @@
-function [re, nr, reaching_elements] = reaching_elems(expr, vars)
-% re = reaching_elems(expr)
-% Get the elements of a variable that reaches a certain expression.
-%   expr - The expression the elements reach
-%   re   - A vector of yop.re_data with one element per variable that
-%          reaches the expression. Every element has four fields:
-%          1) .var      - A variable found in the expression tree.
-%          2) .enum     - An enumeration of all elements of that variable.
-%                         If there are more than one variable, indexation
-%                         starts at one for the first variable, and then
-%                         increases by one for every element.
-%          3) .reaching - The elements that reaches the expression.
-%          4) .expr_elem - A logical array the same size as the expression. 
-%                         True values are those elements that reaches the
-%                         final expression. That is, expr(res(k).index)
-%                         gives the elements of variable k that reaches the
-%                         expression.
-%          5) .reaching_idx  - The indices of the variable that reaches the 
-%                         expression. 'var_k(res(k).reaching_idx)' returns the
-%                         elements of the variable that reaches the
-%                         expression. The benefit of this is if the
-%                         enumeration is 5:8, and [8,5] reaches the
-%                         expression (in that order). Then 
-%                         var(reaching_idx) == expr(expr_elem).
-
+function [re, nr, reaching_enumeration] = reaching_elems(expr, vars)
+%__________________________________________________________________________
+%|YOP.REACHING_ELEMS Reching elements analysis. Test which elements of    |
+%|the variables the is part of the expression, or could be part of the    |
+%|expression, that reaches the final expression. An element is reaching   |
+%|the expression if it is possible to deterime that the entrie in the     |
+%|expression is a variable, which essentially means that it is only       |
+%|permuted.                                                               |
+%|                                                                        |
+%| Use:                                                                   |
+%|   re = yop.reaching_elems(expr)                                        |
+%|   [re, nr] = yop.reaching_elems(expr, vars)                            |
+%|   [re, nr, reaching_enumeration] = yop.reaching_elems(expr, vars)      |
+%|                                                                        |
+%| Parameters:                                                            |
+%|   expr - Ast node for the expression of interest.                      |
+%|   vars - (Optional) Variable for which it is of interest to see if     |
+%|          and which elements reaches the expression. If this parameter  |
+%|          is left out Yop will detect the variables that are part of    |
+%|          the expression and do the analysis on them.                   |
+%|                                                                        |
+%| Return values:                                                         |
+%|   re - A vector of yop.re_data, one element for every variable         |
+%|        that is reaching the expression.                                |
+%|   nr - A vector of yop.re_data, one element for every variable         |
+%|        that is not reaching the expression.                            |
+%|   reaching_enumeration - The enumeration that is reaching the          |
+%|                          expression. Zeroes for those that are not     |
+%|                          variables.                                    |
+%|________________________________________________________________________|
 
 % Get the variables that make up the expression
 if nargin == 1
@@ -47,15 +52,15 @@ for k=1:length(re)
 end
 
 % Evaluate in order to find reaching variables
-reaching_elements = propagate_value(expr);
+reaching_enumeration = propagate_value(expr);
 
 % Elements that are not variables are set to 0
-reaching_elements(~isa_variable(expr)) = 0;
+reaching_enumeration(~isa_variable(expr)) = 0;
 
 % Compute the index in the expression that matches the elements the
 % variable takes.
 for k=1:length(re)
-    re(k).set_expr_elements_reached(reaching_elements);
+    re(k).set_expr_elements_reached(reaching_enumeration);
 end
 
 % Remove variables that do not reach the final expression.

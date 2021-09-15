@@ -25,7 +25,7 @@ classdef ocp < handle
         t0_lb
         tf_ub
         tf_lb
-                
+        
         x0_ub
         x0_lb
         x_ub
@@ -57,23 +57,23 @@ classdef ocp < handle
     
     properties (Hidden, Access=private)
         % Permutation of the state vector:
-        %e2i        % Go from the order in which the states are found to how 
-                   % the are orderered in the dynamics. This is the 
-                   % internal order, becuase then it makes senso to do
-                   % dx + x, which is used by the explicit rk integrators.
-                   
+        %e2i        % Go from the order in which the states are found to how
+        % the are orderered in the dynamics. This is the
+        % internal order, becuase then it makes senso to do
+        % dx + x, which is used by the explicit rk integrators.
+        
         %i2e        % Go from how they are ordered in the derivative vector
-                   % to the order in which the states are found. This is
-                   % the order that is obtained by the formulation of the
-                   % problem and is generally random. Here it is possible
-                   % that the state variables are found in a different
-                   % order than their derivatives, so it does not makes
-                   % sense to use this order internally.
+        % to the order in which the states are found. This is
+        % the order that is obtained by the formulation of the
+        % problem and is generally random. Here it is possible
+        % that the state variables are found in a different
+        % order than their derivatives, so it does not makes
+        % sense to use this order internally.
     end
-  
+    
     
     %% Formulate ocp
-    methods 
+    methods
         
         function obj = ocp(name)
             if nargin == 1
@@ -100,8 +100,8 @@ classdef ocp < handle
     end
     
     %% Analyze user input, and build canonical form
-    methods 
-
+    methods
+        
         function obj = build(obj)
             % Find all variables from the relations and expressions that
             % make up the problem
@@ -126,18 +126,7 @@ classdef ocp < handle
             obj.ieq = yop.ocp.split_transcription_invariance(ieqs);
             
             % Vectorize ocp
-            obj.vectorize_variables();
-            
-            % Compute timepoint and integral functions
-            obj.set_timepoint_placeholders();
-            obj.set_integral_placeholders();
-            obj.set_timepoint_functions(); % måste komma efter vectorize 
-            obj.set_integral_functions();  % för att parameterlistan ska vara rätt
-            
-            % Compute function objects for objective and  
-            % path constraints
-            obj.compute_objective_function();
-            obj.compute_pathcon_functions();
+            obj.vectorize_ocp();
             
             % Error checking
             
@@ -145,15 +134,28 @@ classdef ocp < handle
         end
         
         function obj = find_variables_timepoints_integrals(obj)
+            %______________________________________________________________
+            %|YOP.OCP/FIND_VARIABLE_TIMEPOINTS_INTEGRALS From all problem |
+            %|expressions finds all variables, timepoints and expressions.|
+            %|                                                            |
+            %| Use:                                                       |
+            %|   find_variables_timepoints_integrals(obj)                 |
+            %|   obj.find_variables_timepoints_integrals()                |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             obj.vars = {};
             obj.timepoints = yop.ocp_timepoint.empty(1,0);
             obj.integrals = yop.ocp_int.empty(1,0);
-            
-            exprs = {obj.objective.expr, obj.constraints{:}};
-            
-            % Hoist first iteration in order to avoid to visit the same 
+                        
+            % Hoist first iteration in order to avoid to visit the same
             % node twice as all nodes are stored in 'visited', which is
             % reused.
+            exprs = {obj.objective.expr, obj.constraints{:}};
             [tsort, n_elem, visited] = topological_sort(exprs{1});
             for n=1:n_elem
                 obj.classify_node(tsort{n});
@@ -168,6 +170,21 @@ classdef ocp < handle
         end
         
         function obj = classify_node(obj, node)
+            %______________________________________________________________
+            %|YOP.OCP/CLASSIFY_NODE Classify the node depending on being  |
+            %|a variable, timepoint, or integral.                         |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   classify_node(obj, node)                                 |
+            %|   obj.classify_node(node)                                  |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|   node - AST node to classify.                             |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             if isa(node, 'yop.ast_variable')
                 obj.vars = {obj.vars{:}, node};
             elseif isa(node, 'yop.ast_timepoint')
@@ -178,6 +195,21 @@ classdef ocp < handle
         end
         
         function obj = classify_variables(obj)
+            %______________________________________________________________
+            %|YOP.OCP/CLASSIFY_VARIABLE Classify variables based on       |
+            %|independent, independent initial, independent final,        |
+            %|state, algebraic, control input, free parameter.            |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   classify_variables(obj)                                  |
+            %|   obj.classify_variables()                                 |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             for k=1:length(obj.vars)
                 vk = obj.vars{k};
                 switch class(vk)
@@ -229,6 +261,20 @@ classdef ocp < handle
         end
         
         function obj = add_independent(obj, t)
+            %______________________________________________________________
+            %|YOP.OCP/ADD_INDEPENDENT Add independent variable to the OCP.|
+            %|                                                            |
+            %| Use:                                                       |
+            %|   add_independent(obj, t)                                  |
+            %|   obj.add_independent(t)                                   |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|   t - The ast_independent.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             if isempty(obj.independent)
                 obj.independent = yop.ocp_var(t);
             else
@@ -238,6 +284,21 @@ classdef ocp < handle
         end
         
         function obj = add_independent_initial(obj, t)
+            %______________________________________________________________
+            %|YOP.OCP/ADD_INDEPENDENT_INITIAL Add initial time parameter  |
+            %|to the OCP.                                                 |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   add_independent_initial(obj, t)                          |
+            %|   obj.add_independent_initial(t)                           |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|   t - The ast_independent_initial.                         |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             if isempty(obj.independent_initial)
                 obj.independent_initial = yop.ocp_var(t);
             else
@@ -247,6 +308,21 @@ classdef ocp < handle
         end
         
         function obj = add_independent_final(obj, t)
+            %______________________________________________________________
+            %|YOP.OCP/ADD_INDEPENDENT_FINAL Add end time parameter to the |
+            %|OCP.                                                        |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   add_independent_final(obj, t)                            |
+            %|   obj.add_independent_final(t)                             |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|   t - The ast_independent_final.                           |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             if isempty(obj.independent_final)
                 obj.independent_final = yop.ocp_var(t);
             else
@@ -256,22 +332,93 @@ classdef ocp < handle
         end
         
         function obj = add_state(obj, x)
+            %___________________________________________________
+            %|YOP.OCP/ADD_STATE Add state variable to the OCP. |
+            %|                                                 |
+            %| Use:                                            |
+            %|   add_state(obj, x)                             |
+            %|   obj.add_state(x)                              |
+            %|                                                 |
+            %| Parameters:                                     |
+            %|   obj - Handle to the ocp.                      |
+            %|   x - The ast_state.                            |
+            %|                                                 |
+            %| Return values:                                  |
+            %|   obj - Handle to the ocp.                      |
+            %|_________________________________________________|
             obj.states(end+1) = yop.ocp_var(x);
         end
         
         function obj = add_algebraic(obj, z)
+            %___________________________________________________________
+            %|YOP.OCP/ADD_ALGEBRAIC Add algebraic variable to the OCP. |
+            %|                                                         |
+            %| Use:                                                    |
+            %|   add_algebraic(obj, z)                                 |
+            %|   obj.add_algebraic(z)                                  |
+            %|                                                         |
+            %| Parameters:                                             |
+            %|   obj - Handle to the ocp.                              |
+            %|   z - The ast_algebraic.                                |
+            %|                                                         |
+            %| Return values:                                          |
+            %|   obj - Handle to the ocp.                              |
+            %|_________________________________________________________|
             obj.algebraics(end+1) = yop.ocp_var(z);
         end
         
         function obj = add_control(obj, u)
+            %____________________________________________________
+            %|YOP.OCP/ADD_CONTROL Add control input to the OCP. |
+            %|                                                  |
+            %| Use:                                             |
+            %|   add_control(obj, u)                            |
+            %|   obj.add_control(u)                             |
+            %|                                                  |
+            %| Parameters:                                      |
+            %|   obj - Handle to the ocp.                       |
+            %|   u - The ast_control.                           |
+            %|                                                  |
+            %| Return values:                                   |
+            %|   obj - Handle to the ocp.                       |
+            %|__________________________________________________|
             obj.controls(end+1) = yop.ocp_var(u);
         end
         
         function obj = add_parameter(obj, p)
+            %___________________________________________________________
+            %|YOP.OCP/ADD_PARAMETER Add free optimization parameter to |
+            %|the OCP.                                                 |
+            %|                                                         |
+            %| Use:                                                    |
+            %|   add_parameter(obj, p)                                 |
+            %|   obj.add_parameter(p)                                  |
+            %|                                                         |
+            %| Parameters:                                             |
+            %|   obj - Handle to the ocp.                              |
+            %|   p - The ast_parameter.                                |
+            %|                                                         |
+            %| Return values:                                          |
+            %|   obj - Handle to the ocp.                              |
+            %|_________________________________________________________|
             obj.parameters(end+1) = yop.ocp_var(p);
         end
         
         function obj = set_box_bounds(obj)
+            %______________________________________________________________
+            %|YOP.OCP/SET_BOX_BOUNDS From box constraints and default     |
+            %|values, set the box constraints for the problem.            |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   set_box_bounds(obj)                                      |
+            %|   obj.set_box_bounds()                                     |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             obj.set_box_bnd('independent', 'lb', 'ub', ...
                 yop.defaults().independent_lb, ...
                 yop.defaults().independent_ub);
@@ -309,40 +456,71 @@ classdef ocp < handle
                 yop.defaults().parameter_lb, yop.defaults().parameter_ub);
         end
         
-        function obj = vectorize_variables(obj)
+        function obj = vectorize_ocp(obj)
+            %______________________________________________________________
+            %|YOP.OCP/VECTORIZE_OCP Vectorize the OCP                     |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   vectorize_ode(obj)                                       |
+            %|   obj.vectorize_ode()                                      |
+            %|                                                            |
+            %| Description:                                               |
+            %|   Vectorizes the OCP. The imporant thing to keep in mind   |
+            %|   is that the ode is vectorized before any mx function     |
+            %|   expression is created. The reason is that it computes    |
+            %|   the state permutation vectors, which are necessar for    |
+            %|   providing a good interface for other functions and       |
+            %|   classes. Because of this, vectorize_ode is run first.    |
+            %|   Also, timepoint and integral placeholders must be set    |
+            %|   before their functions can be created.                   |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
+            obj.vectorize_ode();
             obj.vectorize_independent();
             obj.vectorize_state();
             obj.vectorize_algebraic();
             obj.vectorize_control();
             obj.vectorize_parameters();
+            obj.set_timepoint_placeholders();
+            obj.set_integral_placeholders();
+            obj.set_timepoint_functions();
+            obj.set_integral_functions();
+            obj.compute_objective_function();
+            obj.compute_pathcon_functions();
         end
         
-        function obj = vectorize_independent(obj)
-            obj.t0_lb = obj.independent_initial.lb;
-            obj.t0_ub = obj.independent_initial.ub;
-            obj.tf_lb = obj.independent_final.lb;
-            obj.tf_ub = obj.independent_final.ub;
-        end
-        
-        function [ode_var, ode_expr] = vectorize_ode(obj)
-            %VECTORIZE_ODE - Vectorize the odes and set default
-            %  derivatives.
-            %
-            %  Description:
-            %    Analyzes which of the state elements the reaches the ode
-            %    rhs: der(var) == ... Those elements of the entire state
-            %    vector that does not reach is given the default derivative
-            %    der(var) == 0.
-            %
-            %  Parameters:
-            %    obj - Handle to a ocp
-            %
-            %  Return values:
-            %    ode_var - Variables of ode rhs (ode(var) == expr) in
-            %              vectorized form.
-            %    ode_expr - Expressions of ode lhs (ode(var) == expr) in
-            %               vectorized form.
+        function obj = vectorize_ode(obj)
+            %______________________________________________________________
+            %|YOP.OCP/VECTORIZE_ODE Vectorize all ODEs and set default    |
+            %|odes for states that are not bound by an ode.               |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   vectorize_ode(obj)                                       |
+            %|   obj.vectorize_ode()                                      |
+            %|                                                            |
+            %| Description:                                               |
+            %|   Analyzes which of the state elements the reaches the ode |
+            %|   rhs: der(var) == expr. The elements of the entire state  |
+            %|   vector that does not reach is given the default          |
+            %|   derivative: der(var) == 0.                               |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
+  
             
+            % ode_var - Variables of ode rhs (ode(var) == expr) in
+            %           vectorized form.
+            % ode_expr - Expressions of ode lhs (ode(var) == expr) in
+            %            vectorized form.
             % The ode is canonicalized, so all variables are to the left
             % and expressions to the right.
             ode_var = []; ode_expr = [];
@@ -381,61 +559,72 @@ classdef ocp < handle
                 end
             end
             
-            % Very important step!
+            % Very important step! Necessary before any MX function object
+            % can be set.
             obj.compute_permutation_vector(ode_var);
             
             % Compute ODE function in two steps
-            [tt,xx,uu,pp] = obj.mx_parameter_list();
-            args = {tt,xx,uu,pp};
-            
-            obj.set_mx();
-            expr = {fw_eval(ode_expr)};
-            ode_fn = casadi.Function('x', args, expr);
-            
-            
-            obj.ode = casadi.Function('ode', args,  {ode_fn(tt,xx(obj.i2e),uu,pp)});
-            
+            obj.ode = obj.mx_ode_function(ode_expr);
         end
         
         function obj = compute_permutation_vector(obj, ode_var)
-            %COMPUTE_PERMUTATION_VECTOR - Computes vectors that maps the 
-            %  sequence in which the state variables are detected to the 
-            %  order in which their derivatives appear.
-            %
-            %  Description:
-            %    Because the integration methods might add state and
-            %    deriative in order to compute the next step, it is
-            %    important that elements appear in the same order in the
-            %    state variable vector as in the state derivative vector.
-            %    Yop solves that by computing two permutation vectors. One
-            %    maps from external to internal representation (e2i) and
-            %    one maps from internal to external representation (i2e).
-            %    External representation could be any order and is simply
-            %    the order in which the states are detected. Internal order
-            %    is also random to some degree since it might depend on the
-            %    order in which odes are detected. Nevertheless it is
-            %    necessary to work with only one representation internally,
-            %    which is why yop computes these permutation vectors.
+            %______________________________________________________________
+            %|YOP.OCP/COMPUTE_PERMUTATION_VECTOR Computes the vector that |
+            %|permutes the state vector in such a way that the vector     |
+            %|elemnts appear in the same order as they to in the state    |
+            %|derivative.                                                 |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   compute_permutation_vector(obj, ode_var)                 |
+            %|   obj.compute_permutation_vector(ode_var)                  |
+            %|                                                            |
+            %| Description:                                               |
+            %|   Because the integration methods might add state and      |
+            %|   deriative in order to compute the next step, it is       |
+            %|   important that elements appear in the same order in the  |
+            %|   state variable vector as in the state derivative vector. |
+            %|   Yop solves that by computing two permutation vectors.    |
+            %|   One maps from external to internal representation (e2i)  |
+            %|   and one maps from internal to external representation    |
+            %|   (i2e). External representation could be any order and is |
+            %|   simply the order in which the states are detected.       |
+            %|   Internal order is also random to some degree since it    |
+            %|   might depend on the order in which odes are detected.    |
+            %|   Nevertheless, it is necessary to work with only one      |
+            %|   representation internally, which is why yop computes     |
+            %|   these permutation vectors.                               |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|   ode_var - AST expression for the variables as they       |
+            %|             appear in the ODE.                             |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             [~, ~, output_idx] = obj.reaching_states(ode_var);
             [~, idx] = sort(output_idx);
             obj.e2i = output_idx;
             obj.i2e = idx;
         end
         
+        function obj = vectorize_independent(obj)
+            obj.t0_lb = obj.independent_initial.lb;
+            obj.t0_ub = obj.independent_initial.ub;
+            obj.tf_lb = obj.independent_final.lb;
+            obj.tf_ub = obj.independent_final.ub;
+        end
+        
         function obj = vectorize_state(obj)
-
-            
-            
-            % -- Vectorize state --
-            % 5) Set ode_rhs
-            [tt, xx, uu, pp] = obj.mx_parameter_list();
-            obj.set_mx();
-            ode_fn = casadi.Function('x', {tt,xx,uu,pp}, ...
-                {fw_eval(ode_expr)});
-            obj.ode = casadi.Function('ode', {tt,xx,uu,pp}, ...
-                {ode_fn(tt,xx(obj.i2e),uu,pp)});
-            
-            % 6) Set state bounds
+            %______________________________________________________________
+            %|YOP.OCP/VECTORIZE_STATE Vectorize the OCP states.           |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             x0lb=[]; x0ub=[]; xlb=[]; xub=[]; xflb=[]; xfub=[];
             for k=1:length(obj.states)
                 xlb = [xlb(:); obj.states(k).lb(:)];
@@ -451,9 +640,22 @@ classdef ocp < handle
             obj.x_ub  = xub(obj.e2i);
             obj.xf_lb = xflb(obj.e2i);
             obj.xf_ub = xfub(obj.e2i);
-        end        
+        end
+        
+        
+        
         
         function obj = vectorize_algebraic(obj)
+            %______________________________________________________________
+            %|YOP.OCP/VECTORIZE_ALGEBRAIC Vectorize the OCP algebraic     |
+            %|variables.                                                  |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             zlb=[]; zub=[];
             for k=1:length(obj.algebraics)
                 zlb = [zlb(:); obj.algebraics(k).lb(:)];
@@ -464,6 +666,15 @@ classdef ocp < handle
         end
         
         function obj = vectorize_control(obj)
+            %______________________________________________________________
+            %|YOP.OCP/VECTORIZE_CONTROL Vectorize the OCP control inputs. |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             u0lb=[]; u0ub=[]; ulb=[]; uub=[]; uflb=[]; ufub=[];
             for k=1:length(obj.controls)
                 ulb = [ulb(:); obj.controls(k).lb(:)];
@@ -482,6 +693,16 @@ classdef ocp < handle
         end
         
         function obj = vectorize_parameters(obj)
+            %______________________________________________________________
+            %|YOP.OCP/VECTORIZE_PARAMETERS Vectorize the OCP free         |
+            %|parameters.                                                 |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             plb=[]; pub=[];
             for k=1:length(obj.parameters)
                 plb = [plb(:); obj.parameters(k).lb(:)];
@@ -492,50 +713,112 @@ classdef ocp < handle
         end
         
         function obj = set_timepoint_placeholders(obj)
+            %______________________________________________________________
+            %|YOP.OCP/SET_TIMEPOINT_PLACEHOLDERS Give every timepoint an  |
+            %|MX variable of the same size as the expression to represent |
+            %|its value.                                                  |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             k = 1;
-           for tp=obj.timepoints
-               if isa(tp.timepoint, 'yop.ast_independent_initial')
-                   tp_text = 't0';
-               elseif isa(tp.timepoint, 'yop.ast_independent_final')
-                   tp_text = 'tf';
-               else
-                   tp_text = num2str(floor(tp.timepoint));% shouold relace . with _
-               end
-               nme = ['expr', num2str(k), '_t_eq_', tp_text]; 
-               tp.mx= casadi.MX.sym(nme, size(tp.node,1), size(tp.node,2));
-               tp.sym = sym(nme, size(tp.node));
-               k = k+1;
-           end
+            for tp=obj.timepoints
+                if isa(tp.timepoint, 'yop.ast_independent_initial')
+                    tp_text = 't0';
+                elseif isa(tp.timepoint, 'yop.ast_independent_final')
+                    tp_text = 'tf';
+                else
+                    tp_text = num2str(floor(tp.timepoint));
+                end
+                nme = ['expr', num2str(k), '_t_eq_', tp_text];
+                tp.mx= casadi.MX.sym(nme, size(tp.node,1), size(tp.node,2));
+                tp.sym = sym(nme, size(tp.node));
+                k = k+1;
+            end
         end
         
         function obj = set_integral_placeholders(obj)
+            %______________________________________________________________
+            %|YOP.OCP/SET_INTEGRAL_PLACEHOLDERS Give every integral an MX |
+            %|variable of the same size as the expression to represent    |
+            %|its value.                                                  |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             k = 1;
-           for tp=obj.integrals
-               str = ['int', num2str(k)];
-               tp.mx= casadi.MX.sym(str, size(tp.node,1), size(tp.node,2));
-               tp.sym = sym(str, size(tp.node));
-               k = k+1;
-           end
+            for tp=obj.integrals
+                str = ['int', num2str(k)];
+                tp.mx= casadi.MX.sym(str, size(tp.node,1), size(tp.node,2));
+                tp.sym = sym(str, size(tp.node));
+                k = k+1;
+            end
         end
         
         function obj = set_timepoint_functions(obj)
+            %______________________________________________________________
+            %|YOP.OCP/SET_TIMEPOINT_FUNCTIONS Compute mx function         |
+            %|objects for the timepoint expressions.                      |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             for tp = obj.timepoints
                 tp.fn = obj.mx_function_object(tp.expr);
             end
         end
         
         function obj = set_integral_functions(obj)
+            %______________________________________________________________
+            %|YOP.OCP/SET_INTEGRAL_FUNCTIONS Compute mx function          |
+            %|objects for the integral expressions.                       |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             for int = obj.integrals
                 int.fn = obj.mx_function_object(int.expr);
             end
         end
         
         function obj = compute_objective_function(obj)
-            J = obj.objective; 
+            %______________________________________________________________
+            %|YOP.OCP/COMPUTE_OBJECTIVE_FUNCTION Compute mx function      |
+            %|object for the objective function.                          |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
+            J = obj.objective;
             J.fn = obj.mx_function_object(J.expr);
         end
         
         function obj = compute_pathcon_functions(obj)
+            %______________________________________________________________
+            %|YOP.OCP/COMPUTE_PATHCON_FUNCTION Compute mx function        |
+            %|objects for the path constraints.                           |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             for pc = [obj.eq, obj.ieq]
                 pc.fn = obj.mx_function_object(pc.expr);
             end
@@ -549,7 +832,28 @@ classdef ocp < handle
         
         function obj = set_box_bnd(obj, var_field, lb_field, ...
                 ub_field, lb_def, ub_def)
-            
+            %______________________________________________________________
+            %|YOP.OCP/SET_BOX_BND Set bound on a problem variable.        |
+            %|                                                            |
+            %| Use:                                                       |
+            %|  set_box_bnd(obj,var_field,lb_field,ub_field,lb_def,ub_def)|
+            %|  obj.set_box_bnd(var_field,lb_field,ub_field,lb_def,ub_def)|
+            %|                                                            |
+            %| Example:                                                   |
+            %|   obj.set_box_bnd('states', 'lb', 'ub', -inf, inf)         |
+            %|   obj.set_box_bnd('states', 'lb0', 'ub0', 0, 0)            |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|   var_field - String for the variable field/property.      |
+            %|   lb_field - String for the lower bound field/property.    |
+            %|   ub_field - String for the upper bound field/property.    |
+            %|   lb_def - The default lower bound value.                  |
+            %|   ub_def - The default upper bound value.                  |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
             for v=obj.(var_field)
                 % Timed box constraint: t=t0 or t=tf, follow a hierarchical
                 % approach when it comes to setting the. Beginning with the
@@ -564,7 +868,7 @@ classdef ocp < handle
                 not_set = isnan(ub); % The elements not set
                 
                 bd = v.ub(not_set); % The ub for t = (t0, tf)
-                bd(isnan(bd)) = ub_def; % Default for unsets 
+                bd(isnan(bd)) = ub_def; % Default for unsets
                 
                 ub(not_set) = bd; % Timed bound
                 v.(ub_field) = ub; % Set variable timed bound
@@ -580,6 +884,22 @@ classdef ocp < handle
         end
         
         function [ast_var, ocp_var] = find_variable(obj, id)
+            %______________________________________________________________
+            %|YOP.OCP/FIND_VARIABLE Find a problem variable by its ID.    |
+            %|Error if the ID is not found among the problem variables.   |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   [ast_var, ocp_var] = find_variable(obj, id)              |
+            %|   [ast_var, ocp_var] = obj.find_variable(id)               |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|   id - Id of the sought variable.                          |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   ast_var - The ast node of the variable.                  |
+            %|   ocp_var - The ocp information on the variable.           |
+            %|____________________________________________________________|
             for ocp_var = obj.variables
                 if ocp_var.var.id == id
                     ast_var = ocp_var;
@@ -590,6 +910,19 @@ classdef ocp < handle
         end
         
         function vars = variables(obj)
+            %______________________________________________________________
+            %|YOP.OCP/VARIABLES Get all OCP problem variables as a vector.|
+            %|                                                            |
+            %| Use:                                                       |
+            %|   vars = variables(obj)                                    |
+            %|   vars = obj.variables()                                   |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   vars - All problem variables vectorized.                 |
+            %|____________________________________________________________|
             vars = [obj.independent(:).', ...
                 obj.independent_initial(:).', ...
                 obj.independent_final(:).', ...
@@ -600,16 +933,49 @@ classdef ocp < handle
         end
         
         function obj = set_mx(obj)
-           obj.variables.set_mx();
-           obj.timepoints.set_mx();
-           obj.integrals.set_mx();
+            %______________________________________________________________
+            %|YOP.OCP/SET_MX Set all OCP variables to their mx value.     |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   set_mx(obj)                                              |
+            %|   obj.set_mx()                                             |
+            %|                                                            |
+            %| Description:                                               |
+            %|   In order to get MX expressions for AST expressions it is |
+            %|   necessary to set the value of all expression variables   |
+            %|   to MX, which is done by this function.                   |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
+            obj.variables.set_mx();
+            obj.timepoints.set_mx();
+            obj.integrals.set_mx();
         end
         
         function [tt, xx, uu, pp] = mx_parameter_list(obj)
-            % Used to derive function objects. Does not permute state
-            % vector, which is why this function is private. All outide
-            % communication should have no knowledge of that the state
-            % vector needs to be permuted.
+            %______________________________________________________________
+            %|YOP.OCP/MX_PARAMETER_LIST Get external MX form of the       |
+            %|expression parameter list. The function is private since    |
+            %|the state vector is in external ordering which easily leads |
+            %|to errors if not cautious.                                  |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   [tt, xx, uu, pp] = mx_parameter_list(obj)                |
+            %|   [tt, xx, uu, pp] = obj.mx_parameter_list()               |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   tt - MX scalar for the independent variable.             |
+            %|   xx - MX vector for the state variable.                   |
+            %|   uu - MX vector for the control input.                    |
+            %|   pp - MX vector for the free parameters.                  |
+            %|____________________________________________________________|
             tt = obj.independent.mx_vec();
             xx = obj.states.mx_vec();
             uu = obj.controls.mx_vec();
@@ -617,48 +983,60 @@ classdef ocp < handle
         end
         
         function fn = mx_function_object(obj, expr)
-            %MX_ODE_FUNCTION Compute function object from expression with
-            %  an ode parameter list (t,x,u,p,tps,ints).
-            %
-            %  Description:
-            %    Computes a casadi function object from an ast expression.
-            %    The function object has its state parameter on the
-            %    internal form which means that der(x) == expr, as opposed
-            %    to external form where the states might be permuted so 
-            %    der(x) != expr.
-            %
-            %    Function object parameters are:
-            %      t - independent variable
-            %      x - state vector (internal ordering)
-            %      u - control input
-            %      p - free parameters
-            %      tps  - Timepoint expressions
-            %      ints - Integrals
-            %
-            %  Parameters:
-            %    obj - Handle to a ocp.
-            %    expr - AST of expression to create a function object from.
-            %
-            %  Return values:
-            %    fn - A function object when called with the arguments
-            %         t, x, u, p, tps, ints (in that exact order, empty 
-            %         ones are set to empty: []) computes 'expr'.
+            %______________________________________________________________
+            %|YOP.OCP/MX_FUNCTION_OBJECT Compute function object from     |
+            %|expression with the parameter list (t,x,u,p,tps,ints).      |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   fn = mx_ode_function(obj, expr)                          |
+            %|   fn = obj.mx_ode_function(expr)                           |
+            %|                                                            |
+            %| Description:                                               |
+            %|   Computes a casadi function object from an ast expression.|
+            %|   The function object has its state parameter on the       |
+            %|   internal form which means that                           |
+            %|                                                            |
+            %|       ordering(der(x)) == ordering(expr)                   |
+            %|                                                            |
+            %|   as opposed to external form where the states might be    |
+            %|   permuted so that                                         |
+            %|                                                            |
+            %|       ordering(der(x)) != ordering(expr)                   |
+            %|                                                            |
+            %|   Function object parameters are:                          |
+            %|     t - Independent variable.                              |
+            %|     x - State vector (internal ordering).                  |
+            %|     u - Control input.                                     |
+            %|     p - Free parameters.                                   |
+            %|     tps - Timepoint expressions.                           |
+            %|     ints - Integral expressions.                           |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|   expr - AST of expression to create a function object     |
+            %|          from.                                             |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   fn - A function object when called with the arguments    |
+            %|        t, x, u, p, tps, int (in that exact order, empty    |
+            %|        ones are set to empty: []) computes 'expr'.         |
+            %|____________________________________________________________|
             [tt, xx, uu, pp] = obj.mx_parameter_list();
             tps = obj.timepoints.mx_vec();
             ints = obj.integrals.mx_vec();
             args = {tt,xx,uu,pp,tps,ints};
             
-            % Since we are seeking an MX expression, all ast_variable in 
-            % the ocp set their values to MX. Otherwise fw_eval could 
+            % Since we are seeking an MX expression, all ast_variable in
+            % the ocp set their values to MX. Otherwise fw_eval could
             % result in anything.
             obj.set_mx();
             
-            % First a function object is created that maps the expression 
+            % First a function object is created that maps the expression
             % to variables in the order they appear in the state variable
-            % vector. The state element order here is external, as states 
-            % simply appear as they were found. An idea is of course to 
-            % change the order of the elements in the variable vector, but 
-            % that is a bit cumbersome as one needs to keep track of the 
+            % vector. The state element order here is external, as states
+            % simply appear as they were found. An idea is of course to
+            % change the order of the elements in the variable vector, but
+            % that is a bit cumbersome as one needs to keep track of the
             % individual elements, not just the state variables themselves.
             inner_expr = {fw_eval(expr)};
             innr_fn = casadi.Function('i', args, inner_expr);
@@ -673,44 +1051,56 @@ classdef ocp < handle
         end
         
         function fn = mx_ode_function(obj, expr)
-            %MX_ODE_FUNCTION Compute function object from expression with
-            %  an ode parameter list (t,x,u,p).
-            %
-            %  Description:
-            %    Computes a casadi function object from an ast expression.
-            %    The function object has its state parameter on the
-            %    internal form which means that der(x) == expr, as opposed
-            %    to external form where the states might be permuted so 
-            %    der(x) != expr.
-            %
-            %    Function object parameters are:
-            %      t - independent variable
-            %      x - state vector (internal ordering)
-            %      u - control input
-            %      p - free parameters
-            %
-            %  Parameters:
-            %    obj - Handle to a ocp.
-            %    expr - AST of expression to create a function object from.
-            %
-            %  Return values:
-            %    fn - A function object when called with the arguments
-            %         t, x, u, p (in that exact order, empty ones are set
-            %         to empty: []) computes 'expr'.
+            %______________________________________________________________
+            %|YOP.OCP/MX_ODE_FUNCTION Compute function object from        |
+            %|expression with the ode parameter list (t,x,u,p).           |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   fn = mx_ode_function(obj, expr)                          |
+            %|   fn = obj.mx_ode_function(expr)                           |
+            %|                                                            |
+            %| Description:                                               |
+            %|   Computes a casadi function object from an ast expression.|
+            %|   The function object has its state parameter on the       |
+            %|   internal form which means that                           |
+            %|                                                            |
+            %|       ordering(der(x)) == ordering(expr)                   |
+            %|                                                            |
+            %|   as opposed to external form where the states might be    |
+            %|   permuted so that                                         |
+            %|                                                            |
+            %|       ordering(der(x)) != ordering(expr)                   |
+            %|                                                            |
+            %|   Function object parameters are:                          |
+            %|     t - Independent variable.                              |
+            %|     x - State vector (internal ordering).                  |
+            %|     u - Control input.                                     |
+            %|     p - Free parameters.                                   |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|   expr - AST of expression to create a function object     |
+            %|          from.                                             |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   fn - A function object when called with the arguments    |
+            %|        t, x, u, p (in that exact order, empty ones are set |
+            %|        to empty: []) computes 'expr'.                      |
+            %|____________________________________________________________|
             [tt, xx, uu, pp] = obj.mx_parameter_list();
             args = {tt,xx,uu,pp};
             
-            % Since we are seeking an MX expression, all ast_variable in 
-            % the ocp set their values to MX. Otherwise fw_eval could 
+            % Since we are seeking an MX expression, all ast_variable in
+            % the ocp set their values to MX. Otherwise fw_eval could
             % result in anything.
             obj.set_mx();
             
-            % First a function object is created that maps the expression 
+            % First a function object is created that maps the expression
             % to variables in the order they appear in the state variable
-            % vector. The state element order here is external, as states 
-            % simply appear as they were found. An idea is of course to 
-            % change the order of the elements in the variable vector, but 
-            % that is a bit cumbersome as one needs to keep track of the 
+            % vector. The state element order here is external, as states
+            % simply appear as they were found. An idea is of course to
+            % change the order of the elements in the variable vector, but
+            % that is a bit cumbersome as one needs to keep track of the
             % individual elements, not just the state variables themselves.
             inner_expr = {fw_eval(expr)};
             innr_fn = casadi.Function('i', args, inner_expr);
@@ -724,32 +1114,36 @@ classdef ocp < handle
             fn = casadi.Function('o', args, outer_expr);
         end
         
-        function [re, nr, reaching_elements] = reaching_states(obj, expr)
-            %REACHING_STATES - Reaching elements analysis of the ocp states
-            %  for an expression.
-            %
-            %  Description:
-            %    Determines which of all state elements reaches expr. Does
-            %    the analysis by enumerating all state elements and then
-            %    propagating them through the expression. Those elements
-            %    that are not state variables are set to zero. The benefit
-            %    of this is that it is possible to add two reaching
-            %    elements analyses and the reaching element's enumeration
-            %    is unaffected by those that are not states.
-            %
-            %  Parameters:
-            %    obj - Handle to ocp
-            %    expr - AST node representing the expression on which to
-            %           perform the analysis.
-            %
-            %  Return values:
-            %    re - Array of re_data objects. One element per reching
-            %         variable (might be several elements reaching).
-            %    nr - Array of re_data objects. One element per not
-            %         reaching variable. For this category not a single
-            %         element is reaching.
-            %    reaching_elements - The reaching enumerations order how
-            %                        they reach the expression.
+        function [re, nr, reaching_enumeration] = reaching_states(obj, expr)
+            %______________________________________________________________
+            %|YOP.OCP/REACHING_STATES Reaching elements analysis for the  |
+            %|OCP states given an expression on which to do the analysis. |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   [re,nr,reaching_enumeration] = reaching_states(obj, expr)|
+            %|   [re,nr,reaching_enumeration] = obj.reaching_states(expr) |
+            %|                                                            |
+            %| Description:                                               |
+            %|   Determines which of all state elements reaches expr.     |
+            %|   Does the analysis by enumerating all state elements and  |
+            %|   propagating them through the expression. Those elements  |
+            %|   that are not state variables are set to zero. The        |
+            %|   benefit of this is that it is possible to add two        |
+            %|   reaching elements analyses and the reaching element's    |
+            %|   enumeration is unaffected by those that are not states.  |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   expr - Ast node for the expression of interest.          |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   re - A vector of yop.re_data, one element for every      |
+            %|        variable that is reaching the expression.           |
+            %|   nr - A vector of yop.re_data, one element for every      |
+            %|        variable that is not reaching the expression.       |
+            %|   reaching_enumeration - The enumeration that is reaching  |
+            %|                          the expression. Zeroes for those  |
+            %|                          that are not variables.           |
+            %|____________________________________________________________|
             
             % Cell array with all states (ocp_variable objects)
             xs = arrayfun(@(e) e.var, obj.states, 'UniformOutput', false);
@@ -759,23 +1153,23 @@ classdef ocp < handle
             e0 = 1; % Enumeration start value.
             for k=1:length(re)
                 re(k).var = xs{k};
-                [e0, idx] = re(k).enumerate(e0); 
+                [e0, idx] = re(k).enumerate(e0);
                 obj.states(k).enum = idx;
             end
             
             % Propagate elements through the expression
-            reaching_elements = propagate_value(expr);
+            reaching_enumeration = propagate_value(expr);
             
             % Filter
-            reaching_elements(~(isa_der(expr) & isa_state(expr))) = 0;
+            reaching_enumeration(~(isa_der(expr) & isa_state(expr))) = 0;
             
             % Store results
             for k=1:length(re)
-                re(k).set_expr_elements_reached(reaching_elements);
+                re(k).set_expr_elements_reached(reaching_enumeration);
             end
             
             % Split reaching and not reaching
-            reaching = arrayfun(@(v) ~isempty(v.reaching), re);            
+            reaching = arrayfun(@(v) ~isempty(v.reaching), re);
             nr = re(~reaching);
             re = re( reaching);
         end
@@ -785,16 +1179,32 @@ classdef ocp < handle
     %% Passes
     methods
         
-        function obj = add_srf(obj, srf)
-            if isempty(obj.srf)
-                obj.srf = {srf};
-            else
-                obj.srf{end+1} = srf;
-            end
-        end
-        
         function obj = parse_box(obj, box, lb, ub)
-            % Canonicalized, unqiue box
+            %______________________________________________________________
+            %|YOP.OCP/PARSE_BOX Parses the box constraints and saves the  |
+            %|the information to the probem variables.                    |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   parse_box(obj, box, lb, ub)                              |
+            %|   obj.parse_box(box, lb, ub)                               |
+            %|                                                            |
+            %| example:                                                   |
+            %|   obj.parse_box(box, 'lb', 'ub')                           |
+            %|   obj.parse_box(box, 'lb0', 'ub0')                         |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - A handle to the ocp.                               |
+            %|   box - Cell array with box constraints. They must be      |
+            %|         canonicalized and refer to a single variable.      |
+            %|   lb - A string for the field to which the lower bound     |
+            %|        apply. See yop.ocp_var for the fields.              |
+            %|   ub - A string for the field to which the upper bound     |
+            %|        apply. See yop.ocp_var for the fields.              |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - A handle to the ocp.                               |
+            %|____________________________________________________________|
+            
             for k=1:length(box)
                 re = yop.reaching_elems(box{k}.lhs);
                 bnd = yop.prop_num(box{k}.rhs);
@@ -840,7 +1250,7 @@ classdef ocp < handle
             %|   that there is only one relation per constraint.          |
             %|                                                            |
             %| Parameters:                                                |
-            %|   constraints - A cell array with constraints              |
+            %|   constraints - A cell array with constraints.             |
             %|                                                            |
             %| Return values:                                             |
             %|   srf - A cell array with the constraints on srf.          |
@@ -876,7 +1286,7 @@ classdef ocp < handle
             %| Return values:                                             |
             %|   srf - Cell array containing constraints on srf form      |
             %|____________________________________________________________|
-            box = {};                       
+            box = {};
             nbox = {};
             for n=1:length(srf)
                 var_num = yop.ocp.isa_box(srf{n}.lhs, srf{n}.rhs);
@@ -885,7 +1295,7 @@ classdef ocp < handle
                 box{end+1} = yop.get_subrel(srf{n}, isbox);
                 nbox{end+1} = yop.get_subrel(srf{n}, ~isbox);
             end
-            nbox = nbox(~cellfun('isempty', nbox)); 
+            nbox = nbox(~cellfun('isempty', nbox));
             
             % Canonicalize
             box = box(~cellfun('isempty', box));
@@ -938,7 +1348,7 @@ classdef ocp < handle
             %|canonicalized box constraints.                              |
             %|                                                            |
             %| Use:                                                       |
-            %|   uid_box = unique_box(cbox)                               |
+            %|   uid_box = yop.ocp.unique_box(cbox)                       |
             %|                                                            |
             %| Description:                                               |
             %|   Uses the unique ID every node has to sort the            |
@@ -963,6 +1373,26 @@ classdef ocp < handle
         end
         
         function [bc_t, bc_t0, bc_tf] = timed_box(box)
+            %______________________________________________________________
+            %|YOP.OCP.TIMED_BOX Sorts the box constraints based on the    |
+            %|timepoint information they convey. There are three          |
+            %|categories: entire horizon, initial timepoint, terminal     |
+            %|timepoint.                                                  |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   [bc_t, bc_t0, bc_tf] = yop.ocp.timed_box(box)            |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   box - Cell array with canonicalized box constraints.     |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   bc - Cell array with canonicalized box constraints       |
+            %|        that apply to the entire problem horizon.           |
+            %|   bc_t0 - Cell array with canonicalized box constraints    |
+            %|           that apply to the initial timepoint.             |
+            %|   bc_tf - Cell array with canonicalized box constraints    |
+            %|           that apply to the final timepoint.               |
+            %|____________________________________________________________|
             t0 = yop.initial_timepoint();
             tf = yop.final_timepoint();
             bc_t={}; bc_t0={}; bc_tf={};
@@ -978,6 +1408,24 @@ classdef ocp < handle
         end
         
         function [ode, alg, eq, ieq] = sort_nonbox(nbox)
+            %______________________________________________________________
+            %|YOP.OCP.SORT_NONBOC Sorts the constraints that are not box  |
+            %|constraints. It returns constraints in the categories       |
+            %|ordinary differential equation (ODE), algebraic equation,   |
+            %|equality constraints, and inequality constraints.           |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   [ode, alg, eq, ieq] = yop.ocp.sort_nonbox(nbox)          |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   nbox - Cell array with non-box constraints.              |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   ode - Cell array with ordinary differential equations.   |
+            %|   alg - Cell array with algebraic equations.               |
+            %|   eq - Cell array with equality constraints.               |
+            %|   ieq - Cell array with inequality constraints.            |
+            %|____________________________________________________________|
             ode={};alg={};eq={};ieq={};
             for k=1:length(nbox)
                 if is_alg(nbox{k})
@@ -1000,6 +1448,34 @@ classdef ocp < handle
         end
         
         function trcon = split_transcription_invariance(con)
+            %______________________________________________________________
+            %|YOP.OCP.SPLIT_TRANSCRIPTION_INVARIANCE Split constraints    |
+            %|that are both transcription variant and invariant into two  |
+            %|separate constraints.                                       |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   trcon = yop.ocp.split_transcription_invariance(con)      |
+            %|                                                            |
+            %| Description:                                               |
+            %|   A constraint is transcription invariant if its           |
+            %|   transcription does not change with the independent       |
+            %|   variable. The distinction is important because           |
+            %|   transcription variant constraints are assigned to every  |
+            %|   point of the discretization grid, as opposed to an       |
+            %|   invariant constraint that only needs to be applied       |
+            %|   once. To make this easier to the transcription method    |
+            %|   this function makes it so that transcription method      |
+            %|   only needs to make a binary decision as to wheteher it   |
+            %|   invariant or not, never something in between.            |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   con - Cell array with canonlicalized constraints non-box |
+            %|         constraints.                                       |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   trcon - Cell array with the constraints separated based  |
+            %|           on their transcription invariane.                |
+            %|____________________________________________________________|
             trcon = {};
             for k=1:length(con)
                 invariant = is_transcription_invariant(con{k}.lhs);
@@ -1019,37 +1495,125 @@ classdef ocp < handle
     methods
         
         function n = n_x(obj)
+            %___________________________________________________
+            %|YOP.OCP/N_X Get the number of states in the OCP. |
+            %|                                                 |
+            %| Use:                                            |
+            %|   n = n_x(obj)                                  |
+            %|   n = obj.n_x()                                 |
+            %|   n = obj.n_x                                   |
+            %|                                                 |
+            %| Parameters:                                     |
+            %|   obj - A handle to the ocp.                    |
+            %|                                                 |
+            %| Return values:                                  |
+            %|   n - The number of states.                     |
+            %|_________________________________________________|
             n = numel(obj.states.mx_vec);
         end
         
         function n = n_u(obj)
+            %___________________________________________________________
+            %|YOP.OCP/N_U Get the number of control inputs in the OCP. |
+            %|                                                         |
+            %| Use:                                                    |
+            %|   n = n_u(obj)                                          |
+            %|   n = obj.n_u()                                         |
+            %|   n = obj.n_u                                           |
+            %|                                                         |
+            %| Parameters:                                             |
+            %|   obj - A handle to the ocp.                            |
+            %|                                                         |
+            %| Return values:                                          |
+            %|   n - The number of control inputs.                     |
+            %|_________________________________________________________|
             n = numel(obj.controls.mx_vec);
         end
         
         function n = n_p(obj)
+            %____________________________________________________________
+            %|YOP.OCP/N_P Get the number of free parameters in the OCP. |
+            %|                                                          |
+            %| Use:                                                     |
+            %|   n = n_p(obj)                                           |
+            %|   n = obj.n_p()                                          |
+            %|   n = obj.n_p                                            |
+            %|                                                          |
+            %| Parameters:                                              |
+            %|   obj - A handle to the ocp.                             |
+            %|                                                          |
+            %| Return values:                                           |
+            %|   n - The number of free parameters.                     |
+            %|__________________________________________________________|
             n = numel(obj.parameters.mx_vec);
         end
         
         function n = n_tp(obj)
+            %________________________________________________________
+            %|YOP.OCP/N_TP Get the number of timepoints in the OCP. |
+            %|                                                      |
+            %| Use:                                                 |
+            %|   n = n_tp(obj)                                      |
+            %|   n = obj.n_tp()                                     |
+            %|   n = obj.n_tp                                       |
+            %|                                                      |
+            %| Parameters:                                          |
+            %|   obj - A handle to the ocp.                         |
+            %|                                                      |
+            %| Return values:                                       |
+            %|   n - The number of timepoints.                      |
+            %|______________________________________________________|
             n = numel(obj.timepoints.mx_vec);
         end
         
         function n = n_int(obj)
+            %________________________________________________________
+            %|YOP.OCP/N_INT Get the number of integrals in the OCP. |
+            %|                                                      |
+            %| Use:                                                 |
+            %|   n = n_int(obj)                                     |
+            %|   n = obj.n_int()                                    |
+            %|   n = obj.n_int                                      |
+            %|                                                      |
+            %| Parameters:                                          |
+            %|   obj - A handle to the ocp.                         |
+            %|                                                      |
+            %| Return values:                                       |
+            %|   n - The number of integrals.                       |
+            %|______________________________________________________|
             n = numel(obj.integrals.mx_vec);
         end
         
         function [bool, T] = fixed_horizon(obj)
+            %______________________________________________________________
+            %|YOP.OCP/FIXED_HORIZON Test if the problem horizon is fixed. |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   bool = fixed_horizon(obj)                                |
+            %|   bool = obj.fixed_horizon()                               |
+            %|   [bool, T] = fixed_horizon(obj)                           |
+            %|   [bool, T] = obj.fixed_horizon()                          |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - A handle to the ocp.                               |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   bool - A boolean value (true/false) telling whether      |
+            %|          the horizon is fixed.                             |
+            %|   T - The fixed horizon length. If the horizon is not      |
+            %|       fixed this value should be disregarded.              |
+            %|____________________________________________________________|
             if obj.t0_lb==obj.t0_ub && obj.tf_lb==obj.tf_ub && all( ...
                     ~isinf( [obj.t0_lb; obj.t0_ub; obj.tf_lb; obj.tf_ub] ))
                 bool = true;
             else
                 bool = false;
-            end    
+            end
             T = obj.tf_lb - obj.t0_lb;
         end
         
     end
-        
+    
     %% Presentation
     methods
         
@@ -1115,7 +1679,7 @@ classdef ocp < handle
                 fprintf('  ODE\n');
             end
             for k=1:length(obj.differetial_eqs)
-                fprintf('\tder(');                                
+                fprintf('\tder(');
                 fprintf(char(propagate_value(obj.differetial_eqs{k}.lhs)));
                 fprintf(') == ');
                 rhs = propagate_value(obj.differetial_eqs{k}.rhs);
@@ -1141,7 +1705,7 @@ classdef ocp < handle
             end
             for k=1:length(obj.eq)
                 fprintf('\t');
-%                 fprintf(char(propagate_value(obj.eq{k})));
+                %                 fprintf(char(propagate_value(obj.eq{k})));
                 fprintf('\n');
             end
             
@@ -1150,7 +1714,7 @@ classdef ocp < handle
             end
             for k=1:length(obj.ieq)
                 fprintf('\t');
-%                 fprintf(char(propagate_value(obj.ieq{k})));
+                %                 fprintf(char(propagate_value(obj.ieq{k})));
                 fprintf('\n');
             end
             
