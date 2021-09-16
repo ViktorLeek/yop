@@ -26,26 +26,17 @@ ocp.st(...
      0 <= rocket.fuel_mass_flow <= 9.5 ...
     );
 
-[sol, dms] = ocp.present.solve(100, 4);
-
-time = casadi.Function('x', {dms.w}, {vertcat(dms.t{:})});
-t_sol = full(time(sol.x));
-
-state = casadi.Function('x', {dms.w}, {horzcat(dms.x{:})});
-x_sol = full(state(sol.x))';
-
-control = casadi.Function('x', {dms.w}, {horzcat(dms.u{:})});
-u_sol = full(control(sol.x))';
+[tt,xx,uu,pp,tx]=ocp.solve('method', 'dc', 'intervals', 70);
 
 figure(1)
 subplot(411); hold on;
-plot(t_sol, x_sol(:,1))
+plot(tx, xx(:,1))
 subplot(412); hold on;
-plot(t_sol, x_sol(:,2))
+plot(tx, xx(:,2))
 subplot(413); hold on;
-plot(t_sol, x_sol(:,3))
+plot(tx, xx(:,3))
 subplot(414); hold on;
-stairs(t_sol, [u_sol; nan])
+stairs(tt, [uu; nan])
 
 %% Formulation 2
 [t, t0, tf] = yop.time('t');

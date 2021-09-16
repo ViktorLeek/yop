@@ -115,10 +115,52 @@ classdef ocp < handle
             obj.built = true;
         end
         
-        function [sol, dms] = solve(obj, N, rk_steps)
+        function [t, x, u, p, tx] = solve(obj, varargin)
+            ip = inputParser();
+            ip.FunctionName = "yop.ocp/solve";
+            ip.addParameter('method', 'dc');
+            ip.addParameter('intervals', yop.defaults.control_invervals);
+            ip.addParameter('degree', yop.defaults.polynomial_degree);
+            ip.addParameter('points', yop.defaults.collocation_points);
+            ip.addParameter('rk4_steps', yop.defaults.rk4_steps);
+            ip.parse(varargin{:});
+            
             obj.build();
-            dms = yop.direct_multiple_shooting(N, rk_steps);
-            sol = dms.solve(obj);
+            
+            method = ip.Results.method;
+            intervals = ip.Results.intervals;
+            degree = ip.Results.degree;
+            points = ip.Results.points;
+            rk4_steps = ip.Results.rk4_steps;
+            
+            if strcmp(method, 'dc')
+                transcriber = ...
+                    yop.direct_collocation(intervals, degree, points);
+            elseif strcmp(method, 'dms')
+                transcriber = ...
+                    yop.direct_multiple_shooting(intervals, rk4_steps);
+            else
+                error();
+            end
+            
+            nlp = transcriber.transcribe(obj);
+            
+            w0 = ones(size(nlp.w));
+            prob = struct('f', nlp.J, 'x', nlp.w, 'g', [nlp.g; nlp.h]);
+            solver = casadi.nlpsol('solver', 'ipopt', prob);
+            sol = solver( ...
+                'x0', w0, ...
+                'lbx', nlp.w_lb, ...
+                'ubx', nlp.w_ub, ...
+                'ubg', [nlp.g_ub; nlp.h_ub], ...
+                'lbg', [nlp.g_lb; nlp.h_lb] ...
+                );
+            if method == "dc"
+                [t, x, u, p, tx] = transcriber.to_numeric(sol.x);
+            else
+                tx = [];
+                [t, x, u, p] = transcriber.to_numeric(sol.x);
+            end
         end
         
         function obj = set_box(obj, box)
@@ -887,8 +929,8 @@ classdef ocp < handle
             % change the order of the elements in the variable vector, but
             % that is a bit cumbersome as one needs to keep track of the
             % individual elements, not just the state variables themselves.
-            inner_expr = {fw_eval(expr)};
-            innr_fn = casadi.Function('i', args, inner_expr);
+            inner_expr = fw_eval(expr);
+            innr_fn = casadi.Function('i', args, {inner_expr(:)});
             
             % To provide the internal interface the argument order is
             % changed. Here 'args' is reused. Here it simply maps inputs to
@@ -951,8 +993,8 @@ classdef ocp < handle
             % change the order of the elements in the variable vector, but
             % that is a bit cumbersome as one needs to keep track of the
             % individual elements, not just the state variables themselves.
-            inner_expr = {fw_eval(expr)};
-            innr_fn = casadi.Function('i', args, inner_expr);
+            inner_expr = fw_eval(expr);
+            innr_fn = casadi.Function('i', args, {inner_expr(:)});
             
             % To provide the internal interface the argument order is
             % changed. Here 'args' is reused. Here it simply maps inputs to

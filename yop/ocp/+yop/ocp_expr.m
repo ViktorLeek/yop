@@ -40,5 +40,14 @@ classdef ocp_expr < handle
             end
         end
         
+        function bool = is_transcription_invariant(obj)
+            bool = all(is_transcription_invariant(obj.ast));
+        end
+        
+        function tp = timepoint(obj)
+            % Notice, error if not a timepoint.
+            tp = obj.ast.timepoint;
+        end
+        
     end
 end

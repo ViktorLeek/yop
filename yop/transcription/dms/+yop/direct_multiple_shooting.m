@@ -1,6 +1,6 @@
 classdef direct_multiple_shooting < handle
     properties
-        N
+        ivals
         rk_steps
         t0
         tf
@@ -12,37 +12,46 @@ classdef direct_multiple_shooting < handle
     methods
         
         function obj = direct_multiple_shooting(N, rk_steps)
-            obj.N = N;
+            obj.ivals = N;
             obj.rk_steps = rk_steps;
         end
         
-        function sol = solve(obj, ocp)
+        function [t, x, u, p] = to_numeric(obj, w)
+            time = casadi.Function('x', {obj.w}, {vertcat(obj.t{:})});
+            t = full(time(w));
+            
+            state = casadi.Function('x', {obj.w}, {horzcat(obj.x{:})});
+            x = full(state(w))';
+            
+            control = casadi.Function('x', {obj.w}, {horzcat(obj.u{:})});
+            u = full(control(w))';
+            
+            parameter = casadi.Function('x', {obj.w}, {horzcat(obj.p{:})});
+            p = full(parameter(w))';
+        end
+        
+        function nlp = transcribe(obj, ocp)
             obj.build_vars(ocp);
             [w_lb, w_ub] = obj.set_box_bnd(ocp);
             
+            cc = obj.discretize_ode(ocp); % Continuity constraints
             tps = obj.parameterize_timepoints(ocp);
             ints = obj.parameterize_integrals(ocp, tps);
             J = obj.parameterize_objective(ocp, tps, ints);
             g = obj.parameterize_equality(ocp, tps, ints);
             h = obj.parameterize_inequality(ocp, tps, ints);
-            cc = obj.discretize_ode(ocp); % Continuity constraints
             
-            sol = obj.solve_nlp(J, [g; cc], h, w_lb, w_ub);
-        end
-        
-        function sol = solve_nlp(obj, J, g, h, w_lb, w_ub) %, options
-            w0 = ones(size(obj.w));
-            nlp.f = J;
-            nlp.x = obj.w;
-            nlp.g = [g; h];
-            solver = casadi.nlpsol('solver', 'ipopt', nlp);
-            sol = solver( ...
-                'x0', w0, ...
-                'lbx', w_lb, ...
-                'ubx', w_ub, ...
-                'ubg', [zeros(size(g)); zeros(size(h))], ...
-                'lbg', [zeros(size(g)); -inf(size(h))] ...
-                );
+            nlp = struct;
+            nlp.J = J;
+            nlp.w = obj.w;
+            nlp.w_ub = w_ub;
+            nlp.w_lb = w_lb;
+            nlp.g = [cc; g];
+            nlp.g_ub = zeros(size([cc; g]));
+            nlp.g_lb = zeros(size([cc; g]));
+            nlp.h = h;
+            nlp.h_ub = zeros(size(h));
+            nlp.h_lb = -inf(size(h));
         end
         
         function obj = build_vars(obj, ocp)
@@ -112,7 +121,7 @@ classdef direct_multiple_shooting < handle
             for k=1:(obj.N)
                 ck = obj.x{k+1} - ...
                     F(obj.t{k}, obj.t{k+1}, obj.x{k}, obj.u{k}, obj.p);
-                cc = [cc(:); ck(:)];
+                cc = [cc; ck(:)];
             end
         end
         
@@ -128,12 +137,11 @@ classdef direct_multiple_shooting < handle
             ints = zeros(ocp.n_int, 1);
             tps = [];
             for k = 1:length(ocp.timepoints)
-                fn = ocp.timepoints(k).fn;
-                [tt,xx,uu,pp] = ...
-                    obj.vars_at(ocp.timepoints(k).ast.timepoint);
-                tmp = [tps; zeros(ocp.n_tp-length(tps),1)];
-                tp_k = fn(tt, xx, uu, pp, tmp, ints);
-                tps = [tps(:); tp_k(:)];
+                tp_k = ocp.timepoints(k);
+                [tt, xx, uu, pp] = obj.vars_at(tp_k.timepoint, ocp);
+                tmp = [tps; zeros(ocp.n_tp - length(tps), 1)];
+                tp_k = tp_k.fn(tt, xx, uu, pp, tmp, ints);
+                tps = [tps; tp_k(:)];
             end
         end
         
@@ -148,13 +156,17 @@ classdef direct_multiple_shooting < handle
             ints = [];
             for k = 1:length(ocp.integrals)
                 rk = obj.rk4q(ocp, ocp.integrals(k).fn);
-                tmp = [ints; zeros(ocp.n_int-length(ints),1)];
+                tmp = [ints; zeros(ocp.n_int - length(ints), 1)];
                 I = 0;
                 for n=1:obj.N
-                    I = I + rk(obj.t{n}, obj.t{n+1}, obj.x{n}, ...
-                        obj.u{n}, obj.p, tps, tmp);
+                    ti  = obj.t{n};
+                    tii = obj.t{n+1};
+                    x0  = obj.x{n};
+                    uu  = obj.u{n};
+                    pp  = obj.p;
+                    I = I + rk(ti, tii, x0, uu, pp, tps, tmp);
                 end
-                ints = [ints(:); I(:)];
+                ints = [ints; I(:)];
             end
         end
         
@@ -167,7 +179,7 @@ classdef direct_multiple_shooting < handle
             for k=1:length(ocp.equality_constraints)
                 g_k = obj.parameterize_expression( ...
                     ocp.equality_constraints(k), tps, ints);
-                g = [g(:); g_k(:)];
+                g = [g; g_k(:)];
             end
         end
         
@@ -176,23 +188,31 @@ classdef direct_multiple_shooting < handle
             for k=1:length(ocp.inequality_constraints)
                 h_k = obj.parameterize_expression( ...
                     ocp.inequality_constraints(k), tps, ints);
-                h = [h(:); h_k(:)];
+                h = [h; h_k(:)];
             end
         end
         
-        function disc = parameterize_expression(obj, e, tps, ints)
-            if all(is_transcription_invariant(e.ast))
-                tmp = e.fn(obj.t{1},obj.x{1},obj.u{1},obj.p,tps, ints);
-                disc = tmp(:);
-                
+        function disc = parameterize_expression(obj, expr, tps, ints)
+            if is_transcription_invariant(expr)
+                tt = obj.t{1};
+                xx = obj.x{1};
+                uu = obj.u{1};
+                pp = obj.p;
+                disc = expr.fn(tt, xx, uu, pp, tps, ints);
             else
                 disc = [];
                 for n=1:obj.N
-                    tmp = e.fn(obj.t{n},obj.x{n},obj.u{n},obj.p,tps,ints);
-                    disc = [disc(:); tmp(:)];
+                    tt = obj.t{n};
+                    xx = obj.x{n};
+                    uu = obj.u{n};
+                    pp = obj.p;
+                    disc = [disc; expr.fn(tt, xx, uu, pp, tps, ints)];
                 end
-                tmp = e.fn(obj.t{n+1},obj.x{n+1},obj.u{n},obj.p,tps,ints);
-                disc = [disc(:); tmp(:)];
+                tt = obj.t{obj.N+1};
+                xx = obj.x{obj.N+1};
+                uu = obj.u{obj.N};
+                pp = obj.p;
+                disc = [disc; expr.fn(tt, xx, uu, pp, tps, ints)];
             end
         end
         
@@ -262,7 +282,7 @@ classdef direct_multiple_shooting < handle
             rk = casadi.Function('rk4', {I0, If, x0, uu, pp}, {xx});
         end
         
-        function [t, x, u, p] = vars_at(obj, tp)
+        function [t, x, u, p] = vars_at(obj, tp, ocp)
                 
             if isa(tp, 'yop.ast_independent_initial')
                 t = obj.t0;
@@ -278,7 +298,7 @@ classdef direct_multiple_shooting < handle
                 return;
             end
             
-            [fixed, T] = fixed_horizon(obj.ocp);            
+            [fixed, T] = fixed_horizon(ocp);            
             
             if ~fixed
                 error('[Yop] Problem does not have a fixed horizon')
@@ -315,5 +335,8 @@ classdef direct_multiple_shooting < handle
             n = length(obj.w);
         end
         
+        function n = N(obj)
+            n = obj.ivals;
+        end
     end
 end
