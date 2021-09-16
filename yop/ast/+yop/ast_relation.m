@@ -26,7 +26,7 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
             obj.m_hard = true;
         end
         
-        function bool = ishard(obj)
+        function bool = is_hard(obj)
             bool = obj.m_hard;
         end
         

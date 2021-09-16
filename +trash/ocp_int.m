@@ -27,17 +27,17 @@ classdef ocp_int < handle & matlab.mixin.Copyable
             end
         end
         
-        function vec = get_disc(obj)
-            vec = [];
-            for k=1:length(obj)
-                if isempty(obj(k).disc)
-                    tmp = zeros(size(obj(k).expr));
-                    vec = [vec(:); tmp(:)];
-                else
-                    vec = [vec(:); obj(k).disc];
-                end
-            end
-        end
+%         function vec = get_disc(obj)
+%             vec = [];
+%             for k=1:length(obj)
+%                 if isempty(obj(k).disc)
+%                     tmp = zeros(size(obj(k).expr));
+%                     vec = [vec(:); tmp(:)];
+%                 else
+%                     vec = [vec(:); obj(k).disc];
+%                 end
+%             end
+%         end
         
         function vec = mx_vec(obj)
             vec = [];

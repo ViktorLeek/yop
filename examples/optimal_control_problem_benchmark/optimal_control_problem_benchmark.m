@@ -51,9 +51,7 @@ ocp.st( ...
     y.compressor.pressure_ratio <= y.compressor.surge_line, ...
     y.cylinder.fuel_to_air_ratio <= 1/y.cylinder.lambda_min ...
     );
-ocp.build().present();
-dms = yop.dms(ocp, 25, 4);
-sol = dms.solve();
+[sol, dms] = ocp.present.solve(100, 4);
 
 %%
 load('data_MVEM2.mat')

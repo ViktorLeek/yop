@@ -1,76 +1,46 @@
 classdef ocp < handle
+
     properties
-        % Misc
-        name
+        name 
         
-        % objective
         objective
-        
-        % Variables
-        independent         = yop.ocp_var.empty(1,0);
-        independent_initial = yop.ocp_var.empty(1,0);
-        independent_final   = yop.ocp_var.empty(1,0);
-        states              = yop.ocp_var.empty(1,0);
-        algebraics          = yop.ocp_var.empty(1,0);
-        controls            = yop.ocp_var.empty(1,0);
-        parameters          = yop.ocp_var.empty(1,0);
-        odes
         constraints
+        
+        independent
+        independent_initial
+        independent_final
+        states
+        algebraics
+        controls
+        parameters
+        
+        differential_equation
+        
         timepoints
         integrals
-        vars
+        derivatives
         
-        % Vectorized form
-        t0_ub
-        t0_lb
-        tf_ub
-        tf_lb
+        equality_constraints
+        inequality_constraints
         
-        x0_ub
-        x0_lb
-        x_ub
-        x_lb
-        xf_ub
-        xf_lb
-        
-        z_ub
-        z_lb
-        
-        u0_ub
-        u0_lb
-        u_ub
-        u_lb
-        uf_ub
-        uf_lb
-        
-        p_ub
-        p_lb
-        
-        ode
-        
-        eq
-        ieq
-        
-        e2i
-        i2e
-    end
-    
-    properties (Hidden, Access=private)
         % Permutation of the state vector:
-        %e2i        % Go from the order in which the states are found to how
-        % the are orderered in the dynamics. This is the
-        % internal order, becuase then it makes senso to do
-        % dx + x, which is used by the explicit rk integrators.
+        e2i        % Go from the order in which the states are found to how
+                   % the are orderered in the dynamics. This is the
+                   % internal order, becuase then it makes senso to do
+                   % dx + x, which is used by the explicit rk integrators.
         
-        %i2e        % Go from how they are ordered in the derivative vector
-        % to the order in which the states are found. This is
-        % the order that is obtained by the formulation of the
-        % problem and is generally random. Here it is possible
-        % that the state variables are found in a different
-        % order than their derivatives, so it does not makes
-        % sense to use this order internally.
+        i2e        % Go from how they are ordered in the derivative vector
+                   % to the order in which the states are found. This is
+                   % the order that is obtained by the formulation of the
+                   % problem and is generally random. Here it is possible
+                   % that the state variables are found in a different
+                   % order than their derivatives, so it does not makes
+                   % sense to use this order internally.
     end
     
+    properties (Hidden)
+        built = false;
+    end
     
     %% Formulate ocp
     methods
@@ -103,40 +73,67 @@ classdef ocp < handle
     methods
         
         function obj = build(obj)
+            
+            if obj.built
+                return;
+            end
+            
             % Find all variables from the relations and expressions that
             % make up the problem
-            obj.find_variables_timepoints_integrals();
-            obj.classify_variables();
+            vars = obj.find_variables_timepoints_integrals_derivatives();
+            obj.classify_variables(vars);
             
-            % SRF
             srf = yop.ocp.to_srf(obj.constraints);
             [box, nbox] = yop.ocp.separate_box(srf);
+            obj.set_box(box);
+            [odes, algs, eqs, ieqs] = yop.ocp.sort_nonbox(nbox);
             
-            % Box
+            obj.vectorize_ode(odes);
+            
+            obj.set_timepoint_placeholders();
+            obj.set_integral_placeholders();
+            obj.set_timepoint_functions();
+            obj.set_integral_functions();
+            
+            obj.equality_constraints = yop.ocp_expr.empty(1,0);
+            for k=1:length(eqs)
+                obj.equality_constraints(end+1) = ...
+                    yop.ocp_expr(eqs{k}.lhs, is_hard(eqs{k}));
+            end
+            
+            obj.inequality_constraints = yop.ocp_expr.empty(1,0);
+            for k=1:length(ieqs)
+                obj.inequality_constraints(end+1) = ...
+                    yop.ocp_expr(ieqs{k}.lhs, is_hard(ieqs{k}));
+            end
+            
+            obj.compute_objective_function();
+            obj.compute_pathcon_functions();
+            
+            % Error checking
+            
+            obj.built = true;
+        end
+        
+        function [sol, dms] = solve(obj, N, rk_steps)
+            obj.build();
+            dms = yop.direct_multiple_shooting(N, rk_steps);
+            sol = dms.solve(obj);
+        end
+        
+        function obj = set_box(obj, box)
             [box_t, box_t0, box_tf] = yop.ocp.timed_box(box);
             obj.parse_box(box_t, 'lb', 'ub');
             obj.parse_box(box_t0, 'lb0', 'ub0');
             obj.parse_box(box_tf, 'lbf', 'ubf');
             obj.set_box_bounds(); % Includes processing default values
-            
-            % Sort the nonbox constraints: ode, inequality, equality
-            [odes_, alg, eqs, ieqs] = yop.ocp.sort_nonbox(nbox);
-            obj.odes = odes_;
-            obj.eq = yop.ocp.split_transcription_invariance(eqs);
-            obj.ieq = yop.ocp.split_transcription_invariance(ieqs);
-            
-            % Vectorize ocp
-            obj.vectorize_ocp();
-            
-            % Error checking
-            
-            % OCP built!
         end
         
-        function obj = find_variables_timepoints_integrals(obj)
+        function vars =find_variables_timepoints_integrals_derivatives(obj)
             %______________________________________________________________
-            %|YOP.OCP/FIND_VARIABLE_TIMEPOINTS_INTEGRALS From all problem |
-            %|expressions finds all variables, timepoints and expressions.|
+            %|YOP.OCP/FIND_VARIABLE_TIMEPOINTS_INTEGRALS_DERIVATIVES From |
+            %|all problem expressions finds all variables, timepoints,    |
+            %|integrals, and derivatives.                                 |
             %|                                                            |
             %| Use:                                                       |
             %|   find_variables_timepoints_integrals(obj)                 |
@@ -146,55 +143,42 @@ classdef ocp < handle
             %|   obj - Handle to the ocp.                                 |
             %|                                                            |
             %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
+            %|   vars - Cell array with ast_variable-s.                   |
             %|____________________________________________________________|
-            obj.vars = {};
-            obj.timepoints = yop.ocp_timepoint.empty(1,0);
-            obj.integrals = yop.ocp_int.empty(1,0);
-                        
+            vars = {};
+            obj.timepoints = yop.ocp_expr.empty(1,0);
+            obj.integrals = yop.ocp_expr.empty(1,0);
+            obj.derivatives = yop.ocp_expr.empty(1,0);
             % Hoist first iteration in order to avoid to visit the same
             % node twice as all nodes are stored in 'visited', which is
             % reused.
-            exprs = {obj.objective.expr, obj.constraints{:}};
+            exprs = {obj.objective.ast, obj.constraints{:}};
             [tsort, n_elem, visited] = topological_sort(exprs{1});
             for n=1:n_elem
-                obj.classify_node(tsort{n});
+                classify(obj, tsort{n});
             end
             for k=2:length(exprs)
-                [tsort, n_elem, visited] = ...
-                    topological_sort(exprs{k}, visited);
+                [tsort,n_elem,visited]=topological_sort(exprs{k}, visited);
                 for n=1:n_elem
-                    obj.classify_node(tsort{n});
+                    classify(obj, tsort{n});
+                end
+            end
+            
+            function classify(obj, node)
+                % Helper function
+                if isa(node, 'yop.ast_variable')
+                    vars{end+1} = node;
+                elseif isa(node, 'yop.ast_timepoint')
+                    obj.timepoints(end+1)=yop.ocp_expr(node);
+                elseif isa(node, 'yop.ast_int')
+                    obj.integrals(end+1) = yop.ocp_expr(node);
+                elseif isa(node, 'yop.ast_der')
+                    obj.derivatives(end+1) = yop.ocp_expr(node);
                 end
             end
         end
         
-        function obj = classify_node(obj, node)
-            %______________________________________________________________
-            %|YOP.OCP/CLASSIFY_NODE Classify the node depending on being  |
-            %|a variable, timepoint, or integral.                         |
-            %|                                                            |
-            %| Use:                                                       |
-            %|   classify_node(obj, node)                                 |
-            %|   obj.classify_node(node)                                  |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|   node - AST node to classify.                             |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
-            %|____________________________________________________________|
-            if isa(node, 'yop.ast_variable')
-                obj.vars = {obj.vars{:}, node};
-            elseif isa(node, 'yop.ast_timepoint')
-                obj.timepoints(end+1) = yop.ocp_timepoint(node);
-            elseif isa(node, 'yop.ast_int')
-                obj.integrals(end+1) = yop.ocp_int(node);
-            end
-        end
-        
-        function obj = classify_variables(obj)
+        function obj = classify_variables(obj, vars)
             %______________________________________________________________
             %|YOP.OCP/CLASSIFY_VARIABLE Classify variables based on       |
             %|independent, independent initial, independent final,        |
@@ -206,12 +190,13 @@ classdef ocp < handle
             %|                                                            |
             %| Parameters:                                                |
             %|   obj - Handle to the ocp.                                 |
+            %|   vars - Cell array with ast_variable-s.                   |
             %|                                                            |
             %| Return values:                                             |
             %|   obj - Handle to the ocp.                                 |
             %|____________________________________________________________|
-            for k=1:length(obj.vars)
-                vk = obj.vars{k};
+            for k=1:length(vars)
+                vk = vars{k};
                 switch class(vk)
                     case 'yop.ast_independent'
                         obj.add_independent(vk);
@@ -346,6 +331,9 @@ classdef ocp < handle
             %| Return values:                                  |
             %|   obj - Handle to the ocp.                      |
             %|_________________________________________________|
+            if isempty(obj.states)
+                obj.states = yop.ocp_var.empty(1,0);
+            end
             obj.states(end+1) = yop.ocp_var(x);
         end
         
@@ -364,6 +352,9 @@ classdef ocp < handle
             %| Return values:                                          |
             %|   obj - Handle to the ocp.                              |
             %|_________________________________________________________|
+            if isempty(obj.algebraics)
+                obj.algebraics = yop.ocp_var.empty(1,0);
+            end
             obj.algebraics(end+1) = yop.ocp_var(z);
         end
         
@@ -382,6 +373,9 @@ classdef ocp < handle
             %| Return values:                                   |
             %|   obj - Handle to the ocp.                       |
             %|__________________________________________________|
+            if isempty(obj.controls)
+                obj.controls = yop.ocp_var.empty(1,0);
+            end
             obj.controls(end+1) = yop.ocp_var(u);
         end
         
@@ -401,6 +395,9 @@ classdef ocp < handle
             %| Return values:                                          |
             %|   obj - Handle to the ocp.                              |
             %|_________________________________________________________|
+            if isempty(obj.parameters)
+                obj.parameters = yop.ocp_var.empty(1,0);
+            end
             obj.parameters(end+1) = yop.ocp_var(p);
         end
         
@@ -456,52 +453,14 @@ classdef ocp < handle
                 yop.defaults().parameter_lb, yop.defaults().parameter_ub);
         end
         
-        function obj = vectorize_ocp(obj)
-            %______________________________________________________________
-            %|YOP.OCP/VECTORIZE_OCP Vectorize the OCP                     |
-            %|                                                            |
-            %| Use:                                                       |
-            %|   vectorize_ode(obj)                                       |
-            %|   obj.vectorize_ode()                                      |
-            %|                                                            |
-            %| Description:                                               |
-            %|   Vectorizes the OCP. The imporant thing to keep in mind   |
-            %|   is that the ode is vectorized before any mx function     |
-            %|   expression is created. The reason is that it computes    |
-            %|   the state permutation vectors, which are necessar for    |
-            %|   providing a good interface for other functions and       |
-            %|   classes. Because of this, vectorize_ode is run first.    |
-            %|   Also, timepoint and integral placeholders must be set    |
-            %|   before their functions can be created.                   |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
-            %|____________________________________________________________|
-            obj.vectorize_ode();
-            obj.vectorize_independent();
-            obj.vectorize_state();
-            obj.vectorize_algebraic();
-            obj.vectorize_control();
-            obj.vectorize_parameters();
-            obj.set_timepoint_placeholders();
-            obj.set_integral_placeholders();
-            obj.set_timepoint_functions();
-            obj.set_integral_functions();
-            obj.compute_objective_function();
-            obj.compute_pathcon_functions();
-        end
-        
-        function obj = vectorize_ode(obj)
+        function obj = vectorize_ode(obj, odes)
             %______________________________________________________________
             %|YOP.OCP/VECTORIZE_ODE Vectorize all ODEs and set default    |
             %|odes for states that are not bound by an ode.               |
             %|                                                            |
             %| Use:                                                       |
-            %|   vectorize_ode(obj)                                       |
-            %|   obj.vectorize_ode()                                      |
+            %|   vectorize_ode(obj, odes)                                 |
+            %|   obj.vectorize_ode(odes)                                  |
             %|                                                            |
             %| Description:                                               |
             %|   Analyzes which of the state elements the reaches the ode |
@@ -511,22 +470,15 @@ classdef ocp < handle
             %|                                                            |
             %| Parameters:                                                |
             %|   obj - Handle to the ocp.                                 |
+            %|   odes - Cell array with canonicalized ODEs.               |
             %|                                                            |
             %| Return values:                                             |
             %|   obj - Handle to the ocp.                                 |
             %|____________________________________________________________|
-  
-            
-            % ode_var - Variables of ode rhs (ode(var) == expr) in
-            %           vectorized form.
-            % ode_expr - Expressions of ode lhs (ode(var) == expr) in
-            %            vectorized form.
-            % The ode is canonicalized, so all variables are to the left
-            % and expressions to the right.
             ode_var = []; ode_expr = [];
-            for k=1:length(obj.odes)
-                ode_var = [ode_var(:); obj.odes{k}.lhs(:)];
-                ode_expr = [ode_expr(:); obj.odes{k}.rhs(:)];
+            for k=1:length(odes)
+                ode_var = [ode_var(:); odes{k}.lhs(:)];
+                ode_expr = [ode_expr(:); odes{k}.rhs(:)];
             end
             
             % Analyze the elements that reaches the ode rhs: ode(var)==...
@@ -563,8 +515,7 @@ classdef ocp < handle
             % can be set.
             obj.compute_permutation_vector(ode_var);
             
-            % Compute ODE function in two steps
-            obj.ode = obj.mx_ode_function(ode_expr);
+            obj.differential_equation = yop.ast_eq(ode_var, ode_expr);
         end
         
         function obj = compute_permutation_vector(obj, ode_var)
@@ -608,110 +559,6 @@ classdef ocp < handle
             obj.i2e = idx;
         end
         
-        function obj = vectorize_independent(obj)
-            obj.t0_lb = obj.independent_initial.lb;
-            obj.t0_ub = obj.independent_initial.ub;
-            obj.tf_lb = obj.independent_final.lb;
-            obj.tf_ub = obj.independent_final.ub;
-        end
-        
-        function obj = vectorize_state(obj)
-            %______________________________________________________________
-            %|YOP.OCP/VECTORIZE_STATE Vectorize the OCP states.           |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
-            %|____________________________________________________________|
-            x0lb=[]; x0ub=[]; xlb=[]; xub=[]; xflb=[]; xfub=[];
-            for k=1:length(obj.states)
-                xlb = [xlb(:); obj.states(k).lb(:)];
-                xub = [xub(:); obj.states(k).ub(:)];
-                x0lb = [x0lb(:); obj.states(k).lb0(:)];
-                x0ub = [x0ub(:); obj.states(k).ub0(:)];
-                xflb = [xflb(:); obj.states(k).lbf(:)];
-                xfub = [xfub(:); obj.states(k).ubf(:)];
-            end
-            obj.x0_lb = x0lb(obj.e2i);
-            obj.x0_ub = x0ub(obj.e2i);
-            obj.x_lb  = xlb(obj.e2i);
-            obj.x_ub  = xub(obj.e2i);
-            obj.xf_lb = xflb(obj.e2i);
-            obj.xf_ub = xfub(obj.e2i);
-        end
-        
-        
-        
-        
-        function obj = vectorize_algebraic(obj)
-            %______________________________________________________________
-            %|YOP.OCP/VECTORIZE_ALGEBRAIC Vectorize the OCP algebraic     |
-            %|variables.                                                  |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
-            %|____________________________________________________________|
-            zlb=[]; zub=[];
-            for k=1:length(obj.algebraics)
-                zlb = [zlb(:); obj.algebraics(k).lb(:)];
-                zub = [zub(:); obj.algebraics(k).ub(:)];
-            end
-            obj.z_lb  = zlb;
-            obj.z_ub  = zub;
-        end
-        
-        function obj = vectorize_control(obj)
-            %______________________________________________________________
-            %|YOP.OCP/VECTORIZE_CONTROL Vectorize the OCP control inputs. |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
-            %|____________________________________________________________|
-            u0lb=[]; u0ub=[]; ulb=[]; uub=[]; uflb=[]; ufub=[];
-            for k=1:length(obj.controls)
-                ulb = [ulb(:); obj.controls(k).lb(:)];
-                uub = [uub(:); obj.controls(k).ub(:)];
-                u0lb = [u0lb(:); obj.controls(k).lb0(:)];
-                u0ub = [u0ub(:); obj.controls(k).ub0(:)];
-                uflb = [uflb(:); obj.controls(k).lbf(:)];
-                ufub = [ufub(:); obj.controls(k).ubf(:)];
-            end
-            obj.u0_lb = u0lb;
-            obj.u0_ub = u0ub;
-            obj.u_lb  = ulb;
-            obj.u_ub  = uub;
-            obj.uf_lb = uflb;
-            obj.uf_ub = ufub;
-        end
-        
-        function obj = vectorize_parameters(obj)
-            %______________________________________________________________
-            %|YOP.OCP/VECTORIZE_PARAMETERS Vectorize the OCP free         |
-            %|parameters.                                                 |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
-            %|____________________________________________________________|
-            plb=[]; pub=[];
-            for k=1:length(obj.parameters)
-                plb = [plb(:); obj.parameters(k).lb(:)];
-                pub = [pub(:); obj.parameters(k).ub(:)];
-            end
-            obj.p_lb  = plb;
-            obj.p_ub  = pub;
-        end
-        
         function obj = set_timepoint_placeholders(obj)
             %______________________________________________________________
             %|YOP.OCP/SET_TIMEPOINT_PLACEHOLDERS Give every timepoint an  |
@@ -726,16 +573,16 @@ classdef ocp < handle
             %|____________________________________________________________|
             k = 1;
             for tp=obj.timepoints
-                if isa(tp.timepoint, 'yop.ast_independent_initial')
+                if isa(tp.ast.timepoint, 'yop.ast_independent_initial')
                     tp_text = 't0';
-                elseif isa(tp.timepoint, 'yop.ast_independent_final')
+                elseif isa(tp.ast.timepoint, 'yop.ast_independent_final')
                     tp_text = 'tf';
                 else
-                    tp_text = num2str(floor(tp.timepoint));
+                    tp_text = num2str(floor(tp.ast.timepoint));
                 end
-                nme = ['expr', num2str(k), '_t_eq_', tp_text];
-                tp.mx= casadi.MX.sym(nme, size(tp.node,1), size(tp.node,2));
-                tp.sym = sym(nme, size(tp.node));
+                str = ['expr', num2str(k), '_t_eq_', tp_text];
+                tp.mx= casadi.MX.sym(str, size(tp.ast,1), size(tp.ast,2));
+                tp.sym = sym(str, size(tp.ast));
                 k = k+1;
             end
         end
@@ -753,10 +600,10 @@ classdef ocp < handle
             %|   obj - Handle to the ocp.                                 |
             %|____________________________________________________________|
             k = 1;
-            for tp=obj.integrals
+            for int=obj.integrals
                 str = ['int', num2str(k)];
-                tp.mx= casadi.MX.sym(str, size(tp.node,1), size(tp.node,2));
-                tp.sym = sym(str, size(tp.node));
+                int.mx =casadi.MX.sym(str,size(int.ast,1),size(int.ast,2));
+                int.sym = sym(str, size(int.ast));
                 k = k+1;
             end
         end
@@ -773,7 +620,7 @@ classdef ocp < handle
             %|   obj - Handle to the ocp.                                 |
             %|____________________________________________________________|
             for tp = obj.timepoints
-                tp.fn = obj.mx_function_object(tp.expr);
+                tp.fn = obj.mx_function_object(tp.ast.expr);
             end
         end
         
@@ -789,7 +636,7 @@ classdef ocp < handle
             %|   obj - Handle to the ocp.                                 |
             %|____________________________________________________________|
             for int = obj.integrals
-                int.fn = obj.mx_function_object(int.expr);
+                int.fn = obj.mx_function_object(int.ast.expr);
             end
         end
         
@@ -804,8 +651,7 @@ classdef ocp < handle
             %| Return values:                                             |
             %|   obj - Handle to the ocp.                                 |
             %|____________________________________________________________|
-            J = obj.objective;
-            J.fn = obj.mx_function_object(J.expr);
+            obj.objective.fn = obj.mx_function_object(obj.objective.ast);
         end
         
         function obj = compute_pathcon_functions(obj)
@@ -819,8 +665,11 @@ classdef ocp < handle
             %| Return values:                                             |
             %|   obj - Handle to the ocp.                                 |
             %|____________________________________________________________|
-            for pc = [obj.eq, obj.ieq]
-                pc.fn = obj.mx_function_object(pc.expr);
+            for pc = [obj.equality_constraints, obj.inequality_constraints]
+                % Only computes the function for the lhs as the constraint
+                % is canonicalized, and we then want to remove the
+                % relation.
+                pc.fn = obj.mx_function_object(pc.ast);
             end
         end
         
@@ -1409,7 +1258,7 @@ classdef ocp < handle
         
         function [ode, alg, eq, ieq] = sort_nonbox(nbox)
             %______________________________________________________________
-            %|YOP.OCP.SORT_NONBOC Sorts the constraints that are not box  |
+            %|YOP.OCP.SORT_NONBOX Sorts the constraints that are not box  |
             %|constraints. It returns constraints in the categories       |
             %|ordinary differential equation (ODE), algebraic equation,   |
             %|equality constraints, and inequality constraints.           |
@@ -1434,7 +1283,7 @@ classdef ocp < handle
                 elseif isa(nbox{k}, 'yop.ast_eq')
                     [~, ode_k, eq_k] = isa_ode(nbox{k});
                     ode{end+1} = ode_k;
-                    eq{end+1} = eq_k;
+                    eq{end+1} = eq_k; % is canonicalized
                     
                 else
                     ieq{end+1} = canonicalize(nbox{k});
@@ -1445,6 +1294,40 @@ classdef ocp < handle
             alg = alg(~cellfun('isempty', alg));
             ieq = ieq(~cellfun('isempty', ieq));
             eq  =  eq(~cellfun('isempty', eq));
+            
+            eq = yop.ocp.split_hard(eq);
+            ieq = yop.ocp.split_hard(ieq);
+            eq = yop.ocp.split_transcription_invariance(eq);
+            ieq = yop.ocp.split_transcription_invariance(ieq);
+        end
+        
+        function con = split_hard(con)
+            %______________________________________________________________
+            %|YOP.OCP.SPLIT_HARD Split regular and hard constraints.      |
+            %|Is only relevant for direct collocation. Hard constraints   |
+            %|are applied to every discretization point.                  |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   con = yop.ocp.split_hard(con)                            |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   con - Cell array with canonlicalized non-box constraints.|
+            %|                                                            |
+            %| Return values:                                             |
+            %|   trcon - Cell array with the constraints separated based  |
+            %|           if they are hard or not.                         |
+            %|____________________________________________________________|
+            hcon = {};
+            for k=1:length(con)
+                hard = is_hard(con{k});
+                if all(hard) || all(~hard)
+                    hcon{end+1} = con{k};
+                else
+                    hcon{end+1} = yop.get_subrel(con{k}, hard);
+                    hcon{end+1} = yop.get_subrel(con{k}, ~hard);
+                end
+            end
+            con = hcon;
         end
         
         function trcon = split_transcription_invariance(con)
@@ -1469,8 +1352,7 @@ classdef ocp < handle
             %|   invariant or not, never something in between.            |
             %|                                                            |
             %| Parameters:                                                |
-            %|   con - Cell array with canonlicalized constraints non-box |
-            %|         constraints.                                       |
+            %|   con - Cell array with canonlicalized non-box constraints.|
             %|                                                            |
             %| Return values:                                             |
             %|   trcon - Cell array with the constraints separated based  |
@@ -1482,8 +1364,8 @@ classdef ocp < handle
                 if all(invariant) || all(~invariant)
                     trcon{end+1} = con{k};
                 else
-                    trcon{end+1} = yop.get_subrelation(con{k}, invariant);
-                    trcon{end+1} = yop.get_subrelation(con{k}, ~invariant);
+                    trcon{end+1} = yop.get_subrel(con{k}, invariant);
+                    trcon{end+1} = yop.get_subrel(con{k}, ~invariant);
                 end
             end
         end
@@ -1584,6 +1466,145 @@ classdef ocp < handle
             n = numel(obj.integrals.mx_vec);
         end
         
+        function dx = ode(obj, t, x, u, p)
+            fn = obj.mx_ode_function(obj.differential_equation.rhs);
+            dx = fn(t,x,u,p);
+        end
+        
+        function bd = t0_ub(obj)
+            bd = obj.independent_initial.ub;
+        end
+        
+        function bd = t0_lb(obj)
+            bd = obj.independent_initial.lb;
+        end
+        
+        function bd = tf_ub(obj)
+            bd = obj.independent_final.ub;
+        end
+        
+        function bd = tf_lb(obj)
+            bd = obj.independent_final.lb;
+        end
+        
+        function bd = x0_ub(obj)
+            x0ub=[];
+            for k=1:length(obj.states)
+                x0ub = [x0ub(:); obj.states(k).ub0(:)];
+            end
+            bd = x0ub(obj.e2i);
+        end
+        
+        function bd = x0_lb(obj)
+            x0lb=[];
+            for k=1:length(obj.states)
+                x0lb = [x0lb(:); obj.states(k).lb0(:)];
+            end
+            bd = x0lb(obj.e2i);
+        end
+        
+        function bd = x_ub(obj)
+            xub=[];
+            for k=1:length(obj.states)
+                xub = [xub(:); obj.states(k).ub(:)];
+            end
+            bd  = xub(obj.e2i);
+        end
+        
+        function bd = x_lb(obj)
+            xlb=[];
+            for k=1:length(obj.states)
+                xlb = [xlb(:); obj.states(k).lb(:)];
+            end
+            bd  = xlb(obj.e2i);
+        end
+        
+        function bd = xf_ub(obj)
+            xfub=[];
+            for k=1:length(obj.states)
+                xfub = [xfub(:); obj.states(k).ubf(:)];
+            end
+            bd = xfub(obj.e2i);
+        end
+        
+        function bd = xf_lb(obj)
+            xflb=[];
+            for k=1:length(obj.states)
+                xflb = [xflb(:); obj.states(k).lbf(:)];
+            end
+            bd = xflb(obj.e2i);
+        end
+        
+        function bd = u0_ub(obj)
+            bd=[];
+            for k=1:length(obj.controls)
+                bd = [bd(:); obj.controls(k).ub0(:)];
+            end
+        end
+        
+        function bd = u0_lb(obj)
+            bd=[];
+            for k=1:length(obj.controls)
+                bd = [bd(:); obj.controls(k).lb0(:)];
+            end
+        end
+        
+        function bd = u_ub(obj)
+            bd=[];
+            for k=1:length(obj.controls)
+                bd = [bd(:); obj.controls(k).ub(:)];
+            end
+        end
+        
+        function bd = u_lb(obj)
+            bd=[];
+            for k=1:length(obj.controls)
+                bd = [bd(:); obj.controls(k).lb(:)];
+            end
+        end
+        
+        function bd = uf_ub(obj)
+            bd=[];
+            for k=1:length(obj.controls)
+                bd = [bd(:); obj.controls(k).ubf(:)];
+            end
+        end
+        
+        function bd = uf_lb(obj)
+            bd=[];
+            for k=1:length(obj.controls)
+                bd = [bd(:); obj.controls(k).lbf(:)];
+            end
+        end
+        
+        function bd = p_ub(obj)
+            bd=[];
+            for k=1:length(obj.parameters)
+                bd = [bd(:); obj.parameters(k).ub(:)];
+            end
+        end
+        
+        function bd = p_lb(obj)
+            bd=[];
+            for k=1:length(obj.parameters)
+                bd = [bd(:); obj.parameters(k).lb(:)];
+            end
+        end
+        
+        function bd = z_ub(obj)
+            bd=[];
+            for k=1:length(obj.algebraics)
+                bd = [bd(:); obj.algebraics(k).ub(:)];
+            end
+        end
+        
+        function bd = z_lb(obj)
+            bd=[];
+            for k=1:length(obj.algebraics)
+                bd = [bd(:); obj.algebraics(k).lb(:)];
+            end
+        end
+        
         function [bool, T] = fixed_horizon(obj)
             %______________________________________________________________
             %|YOP.OCP/FIXED_HORIZON Test if the problem horizon is fixed. |
@@ -1617,7 +1638,8 @@ classdef ocp < handle
     %% Presentation
     methods
         
-        function present(obj)
+        function obj = present(obj)
+            obj.build();
             
             obj.independent.set_sym();
             obj.independent_initial.set_sym();
@@ -1628,7 +1650,7 @@ classdef ocp < handle
             obj.parameters.set_sym();
             
             % objective function
-            val = propagate_value(obj.objective.expr);
+            val = propagate_value(obj.objective.ast);
             if isempty(obj.name)
                 title = 'Optimal Control Problem';
             else
@@ -1675,44 +1697,43 @@ classdef ocp < handle
             end
             
             
-            if ~isempty(obj.differetial_eqs)
+            if ~isempty(obj.differential_equation)
                 fprintf('  ODE\n');
             end
-            for k=1:length(obj.differetial_eqs)
-                fprintf('\tder(');
-                fprintf(char(propagate_value(obj.differetial_eqs{k}.lhs)));
-                fprintf(') == ');
-                rhs = propagate_value(obj.differetial_eqs{k}.rhs);
-                if length(char(rhs)) > 40
-                    vs = yop.get_vars(obj.differetial_eqs{k}.rhs);
-                    args = '';
-                    for n=1:length(vs)
-                        args = [args(:).', vs{n}.name, ', '];
-                    end
-                    fprintf(['f(', args(1:end-2), ')']);
-                else
-                    if isnumeric(rhs)
-                        fprintf(num2str(rhs));
-                    else
-                        fprintf(char(rhs));
-                    end
-                end
-                fprintf('\n');
-            end
             
-            if ~isempty(obj.eq)
+            fprintf('\tder(');
+            fprintf(char(propagate_value(obj.differential_equation.lhs)));
+            fprintf(') == ');
+            rhs = propagate_value(obj.differential_equation.rhs);
+            if length(char(rhs)) > 40
+                vs = yop.get_vars(obj.differential_equation.rhs);
+                args = '';
+                for n=1:length(vs)
+                    args = [args(:).', vs{n}.name, ', '];
+                end
+                fprintf(['f(', args(1:end-2), ')']);
+            else
+                if isnumeric(rhs)
+                    fprintf(num2str(rhs));
+                else
+                    fprintf(char(rhs));
+                end
+            end
+            fprintf('\n');
+            
+            if ~isempty(obj.equality_constraints)
                 fprintf('  Equality\n');
             end
-            for k=1:length(obj.eq)
+            for k=1:length(obj.equality_constraints)
                 fprintf('\t');
                 %                 fprintf(char(propagate_value(obj.eq{k})));
                 fprintf('\n');
             end
             
-            if ~isempty(obj.ieq)
+            if ~isempty(obj.inequality_constraints)
                 fprintf('  Inequality\n');
             end
-            for k=1:length(obj.ieq)
+            for k=1:length(obj.inequality_constraints)
                 fprintf('\t');
                 %                 fprintf(char(propagate_value(obj.ieq{k})));
                 fprintf('\n');

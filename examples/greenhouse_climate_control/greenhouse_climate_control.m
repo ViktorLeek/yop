@@ -14,9 +14,7 @@ ocp = yop.ocp('Greenhouse Climate Control');
 ocp.min( at(t==tf, -p(5)*x(1)) + int(p(4)*u) );
 ocp.st(t0==0, tf==T, der(x)==[dx1;dx2], x(t0)==[0;10], 0<u<10);
 
-ocp.build.present();
-dms = yop.dms(ocp, 100, 5);
-sol = dms.solve();
+[sol, dms] = ocp.present.solve(100, 4);
 
 time = casadi.Function('x', {dms.w}, {vertcat(dms.t{:})});
 t_sol = full(time(sol.x));

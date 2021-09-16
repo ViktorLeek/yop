@@ -12,10 +12,7 @@ ocp.st( ...
     -10 <= x <= 10, ...
     -4 <= u <= 4 ...
     );
-ocp.build.present()
-%%
-dms = yop.dms(ocp, 30, 1);
-sol = dms.solve(zeros(size(dms.w)));
+[sol, dms] = ocp.present.solve(100, 4);
 
 time = casadi.Function('x', {dms.w}, {vertcat(dms.t{:})});
 t_sol = full(time(sol.x));
@@ -50,8 +47,7 @@ ocp.st( ...
     );
 ocp.build.present()
 
-dms = yop.dms(ocp, 30, 1);
-sol = dms.solve();
+[sol, dms] = ocp.present.solve(100, 4);
 
 time = casadi.Function('x', {dms.w}, {vertcat(dms.t{:})});
 t_sol = full(time(sol.x));

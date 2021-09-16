@@ -15,10 +15,7 @@ ocp.st( ...
     s(t0) == -s(tf) == 1, ...
     p <= l == 1/9 ... An interesting variation is to balance l and control effort
     );
-ocp.build().present();
-
-dms = yop.dms(ocp, 40, 4);
-sol = dms.solve();
+[sol, dms] = ocp.present.solve(20, 4);
 plot_res(dms, sol);
 
 %% Guaranteed box constraints for boundary conditions
@@ -40,10 +37,7 @@ ocp.st( ...
     s(tf) == -1, ...
     p <= l == 1/9 ...
     );
-ocp.build().present();
-
-dms = yop.dms(ocp, 40, 4);
-sol = dms.solve();
+[sol, dms] = ocp.present.solve(20, 4);
 plot_res(dms, sol);
 
 
@@ -65,10 +59,8 @@ ocp.st( ...
     p(tf) == 0, s(tf) == -1, ...
     p <= l ...
     );
-ocp.build().present();
-
-dms = yop.dms(ocp, 40, 4);
-sol = dms.solve();
+ocp.present();
+[sol, dms] = ocp.present.solve(20, 4);
 plot_res(dms, sol);
 
 %%

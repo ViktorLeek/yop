@@ -39,7 +39,7 @@ classdef ast_eq < yop.ast_relation
             fn = @(lhs, rhs) yop.ast_eq(lhs, rhs, obj.m_hard, obj.m_alg);
         end
         
-        function [isode, ode, expr] = isa_ode(obj)
+        function [isode, ode, non_ode] = isa_ode(obj)
             %ISA_ODE
             isode_lhs = isa_state(obj.lhs) & isa_der(obj.lhs);
             isode_rhs = isa_state(obj.rhs) & isa_der(obj.rhs);
@@ -56,9 +56,9 @@ classdef ast_eq < yop.ast_relation
             end
             
             if all(isode)
-                expr = [];
+                non_ode = [];
             else
-                expr = canonicalize(yop.get_subrel(obj, ~isode));
+                non_ode = canonicalize(yop.get_subrel(obj, ~isode));
             end
             
             assert( ... that both sides are not ode's

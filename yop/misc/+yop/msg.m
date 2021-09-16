@@ -17,5 +17,10 @@ classdef msg < handle
                 'already set', yop.msg.stop];
         end
         
+        function m = not_implemented()
+            m=[yop.msg.start,'Using a feature that is not implemented ',...
+                yop.mst.stop];
+        end
+        
     end
 end

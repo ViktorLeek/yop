@@ -25,10 +25,8 @@ ocp.st(...
     m_min <= rocket.mass <= m_max, ...
      0 <= rocket.fuel_mass_flow <= 9.5 ...
     );
-ocp.build().present();
 
-dms = yop.dms(ocp, 100, 4);
-sol = dms.solve();
+[sol, dms] = ocp.present.solve(100, 4);
 
 time = casadi.Function('x', {dms.w}, {vertcat(dms.t{:})});
 t_sol = full(time(sol.x));

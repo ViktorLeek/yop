@@ -43,13 +43,6 @@ classdef ocp_var < handle
             end
         end
         
-        function e = get_enum(obj)
-            e = [];
-            for k=1:length(obj)
-                e = [e(:); obj(k).enum(:)];
-            end
-        end
-        
         function vec = mx_vec(obj)
             vec = [];
             for k=1:length(obj)
