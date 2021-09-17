@@ -35,8 +35,7 @@ classdef direct_multiple_shooting < handle
             [w_lb, w_ub] = obj.set_box_bnd(ocp);
             
             cc = obj.discretize_ode(ocp); % Continuity constraints
-            tps = obj.parameterize_timepoints(ocp);
-            ints = obj.parameterize_integrals(ocp, tps);
+            [tps, ints] = parameterize_special_nodes(obj, ocp);
             J = obj.parameterize_objective(ocp, tps, ints);
             g = obj.parameterize_equality(ocp, tps, ints);
             h = obj.parameterize_inequality(ocp, tps, ints);
@@ -125,50 +124,95 @@ classdef direct_multiple_shooting < handle
             end
         end
         
-        
-        function tps = parameterize_timepoints(obj, ocp)
-            % Important that this is in topological order, should be
-            % handled by ocp. The reason is that they need to be
-            % parameterized in order, otherwise there is no gurantee of the
-            % results. As more and more timepoints are discretized they can
-            % start appearing in expressions with other timepoints, and
-            % since this is done in topological order, there is no
-            % conflict.
-            ints = zeros(ocp.n_int, 1);
+        function [tps, ints] = parameterize_special_nodes(obj, ocp)
             tps = [];
-            for k = 1:length(ocp.timepoints)
-                tp_k = ocp.timepoints(k);
-                [tt, xx, uu, pp] = obj.vars_at(tp_k.timepoint, ocp);
-                tmp = [tps; zeros(ocp.n_tp - length(tps), 1)];
-                tp_k = tp_k.fn(tt, xx, uu, pp, tmp, ints);
-                tps = [tps; tp_k(:)];
+            ints = [];
+            for node = ocp.special_nodes
+                switch node.type
+                    case yop.ocp_expr.tp
+                        tps = obj.parameterize_timepoint( ...
+                            node, tps, ints, ocp);
+                    case yop.ocp_expr.int
+                        ints = obj.parameterize_integral( ...
+                            node, tps, ints, ocp);
+                    case yop.ocp_expr.der
+                        error(yop.msg.not_implemented);
+                        warning(['When implementing dont forget to ' ...
+                            'multiply derivative with step length']);
+                    otherwise
+                        error(yop.msg.unexpected_error);
+                end
             end
         end
         
-        function ints = parameterize_integrals(obj, ocp, tps)
-            % Important that this is in topological order, should be
-            % handled by ocp. The reason is that they need to be
-            % parameterized in order, otherwise there is no gurantee of the
-            % results. As more and more timepoints are discretized they can
-            % start appearing in expressions with other timepoints, and
-            % since this is done in topological order, there is no
-            % conflict.
-            ints = [];
-            for k = 1:length(ocp.integrals)
-                rk = obj.rk4q(ocp, ocp.integrals(k).fn);
-                tmp = [ints; zeros(ocp.n_int - length(ints), 1)];
-                I = 0;
-                for n=1:obj.N
-                    ti  = obj.t{n};
-                    tii = obj.t{n+1};
-                    x0  = obj.x{n};
-                    uu  = obj.u{n};
-                    pp  = obj.p;
-                    I = I + rk(ti, tii, x0, uu, pp, tps, tmp);
-                end
-                ints = [ints; I(:)];
-            end
+        function tps = parameterize_timepoint(obj, tp, tps, ints, ocp)
+            tp_tmp  = [tps;  zeros(ocp.n_tp  - length(tps), 1)];
+            int_tmp = [ints; zeros(ocp.n_int - length(ints), 1)];
+            [tt, xx, uu, pp] = obj.vars_at(tp.timepoint, ocp);
+            value = tp.fn(tt, xx, uu, pp, tp_tmp, int_tmp);
+            tps = [tps; value(:)];
         end
+        
+        function ints = parameterize_integral(obj, int, tps, ints, ocp)
+            tp_tmp  = [tps;  zeros(ocp.n_tp  - length(tps), 1)];
+            int_tmp = [ints; zeros(ocp.n_int - length(ints), 1)];
+            rk = obj.rk4q(ocp, int.fn);
+            I = 0;
+            for n=1:obj.N
+                ti  = obj.t{n};
+                tii = obj.t{n+1};
+                x0  = obj.x{n};
+                uu  = obj.u{n};
+                pp  = obj.p;
+                I = I + rk(ti, tii, x0, uu, pp, tp_tmp, int_tmp);
+            end
+            ints = [ints; I(:)];
+            
+        end
+        
+%         function tps = parameterize_timepoints(obj, ocp)
+%             % Important that this is in topological order, should be
+%             % handled by ocp. The reason is that they need to be
+%             % parameterized in order, otherwise there is no gurantee of the
+%             % results. As more and more timepoints are discretized they can
+%             % start appearing in expressions with other timepoints, and
+%             % since this is done in topological order, there is no
+%             % conflict.
+%             ints = zeros(ocp.n_int, 1);
+%             tps = [];
+%             for k = 1:length(ocp.timepoints)
+%                 tp_k = ocp.timepoints(k);
+%                 [tt, xx, uu, pp] = obj.vars_at(tp_k.timepoint, ocp);
+%                 tmp = [tps; zeros(ocp.n_tp - length(tps), 1)];
+%                 tp_k = tp_k.fn(tt, xx, uu, pp, tmp, ints);
+%                 tps = [tps; tp_k(:)];
+%             end
+%         end
+%         
+%         function ints = parameterize_integrals(obj, ocp, tps)
+%             % Important that this is in topological order, should be
+%             % handled by ocp. The reason is that they need to be
+%             % parameterized in order, otherwise there is no gurantee of the
+%             % results. As more and more timepoints are discretized they can
+%             % start appearing in expressions with other timepoints, and
+%             % since this is done in topological order, there is no
+%             % conflict.
+%             ints = [];
+%             for k = 1:length(ocp.integrals)
+%                 rk = obj.rk4q(ocp, ocp.integrals(k).fn);
+%                 tmp = [ints; zeros(ocp.n_int - length(ints), 1)];
+%                 I = 0;
+%                 for n=1:obj.N
+%                     ti  = obj.t{n};
+%                     tii = obj.t{n+1};
+%                     x0  = obj.x{n};
+%                     uu  = obj.u{n};
+%                     pp  = obj.p;
+%                     I = I + rk(ti, tii, x0, uu, pp, tps, tmp);
+%                 end
+%                 ints = [ints; I(:)];
+%             end
+%         end
         
         function J = parameterize_objective(obj, ocp, tps, ints)
             J = obj.parameterize_expression(ocp.objective, tps, ints);

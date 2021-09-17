@@ -16,6 +16,7 @@ classdef ocp < handle
         
         differential_equation
         
+        special_nodes
         timepoints
         integrals
         derivatives
@@ -80,7 +81,7 @@ classdef ocp < handle
             
             % Find all variables from the relations and expressions that
             % make up the problem
-            vars = obj.find_variables_timepoints_integrals_derivatives();
+            vars = obj.find_special_nodes();
             obj.classify_variables(vars);
             
             srf = yop.ocp.to_srf(obj.constraints);
@@ -171,11 +172,10 @@ classdef ocp < handle
             obj.set_box_bounds(); % Includes processing default values
         end
         
-        function vars =find_variables_timepoints_integrals_derivatives(obj)
+        function vars = find_special_nodes(obj)
             %______________________________________________________________
-            %|YOP.OCP/FIND_VARIABLE_TIMEPOINTS_INTEGRALS_DERIVATIVES From |
-            %|all problem expressions finds all variables, timepoints,    |
-            %|integrals, and derivatives.                                 |
+            %|YOP.OCP/FIND_SPECIAL_NODES From all problem expressions     |
+            %|finds all variables, timepoints, integrals, and derivatives.|
             %|                                                            |
             %| Use:                                                       |
             %|   find_variables_timepoints_integrals(obj)                 |
@@ -188,9 +188,16 @@ classdef ocp < handle
             %|   vars - Cell array with ast_variable-s.                   |
             %|____________________________________________________________|
             vars = {};
+            % The special nodes are timepoints, integrals, and derivatives.
+            % To handle nesting of the different special nodes it is
+            % necessary to keep a topological sort of the nodes. That way a
+            % derivative be evaluated at a timepoint, and a derivative to
+            % include a timepoint.
+            obj.special_nodes = yop.ocp_expr.empty(1,0);
             obj.timepoints = yop.ocp_expr.empty(1,0);
             obj.integrals = yop.ocp_expr.empty(1,0);
             obj.derivatives = yop.ocp_expr.empty(1,0);
+            
             % Hoist first iteration in order to avoid to visit the same
             % node twice as all nodes are stored in 'visited', which is
             % reused.
@@ -211,11 +218,17 @@ classdef ocp < handle
                 if isa(node, 'yop.ast_variable')
                     vars{end+1} = node;
                 elseif isa(node, 'yop.ast_timepoint')
-                    obj.timepoints(end+1)=yop.ocp_expr(node);
+                    sn = yop.ocp_expr(node, yop.ocp_expr.tp);
+                    obj.timepoints(end+1) = sn;
+                    obj.special_nodes(end+1) = sn;
                 elseif isa(node, 'yop.ast_int')
-                    obj.integrals(end+1) = yop.ocp_expr(node);
+                    sn = yop.ocp_expr(node, yop.ocp_expr.int);
+                    obj.integrals(end+1) = sn;
+                    obj.special_nodes(end+1) = sn;
                 elseif isa(node, 'yop.ast_der')
-                    obj.derivatives(end+1) = yop.ocp_expr(node);
+                    %sn = yop.ocp_expr(node, yop.ocp_expr.der);
+                    %obj.derivatives(end+1) = sn;
+                    %obj.special_nodes(end+1) = sn;
                 end
             end
         end
@@ -557,7 +570,9 @@ classdef ocp < handle
             % can be set.
             obj.compute_permutation_vector(ode_var);
             
-            obj.differential_equation = yop.ast_eq(ode_var, ode_expr);
+            ast = yop.ast_eq(ode_var, ode_expr);
+            obj.differential_equation = yop.ocp_rel(ast);
+            obj.differential_equation.fn = obj.mx_ode_function(ast.rhs);
         end
         
         function obj = compute_permutation_vector(obj, ode_var)
@@ -1509,8 +1524,7 @@ classdef ocp < handle
         end
         
         function dx = ode(obj, t, x, u, p)
-            fn = obj.mx_ode_function(obj.differential_equation.rhs);
-            dx = fn(t,x,u,p);
+            dx = obj.differential_equation.fn(t,x,u,p);
         end
         
         function bd = t0_ub(obj)

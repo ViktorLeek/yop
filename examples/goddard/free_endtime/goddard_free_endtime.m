@@ -3,30 +3,26 @@
 x = yop.state('x', 3);
 u = yop.control('u');
 
-[dx, y] = rocket_model(x, u);
+[~, y] = rocket_model(x, u);
 rocket = y.rocket;
-
-m_max = 215;
-m_min = 68;
 
 ocp = yop.ocp('Goddard''s Rocket Problem');
 ocp.max( rocket.height(tf) );
-ocp.st(...
-    ... dynamics 
-    der(x) == rocket_model(x, u), ...
-    ... initial condition
+ocp.st( ...
     t0==0, ...
+    ... dynamics 
+    p == int(rocket.velocity), ...
+    der(x) == rocket_model(x, u), ...
+    ... initial value
     rocket.height(t0)   == 0, ...
     rocket.velocity(t0) == 0, ...
-    rocket.mass(t0)     == m_max, ...
+    rocket.mass(t0)     == 215, ...
     ... Box constraints
-    rocket.height   >= 0, ...
-    rocket.velocity >= 0, ...
-    m_min <= rocket.mass <= m_max, ...
-     0 <= rocket.fuel_mass_flow <= 9.5 ...
+    68 <= rocket.mass <= 215, ...
+    0 <= rocket.fuel_mass_flow <= 9.5 ...
     );
 
-[tt,xx,uu,pp,tx]=ocp.solve('method', 'dc', 'intervals', 70);
+[tt, xx, uu, pp, tx] = ocp.solve('method', 'dc', 'intervals', 50);
 
 figure(1)
 subplot(411); hold on;
@@ -35,6 +31,41 @@ subplot(412); hold on;
 plot(tx, xx(:,2))
 subplot(413); hold on;
 plot(tx, xx(:,3))
+subplot(414); hold on;
+stairs(tt, [uu; nan])
+
+%% Formulation 1 DMS
+[t, t0, tf] = yop.time('t');
+x = yop.state('x', 3);
+u = yop.control('u');
+
+[~, y] = rocket_model(x, u);
+rocket = y.rocket;
+
+ocp = yop.ocp('Goddard''s Rocket Problem');
+ocp.max( int(rocket.velocity) );
+ocp.st( ...
+    t0==0, ...
+    ... dynamics 
+    p == int(rocket.velocity), ...
+    der(x) == rocket_model(x, u), ...
+    ... initial value
+    rocket.height(t0)   == 0, ...
+    rocket.velocity(t0) == 0, ...
+    rocket.mass(t0)     == 215, ...
+    ... Box constraints
+    68 <= rocket.mass <= 215, ...
+     0 <= rocket.fuel_mass_flow <= 9.5 ...
+    );
+[tt, xx, uu, pp] = ocp.solve('method', 'dms', 'intervals', 50);
+
+figure(1)
+subplot(411); hold on;
+plot(tt, xx(:,1))
+subplot(412); hold on;
+plot(tt, xx(:,2))
+subplot(413); hold on;
+plot(tt, xx(:,3))
 subplot(414); hold on;
 stairs(tt, [uu; nan])
 
@@ -65,29 +96,20 @@ ocp.st( ...
     m_min <= m <= m_max, ...
     0 <= Wf <= Wf_max ...
     );
-ocp.build().present();
+ocp.build();
 
-dms = yop.dms(ocp, 100, 4);
-sol = dms.solve();
 
-time = casadi.Function('x', {dms.w}, {vertcat(dms.t{:})});
-t_sol = full(time(sol.x));
-
-state = casadi.Function('x', {dms.w}, {horzcat(dms.x{:})});
-x_sol = full(state(sol.x))';
-
-control = casadi.Function('x', {dms.w}, {horzcat(dms.u{:})});
-u_sol = full(control(sol.x))';
+[tt, xx, uu, pp] = ocp.solve('method', 'dms', 'intervals', 70);
 
 figure(1)
 subplot(411); hold on;
-plot(t_sol, x_sol(:,1))
+plot(tt, xx(:,1))
 subplot(412); hold on;
-plot(t_sol, x_sol(:,2))
+plot(tt, xx(:,2))
 subplot(413); hold on;
-plot(t_sol, x_sol(:,3))
+plot(tt, xx(:,3))
 subplot(414); hold on;
-stairs(t_sol, [u_sol; nan])
+stairs(tt, [uu; nan])
 
 %% Formulation 3
 % Time

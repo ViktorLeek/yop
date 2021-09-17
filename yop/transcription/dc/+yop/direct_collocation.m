@@ -55,8 +55,7 @@ classdef direct_collocation < handle
             [w_lb, w_ub] = obj.set_box_bnd(ocp);
             
             c = obj.discretize_ode(ocp);
-            tps = obj.parameterize_timepoints(ocp);
-            ints = obj.parameterize_integrals(ocp, tps);
+            [tps, ints] = parameterize_special_nodes(obj, ocp);
             J = obj.parameterize_objective(ocp, tps, ints);
             g = obj.parameterize_equality(ocp, tps, ints);
             h = obj.parameterize_inequality(ocp, tps, ints);
@@ -154,40 +153,54 @@ classdef direct_collocation < handle
             
         end
         
-        function tps = parameterize_timepoints(obj, ocp)
-            ints = zeros(ocp.n_int, 1);
+        function [tps, ints] = parameterize_special_nodes(obj, ocp)
             tps = [];
-            for k = 1:length(ocp.timepoints)
-                tp_k = ocp.timepoints(k);
-                [tt, xx, uu, pp] = obj.vars_at(tp_k.timepoint, ocp);
-                tmp = [tps; zeros(ocp.n_tp-length(tps), 1)];
-                tp_k = tp_k.fn(tt, xx, uu, pp, tmp, ints);
-                tps = [tps; tp_k(:)];
+            ints = [];
+            for node = ocp.special_nodes
+                switch node.type
+                    case yop.ocp_expr.tp
+                        tps = obj.parameterize_timepoint( ...
+                            node, tps, ints, ocp);
+                    case yop.ocp_expr.int
+                        ints = obj.parameterize_integral( ...
+                            node, tps, ints, ocp);
+                    case yop.ocp_expr.der
+                        error(yop.msg.not_implemented);
+                        warning(['When implementing dont forget to ' ...
+                            'multiply derivative with step length']);
+                    otherwise
+                        error(yop.msg.unexpected_error);
+                end
             end
         end
-                
         
-        function ints = parameterize_integrals(obj, ocp, tps)
-            ints = [];
-            for k = 1:length(ocp.integrals)
-                int_k = ocp.integrals(k);
-                tmp = [ints; zeros(ocp.n_int-length(ints), 1)];
-                I = 0;
-                for n=1:obj.N
-                    val = [];
-                    for r=1:obj.d+1
-                        tt = obj.t{n, r};
-                        xx = obj.x(n).evaluate(obj.tau(r));
-                        uu = obj.u{n};
-                        pp = obj.p;
-                        val_r = int_k.fn(tt, xx, uu, pp, tps, tmp);
-                        val = [val, val_r(:)];
-                    end
-                    lp = yop.lagrange_polynomial(obj.tau, val).integrate();
-                    I = I + lp.evaluate(1);
+        function tps = parameterize_timepoint(obj, tp, tps, ints, ocp)
+            tp_tmp  = [tps;  zeros(ocp.n_tp  - length(tps), 1)];
+            int_tmp = [ints; zeros(ocp.n_int - length(ints), 1)];
+            [tt, xx, uu, pp] = obj.vars_at(tp.timepoint, ocp);
+            value = tp.fn(tt, xx, uu, pp, tp_tmp, int_tmp);
+            tps = [tps; value(:)];
+        end
+        
+        function ints = parameterize_integral(obj, int, tps, ints, ocp)
+            tp_tmp  = [tps;  zeros(ocp.n_tp  - length(tps), 1)];
+            int_tmp = [ints; zeros(ocp.n_int - length(ints), 1)];
+            I = 0;
+            for n=1:obj.N
+                yval = [];
+                for r=1:obj.d+1
+                    tt = obj.t{n, r};
+                    xx = obj.x(n).evaluate(obj.tau(r));
+                    uu = obj.u{n};
+                    pp = obj.p;
+                    val_r = int.fn(tt, xx, uu, pp, tp_tmp, int_tmp);
+                    yval = [yval, val_r(:)];
                 end
-                ints = [ints; I(:)];
+                lp = yop.lagrange_polynomial(obj.tau, yval).integrate();
+                % Important detail is to multiply with step length
+                I = I + lp.evaluate(1)*obj.h;
             end
+            ints = [ints; I(:)];
         end
         
         function J = parameterize_objective(obj, ocp, tps, ints)

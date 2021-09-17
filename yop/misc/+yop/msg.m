@@ -19,8 +19,13 @@ classdef msg < handle
         
         function m = not_implemented()
             m=[yop.msg.start,'Using a feature that is not implemented ',...
-                yop.mst.stop];
+                yop.msg.stop];
         end
+        
+        function m = unexpected_error()
+            m = [yop.msg.start, 'Unexpected error', yop.msg.stop];
+        end
+        
         
     end
 end

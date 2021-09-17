@@ -1,5 +1,6 @@
 classdef ocp_expr < handle
     properties        
+        type
         ast
         mx
         sym
@@ -7,10 +8,14 @@ classdef ocp_expr < handle
         is_hard
     end
     methods
-        function obj = ocp_expr(expr, is_hard)
+        function obj = ocp_expr(expr, aux)
             obj.ast = expr;
             if nargin == 2
-                obj.is_hard = is_hard;
+                if isnumeric(aux)
+                    obj.type = aux;
+                else
+                    obj.is_hard = aux;
+                end
             end
         end
         
@@ -49,5 +54,16 @@ classdef ocp_expr < handle
             tp = obj.ast.timepoint;
         end
         
+    end
+    methods (Static)
+        function t = tp()
+            t = 1;
+        end
+        function t = int()
+            t = 2;
+        end
+        function t = der()
+            t = 3;
+        end
     end
 end
