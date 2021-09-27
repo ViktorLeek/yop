@@ -15,11 +15,14 @@ classdef ocp < handle
         parameters
         
         differential_equation
-        
         special_nodes
-        timepoints
-        integrals
-        derivatives
+        
+        n_x
+        n_u
+        n_p
+        n_tp
+        n_int
+        n_der
         
         equality_constraints
         inequality_constraints
@@ -79,22 +82,30 @@ classdef ocp < handle
                 return;
             end
             
+            % Need to do this first in order to add potential augmenting
+            % equations.
+            [sorted, tps, ints, ders] = obj.find_special_nodes( ...
+                obj.objective.ast, obj.constraints{:});
+            obj.special_nodes = sorted;
+            obj.n_tp = n_elem(tps);
+            obj.n_int = n_elem(ints);
+            obj.n_der = n_elem(ders);
+            
             % Find all variables from the relations and expressions that
             % make up the problem
-            vars = obj.find_special_nodes();
+            vars = obj.find_problem_variables( ...
+                obj.objective.ast, obj.constraints{:});
             obj.classify_variables(vars);
+            obj.n_x = n_elem(obj.states);
+            obj.n_u = n_elem(obj.controls);
+            obj.n_p = n_elem(obj.parameters);
             
             srf = yop.ocp.to_srf(obj.constraints);
             [box, nbox] = yop.ocp.separate_box(srf);
             obj.set_box(box);
+            
             [odes, algs, eqs, ieqs] = yop.ocp.sort_nonbox(nbox);
-            
             obj.vectorize_ode(odes);
-            
-            obj.set_timepoint_placeholders();
-            obj.set_integral_placeholders();
-            obj.set_timepoint_functions();
-            obj.set_integral_functions();
             
             obj.equality_constraints = yop.ocp_expr.empty(1,0);
             for k=1:length(eqs)
@@ -108,8 +119,10 @@ classdef ocp < handle
                     yop.ocp_expr(ieqs{k}.lhs, is_hard(ieqs{k}));
             end
             
-            obj.compute_objective_function();
-            obj.compute_pathcon_functions();
+            obj.set_timepoint_functions(tps, ints, ders);
+            obj.set_integral_functions(tps, ints, ders);
+            obj.compute_objective_function(tps, ints, ders);
+            obj.compute_pathcon_functions(tps, ints, ders);
             
             % Error checking
             
@@ -136,7 +149,7 @@ classdef ocp < handle
             
             if strcmp(method, 'dc')
                 transcriber = ...
-                    yop.direct_collocation(intervals, degree, points);
+                    yop.direct_collocation(intervals, degree, points, obj.n_x, obj.n_u, obj.n_p);
             elseif strcmp(method, 'dms')
                 transcriber = ...
                     yop.direct_multiple_shooting(intervals, rk4_steps);
@@ -172,64 +185,56 @@ classdef ocp < handle
             obj.set_box_bounds(); % Includes processing default values
         end
         
-        function vars = find_special_nodes(obj)
-            %______________________________________________________________
-            %|YOP.OCP/FIND_SPECIAL_NODES From all problem expressions     |
-            %|finds all variables, timepoints, integrals, and derivatives.|
-            %|                                                            |
-            %| Use:                                                       |
-            %|   find_variables_timepoints_integrals(obj)                 |
-            %|   obj.find_variables_timepoints_integrals()                |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   vars - Cell array with ast_variable-s.                   |
-            %|____________________________________________________________|
+        function vars = find_problem_variables(obj, varargin)
             vars = {};
-            % The special nodes are timepoints, integrals, and derivatives.
-            % To handle nesting of the different special nodes it is
-            % necessary to keep a topological sort of the nodes. That way a
-            % derivative be evaluated at a timepoint, and a derivative to
-            % include a timepoint.
-            obj.special_nodes = yop.ocp_expr.empty(1,0);
-            obj.timepoints = yop.ocp_expr.empty(1,0);
-            obj.integrals = yop.ocp_expr.empty(1,0);
-            obj.derivatives = yop.ocp_expr.empty(1,0);
-            
-            % Hoist first iteration in order to avoid to visit the same
-            % node twice as all nodes are stored in 'visited', which is
-            % reused.
-            exprs = {obj.objective.ast, obj.constraints{:}};
-            [tsort, n_elem, visited] = topological_sort(exprs{1});
-            for n=1:n_elem
-                classify(obj, tsort{n});
-            end
-            for k=2:length(exprs)
-                [tsort,n_elem,visited]=topological_sort(exprs{k}, visited);
+            visited = [];
+            for k=1:length(varargin)
+                % Sort all nodes in expression k
+                [tsort, n_elem, visited] = ...
+                    topological_sort(varargin{k}, visited);
+                
+                % Find variables
                 for n=1:n_elem
-                    classify(obj, tsort{n});
+                    if isa(tsort{n}, 'yop.ast_variable')
+                        vars{end+1} = tsort{n};
+                    end
+                end
+            end
+        end
+        
+        function [sorted,tps,ints,ders] = find_special_nodes(obj, varargin)
+            
+            sorted = yop.ocp_expr.empty(1,0); % Topological order
+            tps = yop.ocp_expr.empty(1,0);
+            ints = yop.ocp_expr.empty(1,0);
+            ders = yop.ocp_expr.empty(1,0);
+            
+            visited = [];
+            for k=1:length(varargin)
+                % Sort all nodes
+                [tsort, n_elem, visited] = ...
+                    topological_sort(varargin{k}, visited);
+                
+                % Find special nodes, maintin topological order in sorted.
+                for n=1:n_elem
+                    if isa(tsort{n}, 'yop.ast_timepoint')
+                        sn = yop.ocp_expr(tsort{n}, yop.ocp_expr.tp);
+                        tps(end+1) = sn;
+                        sorted(end+1) = sn;
+                    elseif isa(tsort{n}, 'yop.ast_int')
+                        sn = yop.ocp_expr(tsort{n}, yop.ocp_expr.int);
+                        ints(end+1) = sn;
+                        sorted(end+1) = sn;
+                    elseif isa(tsort{n}, 'yop.ast_der')
+                        %sn = yop.ocp_expr(node, yop.ocp_expr.der);
+                        %obj.derivatives(end+1) = sn;
+                        %obj.special_nodes(end+1) = sn;
+                    end
                 end
             end
             
             function classify(obj, node)
                 % Helper function
-                if isa(node, 'yop.ast_variable')
-                    vars{end+1} = node;
-                elseif isa(node, 'yop.ast_timepoint')
-                    sn = yop.ocp_expr(node, yop.ocp_expr.tp);
-                    obj.timepoints(end+1) = sn;
-                    obj.special_nodes(end+1) = sn;
-                elseif isa(node, 'yop.ast_int')
-                    sn = yop.ocp_expr(node, yop.ocp_expr.int);
-                    obj.integrals(end+1) = sn;
-                    obj.special_nodes(end+1) = sn;
-                elseif isa(node, 'yop.ast_der')
-                    %sn = yop.ocp_expr(node, yop.ocp_expr.der);
-                    %obj.derivatives(end+1) = sn;
-                    %obj.special_nodes(end+1) = sn;
-                end
             end
         end
         
@@ -616,57 +621,57 @@ classdef ocp < handle
             obj.i2e = idx;
         end
         
-        function obj = set_timepoint_placeholders(obj)
-            %______________________________________________________________
-            %|YOP.OCP/SET_TIMEPOINT_PLACEHOLDERS Give every timepoint an  |
-            %|MX variable of the same size as the expression to represent |
-            %|its value.                                                  |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
-            %|____________________________________________________________|
-            k = 1;
-            for tp=obj.timepoints
-                if isa(tp.ast.timepoint, 'yop.ast_independent_initial')
-                    tp_text = 't0';
-                elseif isa(tp.ast.timepoint, 'yop.ast_independent_final')
-                    tp_text = 'tf';
-                else
-                    tp_text = num2str(floor(tp.ast.timepoint));
-                end
-                str = ['expr', num2str(k), '_t_eq_', tp_text];
-                tp.mx= casadi.MX.sym(str, size(tp.ast,1), size(tp.ast,2));
-                tp.sym = sym(str, size(tp.ast));
-                k = k+1;
-            end
-        end
+        %         function obj = set_timepoint_placeholders(obj, timepoints)
+        %             %______________________________________________________________
+        %             %|YOP.OCP/SET_TIMEPOINT_PLACEHOLDERS Give every timepoint an  |
+        %             %|MX variable of the same size as the expression to represent |
+        %             %|its value.                                                  |
+        %             %|                                                            |
+        %             %| Parameters:                                                |
+        %             %|   obj - Handle to the ocp.                                 |
+        %             %|                                                            |
+        %             %| Return values:                                             |
+        %             %|   obj - Handle to the ocp.                                 |
+        %             %|____________________________________________________________|
+        %             k = 1;
+        %             for tp=timepoints
+        %                 if isa(tp.ast.timepoint, 'yop.ast_independent_initial')
+        %                     tp_text = 't0';
+        %                 elseif isa(tp.ast.timepoint, 'yop.ast_independent_final')
+        %                     tp_text = 'tf';
+        %                 else
+        %                     tp_text = num2str(floor(tp.ast.timepoint));
+        %                 end
+        %                 str = ['expr', num2str(k), '_t_eq_', tp_text];
+        %                 tp.mx = casadi.MX.sym(str, size(tp.ast,1), size(tp.ast,2));
+        %                 tp.sym = sym(str, size(tp.ast));
+        %                 k = k+1;
+        %             end
+        %         end
         
-        function obj = set_integral_placeholders(obj)
-            %______________________________________________________________
-            %|YOP.OCP/SET_INTEGRAL_PLACEHOLDERS Give every integral an MX |
-            %|variable of the same size as the expression to represent    |
-            %|its value.                                                  |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
-            %|____________________________________________________________|
-            k = 1;
-            for int=obj.integrals
-                str = ['int', num2str(k)];
-                int.mx =casadi.MX.sym(str,size(int.ast,1),size(int.ast,2));
-                int.sym = sym(str, size(int.ast));
-                k = k+1;
-            end
-        end
+        %         function obj = set_integral_placeholders(obj, integrals)
+        %             %______________________________________________________________
+        %             %|YOP.OCP/SET_INTEGRAL_PLACEHOLDERS Give every integral an MX |
+        %             %|variable of the same size as the expression to represent    |
+        %             %|its value.                                                  |
+        %             %|                                                            |
+        %             %| Parameters:                                                |
+        %             %|   obj - Handle to the ocp.                                 |
+        %             %|                                                            |
+        %             %| Return values:                                             |
+        %             %|   obj - Handle to the ocp.                                 |
+        %             %|____________________________________________________________|
+        %             k = 1;
+        %             for int=integrals
+        %                 str = ['int', num2str(k)];
+        %                 int.mx=casadi.MX.sym(str,size(int.ast,1),size(int.ast,2));
+        %                 int.sym = sym(str, size(int.ast));
+        %                 k = k+1;
+        %             end
+        %         end
         
-        function obj = set_timepoint_functions(obj)
-            %______________________________________________________________
+        function obj = set_timepoint_functions(obj, tps, ints, ders)
+            %______________________________________________________________!!!!!!!!!!UPDATE!!!!!!!!!!!
             %|YOP.OCP/SET_TIMEPOINT_FUNCTIONS Compute mx function         |
             %|objects for the timepoint expressions.                      |
             %|                                                            |
@@ -676,13 +681,14 @@ classdef ocp < handle
             %| Return values:                                             |
             %|   obj - Handle to the ocp.                                 |
             %|____________________________________________________________|
-            for tp = obj.timepoints
-                tp.fn = obj.mx_function_object(tp.ast.expr);
+            for tp = tps
+                tp.fn = ...
+                    obj.mx_function_object(tp.ast.expr, tps, ints, ders);
             end
         end
         
-        function obj = set_integral_functions(obj)
-            %______________________________________________________________
+        function obj = set_integral_functions(obj, tps, ints, ders)
+            %______________________________________________________________!!!!!!!!!!UPDATE!!!!!!!!!!!
             %|YOP.OCP/SET_INTEGRAL_FUNCTIONS Compute mx function          |
             %|objects for the integral expressions.                       |
             %|                                                            |
@@ -692,13 +698,14 @@ classdef ocp < handle
             %| Return values:                                             |
             %|   obj - Handle to the ocp.                                 |
             %|____________________________________________________________|
-            for int = obj.integrals
-                int.fn = obj.mx_function_object(int.ast.expr);
+            for int = ints
+                int.fn = ...
+                    obj.mx_function_object(int.ast.expr, tps, ints, ders);
             end
         end
         
-        function obj = compute_objective_function(obj)
-            %______________________________________________________________
+        function obj = compute_objective_function(obj, tps, ints, ders)
+            %______________________________________________________________!!!!!!!!!!UPDATE!!!!!!!!!!!
             %|YOP.OCP/COMPUTE_OBJECTIVE_FUNCTION Compute mx function      |
             %|object for the objective function.                          |
             %|                                                            |
@@ -708,11 +715,12 @@ classdef ocp < handle
             %| Return values:                                             |
             %|   obj - Handle to the ocp.                                 |
             %|____________________________________________________________|
-            obj.objective.fn = obj.mx_function_object(obj.objective.ast);
+            obj.objective.fn = ...
+                obj.mx_function_object(obj.objective.ast, tps, ints, ders);
         end
         
-        function obj = compute_pathcon_functions(obj)
-            %______________________________________________________________
+        function obj = compute_pathcon_functions(obj, tps, ints, ders)
+            %______________________________________________________________!!!!!!!!!!UPDATE!!!!!!!!!!!
             %|YOP.OCP/COMPUTE_PATHCON_FUNCTION Compute mx function        |
             %|objects for the path constraints.                           |
             %|                                                            |
@@ -726,7 +734,7 @@ classdef ocp < handle
                 % Only computes the function for the lhs as the constraint
                 % is canonicalized, and we then want to remove the
                 % relation.
-                pc.fn = obj.mx_function_object(pc.ast);
+                pc.fn = obj.mx_function_object(pc.ast, tps, ints, ders);
             end
         end
         
@@ -838,29 +846,29 @@ classdef ocp < handle
                 obj.parameters(:).'];
         end
         
-        function obj = set_mx(obj)
-            %______________________________________________________________
-            %|YOP.OCP/SET_MX Set all OCP variables to their mx value.     |
-            %|                                                            |
-            %| Use:                                                       |
-            %|   set_mx(obj)                                              |
-            %|   obj.set_mx()                                             |
-            %|                                                            |
-            %| Description:                                               |
-            %|   In order to get MX expressions for AST expressions it is |
-            %|   necessary to set the value of all expression variables   |
-            %|   to MX, which is done by this function.                   |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
-            %|____________________________________________________________|
-            obj.variables.set_mx();
-            obj.timepoints.set_mx();
-            obj.integrals.set_mx();
-        end
+        %         function obj = set_mx(obj)
+        %             %______________________________________________________________
+        %             %|YOP.OCP/SET_MX Set all OCP variables to their mx value.     |
+        %             %|                                                            |
+        %             %| Use:                                                       |
+        %             %|   set_mx(obj)                                              |
+        %             %|   obj.set_mx()                                             |
+        %             %|                                                            |
+        %             %| Description:                                               |
+        %             %|   In order to get MX expressions for AST expressions it is |
+        %             %|   necessary to set the value of all expression variables   |
+        %             %|   to MX, which is done by this function.                   |
+        %             %|                                                            |
+        %             %| Parameters:                                                |
+        %             %|   obj - Handle to the ocp.                                 |
+        %             %|                                                            |
+        %             %| Return values:                                             |
+        %             %|   obj - Handle to the ocp.                                 |
+        %             %|____________________________________________________________|
+        %             obj.variables.set_mx();
+        %             obj.timepoints.set_mx();
+        %             obj.integrals.set_mx();
+        %         end
         
         function [tt, xx, uu, pp] = mx_parameter_list(obj)
             %______________________________________________________________
@@ -888,9 +896,9 @@ classdef ocp < handle
             pp = obj.parameters.mx_vec();
         end
         
-        function fn = mx_function_object(obj, expr)
+        function fn = mx_function_object(obj, expr, tps, ints, ders)
             %______________________________________________________________
-            %|YOP.OCP/MX_FUNCTION_OBJECT Compute function object from     |
+            %|YOP.OCP/MX_FUNCTION_OBJECT Compute function object from     |!!!!!!!!!!!UPDATE!!!!!!!!!!!!!
             %|expression with the parameter list (t,x,u,p,tps,ints).      |
             %|                                                            |
             %| Use:                                                       |
@@ -928,14 +936,17 @@ classdef ocp < handle
             %|        ones are set to empty: []) computes 'expr'.         |
             %|____________________________________________________________|
             [tt, xx, uu, pp] = obj.mx_parameter_list();
-            tps = obj.timepoints.mx_vec();
-            ints = obj.integrals.mx_vec();
-            args = {tt,xx,uu,pp,tps,ints};
+            tpv = tps.mx_vec();
+            intv = ints.mx_vec();
+            args = {tt,xx,uu,pp,tpv,intv};
             
             % Since we are seeking an MX expression, all ast_variable in
             % the ocp set their values to MX. Otherwise fw_eval could
             % result in anything.
-            obj.set_mx();
+            obj.variables.set_mx();
+            tps.set_mx();
+            ints.set_mx();
+            ders.set_mx();
             
             % First a function object is created that maps the expression
             % to variables in the order they appear in the state variable
@@ -952,7 +963,7 @@ classdef ocp < handle
             % parameters in the function call. It could just as well have
             % been other mx variables with the same dimensions, so do not
             % be confused by the reuse of variable.
-            outer_expr = {innr_fn(tt, xx(obj.i2e), uu, pp, tps, ints)};
+            outer_expr = {innr_fn(tt, xx(obj.i2e), uu, pp, tpv, intv)};
             fn = casadi.Function('o', args, outer_expr);
         end
         
@@ -999,7 +1010,7 @@ classdef ocp < handle
             % Since we are seeking an MX expression, all ast_variable in
             % the ocp set their values to MX. Otherwise fw_eval could
             % result in anything.
-            obj.set_mx();
+            obj.variables.set_mx();
             
             % First a function object is created that maps the expression
             % to variables in the order they appear in the state variable
@@ -1433,95 +1444,95 @@ classdef ocp < handle
     %% Transcription
     methods
         
-        function n = n_x(obj)
-            %___________________________________________________
-            %|YOP.OCP/N_X Get the number of states in the OCP. |
-            %|                                                 |
-            %| Use:                                            |
-            %|   n = n_x(obj)                                  |
-            %|   n = obj.n_x()                                 |
-            %|   n = obj.n_x                                   |
-            %|                                                 |
-            %| Parameters:                                     |
-            %|   obj - A handle to the ocp.                    |
-            %|                                                 |
-            %| Return values:                                  |
-            %|   n - The number of states.                     |
-            %|_________________________________________________|
-            n = numel(obj.states.mx_vec);
-        end
+        %         function n = n_x(obj)
+        %             %___________________________________________________
+        %             %|YOP.OCP/N_X Get the number of states in the OCP. |
+        %             %|                                                 |
+        %             %| Use:                                            |
+        %             %|   n = n_x(obj)                                  |
+        %             %|   n = obj.n_x()                                 |
+        %             %|   n = obj.n_x                                   |
+        %             %|                                                 |
+        %             %| Parameters:                                     |
+        %             %|   obj - A handle to the ocp.                    |
+        %             %|                                                 |
+        %             %| Return values:                                  |
+        %             %|   n - The number of states.                     |
+        %             %|_________________________________________________|
+        %             n = numel(obj.states.mx_vec);
+        %         end
         
-        function n = n_u(obj)
-            %___________________________________________________________
-            %|YOP.OCP/N_U Get the number of control inputs in the OCP. |
-            %|                                                         |
-            %| Use:                                                    |
-            %|   n = n_u(obj)                                          |
-            %|   n = obj.n_u()                                         |
-            %|   n = obj.n_u                                           |
-            %|                                                         |
-            %| Parameters:                                             |
-            %|   obj - A handle to the ocp.                            |
-            %|                                                         |
-            %| Return values:                                          |
-            %|   n - The number of control inputs.                     |
-            %|_________________________________________________________|
-            n = numel(obj.controls.mx_vec);
-        end
+        %         function n = n_u(obj)
+        %             %___________________________________________________________
+        %             %|YOP.OCP/N_U Get the number of control inputs in the OCP. |
+        %             %|                                                         |
+        %             %| Use:                                                    |
+        %             %|   n = n_u(obj)                                          |
+        %             %|   n = obj.n_u()                                         |
+        %             %|   n = obj.n_u                                           |
+        %             %|                                                         |
+        %             %| Parameters:                                             |
+        %             %|   obj - A handle to the ocp.                            |
+        %             %|                                                         |
+        %             %| Return values:                                          |
+        %             %|   n - The number of control inputs.                     |
+        %             %|_________________________________________________________|
+        %             n = numel(obj.controls.mx_vec);
+        %         end
         
-        function n = n_p(obj)
-            %____________________________________________________________
-            %|YOP.OCP/N_P Get the number of free parameters in the OCP. |
-            %|                                                          |
-            %| Use:                                                     |
-            %|   n = n_p(obj)                                           |
-            %|   n = obj.n_p()                                          |
-            %|   n = obj.n_p                                            |
-            %|                                                          |
-            %| Parameters:                                              |
-            %|   obj - A handle to the ocp.                             |
-            %|                                                          |
-            %| Return values:                                           |
-            %|   n - The number of free parameters.                     |
-            %|__________________________________________________________|
-            n = numel(obj.parameters.mx_vec);
-        end
+        %         function n = n_p(obj)
+        %             %____________________________________________________________
+        %             %|YOP.OCP/N_P Get the number of free parameters in the OCP. |
+        %             %|                                                          |
+        %             %| Use:                                                     |
+        %             %|   n = n_p(obj)                                           |
+        %             %|   n = obj.n_p()                                          |
+        %             %|   n = obj.n_p                                            |
+        %             %|                                                          |
+        %             %| Parameters:                                              |
+        %             %|   obj - A handle to the ocp.                             |
+        %             %|                                                          |
+        %             %| Return values:                                           |
+        %             %|   n - The number of free parameters.                     |
+        %             %|__________________________________________________________|
+        %             n = numel(obj.parameters.mx_vec);
+        %         end
         
-        function n = n_tp(obj)
-            %________________________________________________________
-            %|YOP.OCP/N_TP Get the number of timepoints in the OCP. |
-            %|                                                      |
-            %| Use:                                                 |
-            %|   n = n_tp(obj)                                      |
-            %|   n = obj.n_tp()                                     |
-            %|   n = obj.n_tp                                       |
-            %|                                                      |
-            %| Parameters:                                          |
-            %|   obj - A handle to the ocp.                         |
-            %|                                                      |
-            %| Return values:                                       |
-            %|   n - The number of timepoints.                      |
-            %|______________________________________________________|
-            n = numel(obj.timepoints.mx_vec);
-        end
+        %         function n = n_tp(obj)
+        %             %________________________________________________________
+        %             %|YOP.OCP/N_TP Get the number of timepoints in the OCP. |
+        %             %|                                                      |
+        %             %| Use:                                                 |
+        %             %|   n = n_tp(obj)                                      |
+        %             %|   n = obj.n_tp()                                     |
+        %             %|   n = obj.n_tp                                       |
+        %             %|                                                      |
+        %             %| Parameters:                                          |
+        %             %|   obj - A handle to the ocp.                         |
+        %             %|                                                      |
+        %             %| Return values:                                       |
+        %             %|   n - The number of timepoints.                      |
+        %             %|______________________________________________________|
+        %             n = numel(obj.timepoints.mx_vec);
+        %         end
         
-        function n = n_int(obj)
-            %________________________________________________________
-            %|YOP.OCP/N_INT Get the number of integrals in the OCP. |
-            %|                                                      |
-            %| Use:                                                 |
-            %|   n = n_int(obj)                                     |
-            %|   n = obj.n_int()                                    |
-            %|   n = obj.n_int                                      |
-            %|                                                      |
-            %| Parameters:                                          |
-            %|   obj - A handle to the ocp.                         |
-            %|                                                      |
-            %| Return values:                                       |
-            %|   n - The number of integrals.                       |
-            %|______________________________________________________|
-            n = numel(obj.integrals.mx_vec);
-        end
+        %         function n = n_int(obj)
+        %             %________________________________________________________
+        %             %|YOP.OCP/N_INT Get the number of integrals in the OCP. |
+        %             %|                                                      |
+        %             %| Use:                                                 |
+        %             %|   n = n_int(obj)                                     |
+        %             %|   n = obj.n_int()                                    |
+        %             %|   n = obj.n_int                                      |
+        %             %|                                                      |
+        %             %| Parameters:                                          |
+        %             %|   obj - A handle to the ocp.                         |
+        %             %|                                                      |
+        %             %| Return values:                                       |
+        %             %|   n - The number of integrals.                       |
+        %             %|______________________________________________________|
+        %             n = numel(obj.integrals.mx_vec);
+        %         end
         
         function dx = ode(obj, t, x, u, p)
             dx = obj.differential_equation.fn(t,x,u,p);

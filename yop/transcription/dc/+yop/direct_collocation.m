@@ -12,10 +12,11 @@ classdef direct_collocation < handle
         p
     end
     methods
-        function obj = direct_collocation(ivals, polydeg, points)
+        function obj = direct_collocation(ivals, polydeg, points, n_x, n_u, n_p)
             obj.ivals = ivals;
             obj.points = points;
             obj.polydeg = polydeg;
+            obj.build_vars(n_x, n_u, n_p);
         end
         
         function [t, x, u, p, tx] = to_numeric(obj, w)
@@ -51,7 +52,6 @@ classdef direct_collocation < handle
         end
         
         function nlp = transcribe(obj, ocp)
-            obj.build_vars(ocp);
             [w_lb, w_ub] = obj.set_box_bnd(ocp);
             
             c = obj.discretize_ode(ocp);
@@ -73,7 +73,7 @@ classdef direct_collocation < handle
             nlp.h_lb = -inf(size(h));
         end
         
-        function obj = build_vars(obj, ocp)
+        function obj = build_vars(obj, n_x, n_u, n_p)
            obj.tau = [0, ...
                casadi.collocation_points(obj.polydeg, obj.points)];
            
@@ -90,16 +90,16 @@ classdef direct_collocation < handle
            
            % State
            obj.x = yop.collocated_state( ...
-               'x', ocp.n_x, obj.N, obj.d, obj.points);
+               'x', n_x, obj.N, obj.d, obj.points);
            
            % Control
            obj.u = cell(obj.N, 1);
            for n=1:obj.N
-               obj.u{n} = casadi.MX.sym(['u_', num2str(n)], ocp.n_u);
+               obj.u{n} = casadi.MX.sym(['u_', num2str(n)], n_u);
            end
            
            % Parameter
-           obj.p = casadi.MX.sym('p', ocp.n_p);
+           obj.p = casadi.MX.sym('p', n_p);
         end
         
         function [w_lb, w_ub] = set_box_bnd(obj, ocp)
@@ -209,18 +209,16 @@ classdef direct_collocation < handle
         
         function g = parameterize_equality(obj, ocp, tps, ints)
             g = [];
-            for k=1:length(ocp.equality_constraints)
-                g_k = obj.parameterize_expression( ...
-                    ocp.equality_constraints(k), tps, ints);
+            for eq_k=1:length(ocp.equality_constraints)
+                g_k = obj.parameterize_expression(eq_k, tps, ints);
                 g = [g; g_k(:)];
             end
         end
         
         function h = parameterize_inequality(obj, ocp, tps, ints)
             h = [];
-            for k=1:length(ocp.inequality_constraints)
-                h_k = obj.parameterize_expression( ...
-                    ocp.inequality_constraints(k), tps, ints);
+            for ieq_k=ocp.inequality_constraints
+                h_k = obj.parameterize_expression(ieq_k, tps, ints);
                 h = [h; h_k(:)];
             end
         end

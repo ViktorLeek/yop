@@ -9,7 +9,7 @@ ocp.st( ...
     der(x) == -sin(x) + u, ...
     x(t0)==1, x(tf)==0, ...
     int(u^2) == 10, ...
-    -10 <= x <= 10, ...
+    -10 <= x <= @(t) expr(t), ...
     -4 <= u <= 4 ...
     );
 [sol, dms] = ocp.present.solve(100, 4);
@@ -28,6 +28,15 @@ subplot(211); hold on;
 plot(t_sol, x_sol(:,1))
 subplot(212); hold on;
 stairs(t_sol, [u_sol; nan])
+
+%%
+[t,t0,tf] = yop.time();
+x = yop.state();
+
+expr = der(x * x(t==2) / x(t0) + int(x^2) );
+expr(t==3) <= 2;
+int(expr) == 10;
+
 
 %%
 [t,t0,tf] = yop.time();

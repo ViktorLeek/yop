@@ -17,6 +17,16 @@ classdef ocp_expr < handle
                     obj.is_hard = aux;
                 end
             end
+            sz = size(expr);
+            obj.mx = casadi.MX.sym('expr', sz(1), sz(2));
+            obj.sym = sym('expr', sz);
+        end
+        
+        function n = n_elem(obj)
+            n = 0;
+            for k=1:length(obj)
+                n = n + prod(size(obj(k).ast));
+            end
         end
         
         function obj = set_sym(obj)

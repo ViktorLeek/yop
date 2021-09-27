@@ -26,6 +26,13 @@ classdef ocp_var < handle
             obj.lbf = nan(size(var));
         end
         
+        function n = n_elem(obj)
+            n = 0;
+            for k=1:length(obj)
+                n = n + prod(size(obj(k).var));
+            end
+        end
+        
         function obj = set_value(obj, value)
             obj.var.m_value = value;
         end

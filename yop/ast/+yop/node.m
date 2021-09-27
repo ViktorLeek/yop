@@ -32,7 +32,6 @@ classdef node < handle
         function value = fw_eval(expr)
             % FW_EVAL - Forward evaluate
             [sort, K] = topological_sort(expr);
-            
             for k=1:(K-1)
                 forward(sort{k});
             end
