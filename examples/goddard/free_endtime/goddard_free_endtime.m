@@ -20,10 +20,10 @@ ocp.st( ...
     0 <= rocket.fuel_mass_flow <= 9.5 ...
     );
 
-[sol, nlp] = ocp.solve('intervals', 50);
+[sol, nlp] = ocp.solve('intervals', 100);
 
 %%
-expr = yop.ocp_expr(t);
+expr = yop.ocp_expr(int(x(1)));
 
 [vars, tps, ints, ders, sn] = yop.ocp.find_special_nodes(expr.ast);
 
@@ -67,9 +67,112 @@ f = casadi.Function('f', {nlp.w}, {disc});
 num = full(f(sol.x))
 
 %%
+
+time = casadi.Function('t', {nlp.w}, {mat(nlp.t)});
+tt = full(time(sol.x));
+
+state = casadi.Function('x', {nlp.w}, {mat(nlp.x)});
+xx = full(state(sol.x));
+
+control = casadi.Function('u', {nlp.w}, {mat(nlp.u)});
+uu = full(control(sol.x));
+
+parameter = casadi.Function('p', {nlp.w}, {nlp.p});
+pp = full(parameter(sol.x));
+
+tlp = yop.collocated_time(tt(1), tt(end), nlp.N);
+
+y = cell(nlp.N+1,1);
+for n=1:nlp.N
+    y{n} = xx(:, (nlp.d+1)*n-nlp.d:(nlp.d+1)*n);
+end
+y{nlp.N+1} = xx(:,end);
+xlp = yop.collocated_expression(nlp.N, nlp.tau, y);
+
+y = cell(nlp.N+1,1);
+for n=1:nlp.N
+    y{n} = uu(:, n);
+end
+y{nlp.N+1} = uu(:,end);
+ulp = yop.collocated_expression(nlp.N, 0, y);
+
+expr = yop.ocp_expr([t; x; u]);
+% expr = yop.ocp_expr(at(t==10, x(3)));
+
+[vars, tps, ints, ders, sn] = yop.ocp.find_special_nodes(expr.ast);
+
+args = { ...
+    mx_vec(ocp.independent), ...
+    mx_vec(ocp.states), ...
+    mx_vec(ocp.controls), ...
+    mx_vec(ocp.parameters), ...
+    mx_vec(tps), ...
+    mx_vec(ints), ...
+    mx_vec(ders) ...
+    };
+
+set_mx(ocp.variables);
+set_mx([tps, ints, ders]);
+
+for node = [tps, ints, ders]
+    mx_expr = fw_eval(node.ast.expr);
+    node.fn = casadi.Function('fn', args, {mx_expr});
+end
+
+expr.fn = casadi.Function('fn', args, {fw_eval(expr.ast)});
+
+[tpv, intv] = yop.param_special_nodes(sn, n_elem(tps), n_elem(ints), ...
+    nlp.N, nlp.tau, nlp.dt, full(sol.x(1)), full(sol.x(2)), nlp.t, nlp.x, nlp.u, nlp.p);
+
+tpf = casadi.Function('f', {nlp.w}, {tpv});
+intf = casadi.Function('f', {nlp.w}, {intv});
+
+TP = tpf(sol.x);
+I = intf(sol.x);
+
+if expr.is_transcription_invariant
+    v = expr.fn( ...
+        tlp(1).evaluate(0), ...
+        xlp(1).evaluate(0), ...
+        ulp(1).evaluate(0), ...
+        pp, TP, I, []);
+else
+    pnts = 25;
+    grid = linspace(tlp(1).evaluate(0), tlp(end).evaluate(0), pnts);
+    v = [];
+    for tp=grid
+        vk = expr.fn( ...
+            tlp.value(tp, tlp(1).evaluate(0), tlp(end).evaluate(0)), ...
+            xlp.value(tp, tlp(1).evaluate(0), tlp(end).evaluate(0)), ...
+            ulp.value(tp, tlp(1).evaluate(0), tlp(end).evaluate(0)), ...
+            pp, TP, I, []);
+        v = [v, vk];
+    end
+end
+V = full(v);
+%%
 figure(1);
-% subplot(211); hold on
-plot(sol.value(t), sol.value(x))
+subplot(411); hold on
+plot(V(1,:), V(2,:))
+subplot(412); hold on
+plot(V(1,:), V(3,:))
+subplot(413); hold on
+plot(V(1,:), V(4,:))
+subplot(414); hold on
+stairs(V(1,:), V(5,:))
+
+%%
+figure(1);
+subplot(411); hold on
+plot(V(1,:), V(2,:), 'x')
+subplot(412); hold on
+plot(V(1,:), V(3,:), 'x')
+subplot(413); hold on
+plot(V(1,:), V(4,:), 'x')
+subplot(414); hold on
+stairs(V(1,:), V(5,:), 'x')
+
+% plot(sol.value(t), sol.value(x))
 % subplot(212); hold on
 % stairs(sol.value(t), sol.value(u))
 %%
