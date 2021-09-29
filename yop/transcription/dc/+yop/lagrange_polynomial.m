@@ -259,7 +259,7 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             % -- Examples --
             %    d = lp.degree
             %    d = degree(lp)
-            
+
             deg = size(obj.x, 2)-1;
         end
         

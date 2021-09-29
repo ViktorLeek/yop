@@ -3,7 +3,7 @@ classdef settings < handle
         m_warnings = true
     end
     methods
-        function obj = settings(obj)
+        function obj = settings()
             persistent OBJ
             if isempty(OBJ)
                 OBJ = obj;

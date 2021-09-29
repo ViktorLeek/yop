@@ -14,36 +14,17 @@ classdef ocp < handle
         controls
         parameters
         
-        differential_equation
+        ode
         special_nodes
-        
-        n_x
-        n_u
-        n_p
-        n_tp
-        n_int
-        n_der
+        timepoints
+        integrals
         
         equality_constraints
         inequality_constraints
-        
-        % Permutation of the state vector:
-        e2i        % Go from the order in which the states are found to how
-                   % the are orderered in the dynamics. This is the
-                   % internal order, becuase then it makes senso to do
-                   % dx + x, which is used by the explicit rk integrators.
-        
-        i2e        % Go from how they are ordered in the derivative vector
-                   % to the order in which the states are found. This is
-                   % the order that is obtained by the formulation of the
-                   % problem and is generally random. Here it is possible
-                   % that the state variables are found in a different
-                   % order than their derivatives, so it does not makes
-                   % sense to use this order internally.
     end
     
     properties (Hidden)
-        built = false;
+        %         built = false;
     end
     
     %% Formulate ocp
@@ -76,29 +57,50 @@ classdef ocp < handle
     %% Analyze user input, and build canonical form
     methods
         
-        function obj = build(obj)
+        function [sol, nlp] = solve(obj, varargin)
+            ip = inputParser();
+            ip.FunctionName = "yop.ocp/solve";
+            ip.addParameter('intervals', yop.defaults.control_invervals);
+            ip.addParameter('degree', yop.defaults.polynomial_degree);
+            ip.addParameter('points', yop.defaults.collocation_points);
+            ip.parse(varargin{:});
             
-            if obj.built
-                return;
-            end
+            N  = ip.Results.intervals;
+            d  = ip.Results.degree;
+            cp = ip.Results.points;
             
-            % Need to do this first in order to add potential augmenting
-            % equations.
-            [sorted, tps, ints, ders] = obj.find_special_nodes( ...
+            obj.to_canonical();
+            
+            nlp = yop.direct_collocation(obj, N, d, cp);
+            
+            solver = casadi.nlpsol( ...
+                'solver', ...
+                'ipopt', ...
+                struct('f', nlp.J, 'x', nlp.w, 'g', [nlp.g; nlp.h]) ...
+                );
+            
+            w0 = ones(size(nlp.w));
+            sol = solver( ...
+                'x0', w0, ...
+                'lbx', nlp.w_lb, ...
+                'ubx', nlp.w_ub, ...
+                'ubg', [nlp.g_ub; nlp.h_ub], ...
+                'lbg', [nlp.g_lb; nlp.h_lb] ...
+                );
+            
+            
+            
+        end
+        
+        function obj = to_canonical(obj)
+            
+            [vars, tps, ints, ders, sn] = yop.ocp.find_special_nodes(...
                 obj.objective.ast, obj.constraints{:});
-            obj.special_nodes = sorted;
-            obj.n_tp = n_elem(tps);
-            obj.n_int = n_elem(ints);
-            obj.n_der = n_elem(ders);
+            obj.timepoints = tps;
+            obj.integrals = ints;
+            obj.special_nodes = sn;
             
-            % Find all variables from the relations and expressions that
-            % make up the problem
-            vars = obj.find_problem_variables( ...
-                obj.objective.ast, obj.constraints{:});
             obj.classify_variables(vars);
-            obj.n_x = n_elem(obj.states);
-            obj.n_u = n_elem(obj.controls);
-            obj.n_p = n_elem(obj.parameters);
             
             srf = yop.ocp.to_srf(obj.constraints);
             [box, nbox] = yop.ocp.separate_box(srf);
@@ -119,124 +121,186 @@ classdef ocp < handle
                     yop.ocp_expr(ieqs{k}.lhs, is_hard(ieqs{k}));
             end
             
-            obj.set_timepoint_functions(tps, ints, ders);
-            obj.set_integral_functions(tps, ints, ders);
-            obj.compute_objective_function(tps, ints, ders);
-            obj.compute_pathcon_functions(tps, ints, ders);
+            obj.set_ode_function();
+            obj.set_special_functions(tps, ints, ders);
+            obj.set_objective_function(tps, ints, ders);
+            obj.set_pathcon_functions(tps, ints, ders);
             
-            % Error checking
-            
-            obj.built = true;
+            % Error/semantic checking
         end
         
-        function [t, x, u, p, tx] = solve(obj, varargin)
-            ip = inputParser();
-            ip.FunctionName = "yop.ocp/solve";
-            ip.addParameter('method', 'dc');
-            ip.addParameter('intervals', yop.defaults.control_invervals);
-            ip.addParameter('degree', yop.defaults.polynomial_degree);
-            ip.addParameter('points', yop.defaults.collocation_points);
-            ip.addParameter('rk4_steps', yop.defaults.rk4_steps);
-            ip.parse(varargin{:});
-            
-            obj.build();
-            
-            method = ip.Results.method;
-            intervals = ip.Results.intervals;
-            degree = ip.Results.degree;
-            points = ip.Results.points;
-            rk4_steps = ip.Results.rk4_steps;
-            
-            if strcmp(method, 'dc')
-                transcriber = ...
-                    yop.direct_collocation(intervals, degree, points, obj.n_x, obj.n_u, obj.n_p);
-            elseif strcmp(method, 'dms')
-                transcriber = ...
-                    yop.direct_multiple_shooting(intervals, rk4_steps);
-            else
-                error();
+        function obj = vectorize_ode(obj, odes)
+            %______________________________________________________________
+            %|YOP.OCP/VECTORIZE_ODE Vectorize all ODEs and set default    |
+            %|odes for states that are not bound by an ode.               |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   vectorize_ode(obj, odes)                                 |
+            %|   obj.vectorize_ode(odes)                                  |
+            %|                                                            |
+            %| Description:                                               |
+            %|   Analyzes which of the state elements the reaches the ode |
+            %|   rhs: der(var) == expr. The elements of the entire state  |
+            %|   vector that does not reach is given the default          |
+            %|   derivative: der(var) == 0.                               |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|   odes - Cell array with canonicalized ODEs.               |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
+            ode_var = []; ode_expr = [];
+            for k=1:length(odes)
+                ode_var = [ode_var(:); odes{k}.lhs(:)];
+                ode_expr = [ode_expr(:); odes{k}.rhs(:)];
             end
             
-            nlp = transcriber.transcribe(obj);
+            % Analyze the elements that reaches the ode rhs: ode(var)==...
+            % The purpose is to set the ode of those that does not reach to
+            % zero. re - reaching elements, nr - not reaching
+            [re, nr] = obj.reaching_states(ode_var);
             
-            w0 = ones(size(nlp.w));
-            prob = struct('f', nlp.J, 'x', nlp.w, 'g', [nlp.g; nlp.h]);
-            solver = casadi.nlpsol('solver', 'ipopt', prob);
-            sol = solver( ...
-                'x0', w0, ...
-                'lbx', nlp.w_lb, ...
-                'ubx', nlp.w_ub, ...
-                'ubg', [nlp.g_ub; nlp.h_ub], ...
-                'lbg', [nlp.g_lb; nlp.h_lb] ...
-                );
-            if method == "dc"
-                [t, x, u, p, tx] = transcriber.to_numeric(sol.x);
-            else
-                tx = [];
-                [t, x, u, p] = transcriber.to_numeric(sol.x);
-            end
-        end
-        
-        function obj = set_box(obj, box)
-            [box_t, box_t0, box_tf] = yop.ocp.timed_box(box);
-            obj.parse_box(box_t, 'lb', 'ub');
-            obj.parse_box(box_t0, 'lb0', 'ub0');
-            obj.parse_box(box_tf, 'lbf', 'ubf');
-            obj.set_box_bounds(); % Includes processing default values
-        end
-        
-        function vars = find_problem_variables(obj, varargin)
-            vars = {};
-            visited = [];
-            for k=1:length(varargin)
-                % Sort all nodes in expression k
-                [tsort, n_elem, visited] = ...
-                    topological_sort(varargin{k}, visited);
-                
-                % Find variables
-                for n=1:n_elem
-                    if isa(tsort{n}, 'yop.ast_variable')
-                        vars{end+1} = tsort{n};
-                    end
-                end
-            end
-        end
-        
-        function [sorted,tps,ints,ders] = find_special_nodes(obj, varargin)
-            
-            sorted = yop.ocp_expr.empty(1,0); % Topological order
-            tps = yop.ocp_expr.empty(1,0);
-            ints = yop.ocp_expr.empty(1,0);
-            ders = yop.ocp_expr.empty(1,0);
-            
-            visited = [];
-            for k=1:length(varargin)
-                % Sort all nodes
-                [tsort, n_elem, visited] = ...
-                    topological_sort(varargin{k}, visited);
-                
-                % Find special nodes, maintin topological order in sorted.
-                for n=1:n_elem
-                    if isa(tsort{n}, 'yop.ast_timepoint')
-                        sn = yop.ocp_expr(tsort{n}, yop.ocp_expr.tp);
-                        tps(end+1) = sn;
-                        sorted(end+1) = sn;
-                    elseif isa(tsort{n}, 'yop.ast_int')
-                        sn = yop.ocp_expr(tsort{n}, yop.ocp_expr.int);
-                        ints(end+1) = sn;
-                        sorted(end+1) = sn;
-                    elseif isa(tsort{n}, 'yop.ast_der')
-                        %sn = yop.ocp_expr(node, yop.ocp_expr.der);
-                        %obj.derivatives(end+1) = sn;
-                        %obj.special_nodes(end+1) = sn;
+            % Test if some of the elements do not reach
+            for k=1:length(re)
+                if numel(re(k).enum) ~= numel(re(k).reaching)
+                    [~, idx] = setdiff(re(k).enum, re(k).reaching);
+                    vk = re(k).var(idx);
+                    ode_var = [ode_var(:); vk(:)];
+                    ode_expr = [ode_expr(:); zeros(size(vk(:)))];
+                    
+                    if yop.settings.warnings
+                        warning(yop.msg.default_der(vk.name));
                     end
                 end
             end
             
-            function classify(obj, node)
-                % Helper function
+            % Entire variable do not reach, set default ode for all
+            for k=1:length(nr)
+                vk = nr(k).var;
+                ode_var = [ode_var(:); vk(:)];
+                ode_expr = [ode_expr(:); zeros(size(vk(:)))];
+                
+                if yop.settings.warnings
+                    warning(yop.msg.default_der(vk.name));
+                end
+            end
+            
+            i2e = obj.compute_permutation_vector(ode_var);
+            
+            ast = yop.ast_eq(ode_var(i2e), ode_expr(i2e));
+            obj.ode = yop.ocp_rel(ast);
+        end
+        
+        function [i2e, e2i] = compute_permutation_vector(obj, ode_var)
+            %______________________________________________________________!!!!!!UPDATE!!!!!
+            %|YOP.OCP/COMPUTE_PERMUTATION_VECTOR Computes the vector that |
+            %|permutes the state vector in such a way that the vector     |
+            %|elemnts appear in the same order as they to in the state    |
+            %|derivative.                                                 |
+            %|                                                            |
+            %| Use:                                                       |
+            %|   compute_permutation_vector(obj, ode_var)                 |
+            %|   obj.compute_permutation_vector(ode_var)                  |
+            %|                                                            |
+            %| Description:                                               |
+            %|   Because the integration methods might add state and      |
+            %|   deriative in order to compute the next step, it is       |
+            %|   important that elements appear in the same order in the  |
+            %|   state variable vector as in the state derivative vector. |
+            %|   Yop solves that by computing two permutation vectors.    |
+            %|   One maps from external to internal representation (e2i)  |
+            %|   and one maps from internal to external representation    |
+            %|   (i2e). External representation could be any order and is |
+            %|   simply the order in which the states are detected.       |
+            %|   Internal order is also random to some degree since it    |
+            %|   might depend on the order in which odes are detected.    |
+            %|   Nevertheless, it is necessary to work with only one      |
+            %|   representation internally, which is why yop computes     |
+            %|   these permutation vectors.                               |
+            %|                                                            |
+            %| Parameters:                                                |
+            %|   obj - Handle to the ocp.                                 |
+            %|   ode_var - AST expression for the variables as they       |
+            %|             appear in the ODE.                             |
+            %|                                                            |
+            %| Return values:                                             |
+            %|   obj - Handle to the ocp.                                 |
+            %|____________________________________________________________|
+            [~, ~, output_idx] = obj.reaching_states(ode_var);
+            [~, idx] = sort(output_idx);
+            e2i = output_idx;
+            i2e = idx;
+        end
+        
+        function obj = set_ode_function(obj)
+            args = { ...
+                mx_vec(obj.independent), ...
+                mx_vec(obj.states), ...
+                mx_vec(obj.controls), ...
+                mx_vec(obj.parameters) ...
+                };
+            set_mx(obj.variables);
+            mx_expr = fw_eval(obj.ode.ast.rhs);
+            obj.ode.fn = casadi.Function('ode', args, {mx_expr});
+        end
+        
+        function obj = set_special_functions(obj, tps, ints, ders)
+            args = { ...
+                mx_vec(obj.independent), ...
+                mx_vec(obj.states), ...
+                mx_vec(obj.controls), ...
+                mx_vec(obj.parameters), ...
+                mx_vec(tps), ...
+                mx_vec(ints), ...
+                mx_vec(ders) ...
+                };
+            
+            set_mx(obj.variables);
+            set_mx([tps, ints, ders]);
+        
+            for node = [tps, ints, ders]
+                mx_expr = fw_eval(node.ast.expr);
+                node.fn = casadi.Function('fn', args, {mx_expr});
             end
         end
+        
+        function obj = set_objective_function(obj, tps, ints, ders)
+            % The objective should be a functino in tps and ints only.
+            args = {mx_vec(tps), mx_vec(ints)};
+            
+            set_mx(obj.variables); % To avoid undefined behaviour.
+            set_mx([tps, ints, ders]);
+        
+            mx_expr = fw_eval(obj.objective.ast);
+            obj.objective.fn = casadi.Function('fn', args, {mx_expr});
+        end
+        
+        function obj = set_pathcon_functions(obj, tps, ints, ders)
+            
+            args = { ...
+                mx_vec(obj.independent), ...
+                mx_vec(obj.states), ...
+                mx_vec(obj.controls), ...
+                mx_vec(obj.parameters), ...
+                mx_vec(tps), ...
+                mx_vec(ints), ...
+                mx_vec(ders) ...
+                };
+            
+            set_mx(obj.variables);
+            set_mx([tps, ints, ders]);
+            
+            for pc = [obj.equality_constraints, obj.inequality_constraints]
+                mx_expr = fw_eval(pc.ast);
+                pc.fn = casadi.Function('fn', args, {mx_expr});
+            end
+        end
+    end
+
+    %% Variables
+    methods
         
         function obj = classify_variables(obj, vars)
             %______________________________________________________________
@@ -278,8 +342,8 @@ classdef ocp < handle
             end
             % If we do not have some of the variables, they are set to
             % something in order for the transcription methods to query
-            % them, and also to be able to set bound on independent
-            % variables.
+            % them, and also to be able to set bounds on the independent
+            % variable.
             if isempty(obj.independent)
                 obj.add_independent(yop.ast_independent('t'));
             end
@@ -303,6 +367,14 @@ classdef ocp < handle
             if isempty(obj.parameters)
                 obj.add_parameter(yop.ast_parameter('p', 0, 0));
             end
+        end
+        
+        function obj = set_box(obj, box)
+            [box_t, box_t0, box_tf] = yop.ocp.timed_box(box);
+            obj.parse_box(box_t, 'lb', 'ub');
+            obj.parse_box(box_t0, 'lb0', 'ub0');
+            obj.parse_box(box_tf, 'lbf', 'ubf');
+            obj.set_box_bounds(); % Includes processing default values
         end
         
         function obj = add_independent(obj, t)
@@ -511,238 +583,12 @@ classdef ocp < handle
             
             obj.set_box_bnd('parameters', 'lb', 'ub', ...
                 yop.defaults().parameter_lb, yop.defaults().parameter_ub);
-        end
-        
-        function obj = vectorize_ode(obj, odes)
-            %______________________________________________________________
-            %|YOP.OCP/VECTORIZE_ODE Vectorize all ODEs and set default    |
-            %|odes for states that are not bound by an ode.               |
-            %|                                                            |
-            %| Use:                                                       |
-            %|   vectorize_ode(obj, odes)                                 |
-            %|   obj.vectorize_ode(odes)                                  |
-            %|                                                            |
-            %| Description:                                               |
-            %|   Analyzes which of the state elements the reaches the ode |
-            %|   rhs: der(var) == expr. The elements of the entire state  |
-            %|   vector that does not reach is given the default          |
-            %|   derivative: der(var) == 0.                               |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|   odes - Cell array with canonicalized ODEs.               |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
-            %|____________________________________________________________|
-            ode_var = []; ode_expr = [];
-            for k=1:length(odes)
-                ode_var = [ode_var(:); odes{k}.lhs(:)];
-                ode_expr = [ode_expr(:); odes{k}.rhs(:)];
-            end
-            
-            % Analyze the elements that reaches the ode rhs: ode(var)==...
-            % The purpose is to set the ode of those that does not reach to
-            % zero. re - reaching elements, nr - not reaching
-            [re, nr] = obj.reaching_states(ode_var);
-            
-            % Test if some of the elements do not reach
-            for k=1:length(re)
-                if numel(re(k).enum) ~= numel(re(k).reaching)
-                    [~, idx] = setdiff(re(k).enum, re(k).reaching);
-                    vk = re(k).var(idx);
-                    ode_var = [ode_var(:); vk(:)];
-                    ode_expr = [ode_expr(:); zeros(size(vk(:)))];
-                    
-                    if yop.settings.warnings
-                        warning(yop.msg.default_der(vk.name));
-                    end
-                end
-            end
-            
-            % Entire variable do not reach, set default ode for all
-            for k=1:length(nr)
-                vk = nr(k).var;
-                ode_var = [ode_var(:); vk(:)];
-                ode_expr = [ode_expr(:); zeros(size(vk(:)))];
-                
-                if yop.settings.warnings
-                    warning(yop.msg.default_der(vk.name));
-                end
-            end
-            
-            % Very important step! Necessary before any MX function object
-            % can be set.
-            obj.compute_permutation_vector(ode_var);
-            
-            ast = yop.ast_eq(ode_var, ode_expr);
-            obj.differential_equation = yop.ocp_rel(ast);
-            obj.differential_equation.fn = obj.mx_ode_function(ast.rhs);
-        end
-        
-        function obj = compute_permutation_vector(obj, ode_var)
-            %______________________________________________________________
-            %|YOP.OCP/COMPUTE_PERMUTATION_VECTOR Computes the vector that |
-            %|permutes the state vector in such a way that the vector     |
-            %|elemnts appear in the same order as they to in the state    |
-            %|derivative.                                                 |
-            %|                                                            |
-            %| Use:                                                       |
-            %|   compute_permutation_vector(obj, ode_var)                 |
-            %|   obj.compute_permutation_vector(ode_var)                  |
-            %|                                                            |
-            %| Description:                                               |
-            %|   Because the integration methods might add state and      |
-            %|   deriative in order to compute the next step, it is       |
-            %|   important that elements appear in the same order in the  |
-            %|   state variable vector as in the state derivative vector. |
-            %|   Yop solves that by computing two permutation vectors.    |
-            %|   One maps from external to internal representation (e2i)  |
-            %|   and one maps from internal to external representation    |
-            %|   (i2e). External representation could be any order and is |
-            %|   simply the order in which the states are detected.       |
-            %|   Internal order is also random to some degree since it    |
-            %|   might depend on the order in which odes are detected.    |
-            %|   Nevertheless, it is necessary to work with only one      |
-            %|   representation internally, which is why yop computes     |
-            %|   these permutation vectors.                               |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|   ode_var - AST expression for the variables as they       |
-            %|             appear in the ODE.                             |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
-            %|____________________________________________________________|
-            [~, ~, output_idx] = obj.reaching_states(ode_var);
-            [~, idx] = sort(output_idx);
-            obj.e2i = output_idx;
-            obj.i2e = idx;
-        end
-        
-        %         function obj = set_timepoint_placeholders(obj, timepoints)
-        %             %______________________________________________________________
-        %             %|YOP.OCP/SET_TIMEPOINT_PLACEHOLDERS Give every timepoint an  |
-        %             %|MX variable of the same size as the expression to represent |
-        %             %|its value.                                                  |
-        %             %|                                                            |
-        %             %| Parameters:                                                |
-        %             %|   obj - Handle to the ocp.                                 |
-        %             %|                                                            |
-        %             %| Return values:                                             |
-        %             %|   obj - Handle to the ocp.                                 |
-        %             %|____________________________________________________________|
-        %             k = 1;
-        %             for tp=timepoints
-        %                 if isa(tp.ast.timepoint, 'yop.ast_independent_initial')
-        %                     tp_text = 't0';
-        %                 elseif isa(tp.ast.timepoint, 'yop.ast_independent_final')
-        %                     tp_text = 'tf';
-        %                 else
-        %                     tp_text = num2str(floor(tp.ast.timepoint));
-        %                 end
-        %                 str = ['expr', num2str(k), '_t_eq_', tp_text];
-        %                 tp.mx = casadi.MX.sym(str, size(tp.ast,1), size(tp.ast,2));
-        %                 tp.sym = sym(str, size(tp.ast));
-        %                 k = k+1;
-        %             end
-        %         end
-        
-        %         function obj = set_integral_placeholders(obj, integrals)
-        %             %______________________________________________________________
-        %             %|YOP.OCP/SET_INTEGRAL_PLACEHOLDERS Give every integral an MX |
-        %             %|variable of the same size as the expression to represent    |
-        %             %|its value.                                                  |
-        %             %|                                                            |
-        %             %| Parameters:                                                |
-        %             %|   obj - Handle to the ocp.                                 |
-        %             %|                                                            |
-        %             %| Return values:                                             |
-        %             %|   obj - Handle to the ocp.                                 |
-        %             %|____________________________________________________________|
-        %             k = 1;
-        %             for int=integrals
-        %                 str = ['int', num2str(k)];
-        %                 int.mx=casadi.MX.sym(str,size(int.ast,1),size(int.ast,2));
-        %                 int.sym = sym(str, size(int.ast));
-        %                 k = k+1;
-        %             end
-        %         end
-        
-        function obj = set_timepoint_functions(obj, tps, ints, ders)
-            %______________________________________________________________!!!!!!!!!!UPDATE!!!!!!!!!!!
-            %|YOP.OCP/SET_TIMEPOINT_FUNCTIONS Compute mx function         |
-            %|objects for the timepoint expressions.                      |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
-            %|____________________________________________________________|
-            for tp = tps
-                tp.fn = ...
-                    obj.mx_function_object(tp.ast.expr, tps, ints, ders);
-            end
-        end
-        
-        function obj = set_integral_functions(obj, tps, ints, ders)
-            %______________________________________________________________!!!!!!!!!!UPDATE!!!!!!!!!!!
-            %|YOP.OCP/SET_INTEGRAL_FUNCTIONS Compute mx function          |
-            %|objects for the integral expressions.                       |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
-            %|____________________________________________________________|
-            for int = ints
-                int.fn = ...
-                    obj.mx_function_object(int.ast.expr, tps, ints, ders);
-            end
-        end
-        
-        function obj = compute_objective_function(obj, tps, ints, ders)
-            %______________________________________________________________!!!!!!!!!!UPDATE!!!!!!!!!!!
-            %|YOP.OCP/COMPUTE_OBJECTIVE_FUNCTION Compute mx function      |
-            %|object for the objective function.                          |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
-            %|____________________________________________________________|
-            obj.objective.fn = ...
-                obj.mx_function_object(obj.objective.ast, tps, ints, ders);
-        end
-        
-        function obj = compute_pathcon_functions(obj, tps, ints, ders)
-            %______________________________________________________________!!!!!!!!!!UPDATE!!!!!!!!!!!
-            %|YOP.OCP/COMPUTE_PATHCON_FUNCTION Compute mx function        |
-            %|objects for the path constraints.                           |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   obj - Handle to the ocp.                                 |
-            %|____________________________________________________________|
-            for pc = [obj.equality_constraints, obj.inequality_constraints]
-                % Only computes the function for the lhs as the constraint
-                % is canonicalized, and we then want to remove the
-                % relation.
-                pc.fn = obj.mx_function_object(pc.ast, tps, ints, ders);
-            end
-        end
-        
+        end        
     end
     
     %% Internal methods and helper methods
     
-    methods (Access=private)
+    methods
         
         function obj = set_box_bnd(obj, var_field, lb_field, ...
                 ub_field, lb_def, ub_def)
@@ -844,191 +690,6 @@ classdef ocp < handle
                 obj.algebraics(:).', ...
                 obj.controls(:).', ...
                 obj.parameters(:).'];
-        end
-        
-        %         function obj = set_mx(obj)
-        %             %______________________________________________________________
-        %             %|YOP.OCP/SET_MX Set all OCP variables to their mx value.     |
-        %             %|                                                            |
-        %             %| Use:                                                       |
-        %             %|   set_mx(obj)                                              |
-        %             %|   obj.set_mx()                                             |
-        %             %|                                                            |
-        %             %| Description:                                               |
-        %             %|   In order to get MX expressions for AST expressions it is |
-        %             %|   necessary to set the value of all expression variables   |
-        %             %|   to MX, which is done by this function.                   |
-        %             %|                                                            |
-        %             %| Parameters:                                                |
-        %             %|   obj - Handle to the ocp.                                 |
-        %             %|                                                            |
-        %             %| Return values:                                             |
-        %             %|   obj - Handle to the ocp.                                 |
-        %             %|____________________________________________________________|
-        %             obj.variables.set_mx();
-        %             obj.timepoints.set_mx();
-        %             obj.integrals.set_mx();
-        %         end
-        
-        function [tt, xx, uu, pp] = mx_parameter_list(obj)
-            %______________________________________________________________
-            %|YOP.OCP/MX_PARAMETER_LIST Get external MX form of the       |
-            %|expression parameter list. The function is private since    |
-            %|the state vector is in external ordering which easily leads |
-            %|to errors if not cautious.                                  |
-            %|                                                            |
-            %| Use:                                                       |
-            %|   [tt, xx, uu, pp] = mx_parameter_list(obj)                |
-            %|   [tt, xx, uu, pp] = obj.mx_parameter_list()               |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   tt - MX scalar for the independent variable.             |
-            %|   xx - MX vector for the state variable.                   |
-            %|   uu - MX vector for the control input.                    |
-            %|   pp - MX vector for the free parameters.                  |
-            %|____________________________________________________________|
-            tt = obj.independent.mx_vec();
-            xx = obj.states.mx_vec();
-            uu = obj.controls.mx_vec();
-            pp = obj.parameters.mx_vec();
-        end
-        
-        function fn = mx_function_object(obj, expr, tps, ints, ders)
-            %______________________________________________________________
-            %|YOP.OCP/MX_FUNCTION_OBJECT Compute function object from     |!!!!!!!!!!!UPDATE!!!!!!!!!!!!!
-            %|expression with the parameter list (t,x,u,p,tps,ints).      |
-            %|                                                            |
-            %| Use:                                                       |
-            %|   fn = mx_ode_function(obj, expr)                          |
-            %|   fn = obj.mx_ode_function(expr)                           |
-            %|                                                            |
-            %| Description:                                               |
-            %|   Computes a casadi function object from an ast expression.|
-            %|   The function object has its state parameter on the       |
-            %|   internal form which means that                           |
-            %|                                                            |
-            %|       ordering(der(x)) == ordering(expr)                   |
-            %|                                                            |
-            %|   as opposed to external form where the states might be    |
-            %|   permuted so that                                         |
-            %|                                                            |
-            %|       ordering(der(x)) != ordering(expr)                   |
-            %|                                                            |
-            %|   Function object parameters are:                          |
-            %|     t - Independent variable.                              |
-            %|     x - State vector (internal ordering).                  |
-            %|     u - Control input.                                     |
-            %|     p - Free parameters.                                   |
-            %|     tps - Timepoint expressions.                           |
-            %|     ints - Integral expressions.                           |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|   expr - AST of expression to create a function object     |
-            %|          from.                                             |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   fn - A function object when called with the arguments    |
-            %|        t, x, u, p, tps, int (in that exact order, empty    |
-            %|        ones are set to empty: []) computes 'expr'.         |
-            %|____________________________________________________________|
-            [tt, xx, uu, pp] = obj.mx_parameter_list();
-            tpv = tps.mx_vec();
-            intv = ints.mx_vec();
-            args = {tt,xx,uu,pp,tpv,intv};
-            
-            % Since we are seeking an MX expression, all ast_variable in
-            % the ocp set their values to MX. Otherwise fw_eval could
-            % result in anything.
-            obj.variables.set_mx();
-            tps.set_mx();
-            ints.set_mx();
-            ders.set_mx();
-            
-            % First a function object is created that maps the expression
-            % to variables in the order they appear in the state variable
-            % vector. The state element order here is external, as states
-            % simply appear as they were found. An idea is of course to
-            % change the order of the elements in the variable vector, but
-            % that is a bit cumbersome as one needs to keep track of the
-            % individual elements, not just the state variables themselves.
-            inner_expr = fw_eval(expr);
-            innr_fn = casadi.Function('i', args, {inner_expr(:)});
-            
-            % To provide the internal interface the argument order is
-            % changed. Here 'args' is reused. Here it simply maps inputs to
-            % parameters in the function call. It could just as well have
-            % been other mx variables with the same dimensions, so do not
-            % be confused by the reuse of variable.
-            outer_expr = {innr_fn(tt, xx(obj.i2e), uu, pp, tpv, intv)};
-            fn = casadi.Function('o', args, outer_expr);
-        end
-        
-        function fn = mx_ode_function(obj, expr)
-            %______________________________________________________________
-            %|YOP.OCP/MX_ODE_FUNCTION Compute function object from        |
-            %|expression with the ode parameter list (t,x,u,p).           |
-            %|                                                            |
-            %| Use:                                                       |
-            %|   fn = mx_ode_function(obj, expr)                          |
-            %|   fn = obj.mx_ode_function(expr)                           |
-            %|                                                            |
-            %| Description:                                               |
-            %|   Computes a casadi function object from an ast expression.|
-            %|   The function object has its state parameter on the       |
-            %|   internal form which means that                           |
-            %|                                                            |
-            %|       ordering(der(x)) == ordering(expr)                   |
-            %|                                                            |
-            %|   as opposed to external form where the states might be    |
-            %|   permuted so that                                         |
-            %|                                                            |
-            %|       ordering(der(x)) != ordering(expr)                   |
-            %|                                                            |
-            %|   Function object parameters are:                          |
-            %|     t - Independent variable.                              |
-            %|     x - State vector (internal ordering).                  |
-            %|     u - Control input.                                     |
-            %|     p - Free parameters.                                   |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|   expr - AST of expression to create a function object     |
-            %|          from.                                             |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   fn - A function object when called with the arguments    |
-            %|        t, x, u, p (in that exact order, empty ones are set |
-            %|        to empty: []) computes 'expr'.                      |
-            %|____________________________________________________________|
-            [tt, xx, uu, pp] = obj.mx_parameter_list();
-            args = {tt,xx,uu,pp};
-            
-            % Since we are seeking an MX expression, all ast_variable in
-            % the ocp set their values to MX. Otherwise fw_eval could
-            % result in anything.
-            obj.variables.set_mx();
-            
-            % First a function object is created that maps the expression
-            % to variables in the order they appear in the state variable
-            % vector. The state element order here is external, as states
-            % simply appear as they were found. An idea is of course to
-            % change the order of the elements in the variable vector, but
-            % that is a bit cumbersome as one needs to keep track of the
-            % individual elements, not just the state variables themselves.
-            inner_expr = fw_eval(expr);
-            innr_fn = casadi.Function('i', args, {inner_expr(:)});
-            
-            % To provide the internal interface the argument order is
-            % changed. Here 'args' is reused. Here it simply maps inputs to
-            % parameters in the function call. It could just as well have
-            % been other mx variables with the same dimensions, so do not
-            % be confused by the reuse of variable.
-            outer_expr = {innr_fn(tt, xx(obj.i2e), uu, pp)};
-            fn = casadi.Function('o', args, outer_expr);
         end
         
         function [re, nr, reaching_enumeration] = reaching_states(obj, expr)
@@ -1147,6 +808,40 @@ classdef ocp < handle
     end
     
     methods (Static)
+        
+        
+        function [vars,tps,ints,ders,sorted] = find_special_nodes(varargin)
+            vars = {};
+            sorted = yop.ocp_expr.empty(1,0); % Topological order
+            tps   = yop.ocp_expr.empty(1,0);
+            ints  = yop.ocp_expr.empty(1,0);
+            ders  = yop.ocp_expr.empty(1,0);
+            visited = [];
+            for k=1:length(varargin)
+                % Sort all nodes
+                [tsort, n_elem, visited] = ...
+                    topological_sort(varargin{k}, visited);
+                
+                % Find special nodes, maintin topological order in sorted.
+                for n=1:n_elem
+                    if isa(tsort{n}, 'yop.ast_variable')
+                        vars{end+1} = tsort{n};
+                    elseif isa(tsort{n}, 'yop.ast_timepoint')
+                        sn = yop.ocp_expr(tsort{n}, yop.ocp_expr.tp);
+                        tps(end+1) = sn;
+                        sorted(end+1) = sn;
+                    elseif isa(tsort{n}, 'yop.ast_int')
+                        sn = yop.ocp_expr(tsort{n}, yop.ocp_expr.int);
+                        ints(end+1) = sn;
+                        sorted(end+1) = sn;
+                    elseif isa(tsort{n}, 'yop.ast_der')
+                        %sn = yop.ocp_expr(node, yop.ocp_expr.der);
+                        %obj.derivatives(end+1) = sn;
+                        %obj.special_nodes(end+1) = sn;
+                    end
+                end
+            end
+        end
         
         function srf = to_srf(constraints)
             %______________________________________________________________
@@ -1444,100 +1139,26 @@ classdef ocp < handle
     %% Transcription
     methods
         
-        %         function n = n_x(obj)
-        %             %___________________________________________________
-        %             %|YOP.OCP/N_X Get the number of states in the OCP. |
-        %             %|                                                 |
-        %             %| Use:                                            |
-        %             %|   n = n_x(obj)                                  |
-        %             %|   n = obj.n_x()                                 |
-        %             %|   n = obj.n_x                                   |
-        %             %|                                                 |
-        %             %| Parameters:                                     |
-        %             %|   obj - A handle to the ocp.                    |
-        %             %|                                                 |
-        %             %| Return values:                                  |
-        %             %|   n - The number of states.                     |
-        %             %|_________________________________________________|
-        %             n = numel(obj.states.mx_vec);
-        %         end
-        
-        %         function n = n_u(obj)
-        %             %___________________________________________________________
-        %             %|YOP.OCP/N_U Get the number of control inputs in the OCP. |
-        %             %|                                                         |
-        %             %| Use:                                                    |
-        %             %|   n = n_u(obj)                                          |
-        %             %|   n = obj.n_u()                                         |
-        %             %|   n = obj.n_u                                           |
-        %             %|                                                         |
-        %             %| Parameters:                                             |
-        %             %|   obj - A handle to the ocp.                            |
-        %             %|                                                         |
-        %             %| Return values:                                          |
-        %             %|   n - The number of control inputs.                     |
-        %             %|_________________________________________________________|
-        %             n = numel(obj.controls.mx_vec);
-        %         end
-        
-        %         function n = n_p(obj)
-        %             %____________________________________________________________
-        %             %|YOP.OCP/N_P Get the number of free parameters in the OCP. |
-        %             %|                                                          |
-        %             %| Use:                                                     |
-        %             %|   n = n_p(obj)                                           |
-        %             %|   n = obj.n_p()                                          |
-        %             %|   n = obj.n_p                                            |
-        %             %|                                                          |
-        %             %| Parameters:                                              |
-        %             %|   obj - A handle to the ocp.                             |
-        %             %|                                                          |
-        %             %| Return values:                                           |
-        %             %|   n - The number of free parameters.                     |
-        %             %|__________________________________________________________|
-        %             n = numel(obj.parameters.mx_vec);
-        %         end
-        
-        %         function n = n_tp(obj)
-        %             %________________________________________________________
-        %             %|YOP.OCP/N_TP Get the number of timepoints in the OCP. |
-        %             %|                                                      |
-        %             %| Use:                                                 |
-        %             %|   n = n_tp(obj)                                      |
-        %             %|   n = obj.n_tp()                                     |
-        %             %|   n = obj.n_tp                                       |
-        %             %|                                                      |
-        %             %| Parameters:                                          |
-        %             %|   obj - A handle to the ocp.                         |
-        %             %|                                                      |
-        %             %| Return values:                                       |
-        %             %|   n - The number of timepoints.                      |
-        %             %|______________________________________________________|
-        %             n = numel(obj.timepoints.mx_vec);
-        %         end
-        
-        %         function n = n_int(obj)
-        %             %________________________________________________________
-        %             %|YOP.OCP/N_INT Get the number of integrals in the OCP. |
-        %             %|                                                      |
-        %             %| Use:                                                 |
-        %             %|   n = n_int(obj)                                     |
-        %             %|   n = obj.n_int()                                    |
-        %             %|   n = obj.n_int                                      |
-        %             %|                                                      |
-        %             %| Parameters:                                          |
-        %             %|   obj - A handle to the ocp.                         |
-        %             %|                                                      |
-        %             %| Return values:                                       |
-        %             %|   n - The number of integrals.                       |
-        %             %|______________________________________________________|
-        %             n = numel(obj.integrals.mx_vec);
-        %         end
-        
-        function dx = ode(obj, t, x, u, p)
-            dx = obj.differential_equation.fn(t,x,u,p);
+        function n = n_x(obj)
+            n = n_elem(obj.states);
         end
         
+        function n = n_u(obj)
+            n = n_elem(obj.controls);
+        end
+        
+        function n = n_p(obj)
+            n = n_elem(obj.parameters);
+        end
+        
+        function n = n_tp(obj)
+            n = n_elem(obj.timepoints);
+        end
+        
+        function n = n_int(obj)
+            n = n_elem(obj.integrals);
+        end
+                
         function bd = t0_ub(obj)
             bd = obj.independent_initial.ub;
         end
@@ -1555,51 +1176,45 @@ classdef ocp < handle
         end
         
         function bd = x0_ub(obj)
-            x0ub=[];
+            bd=[];
             for k=1:length(obj.states)
-                x0ub = [x0ub(:); obj.states(k).ub0(:)];
+                bd = [bd(:); obj.states(k).ub0(:)];
             end
-            bd = x0ub(obj.e2i);
         end
         
         function bd = x0_lb(obj)
-            x0lb=[];
+            bd=[];
             for k=1:length(obj.states)
-                x0lb = [x0lb(:); obj.states(k).lb0(:)];
+                bd = [bd(:); obj.states(k).lb0(:)];
             end
-            bd = x0lb(obj.e2i);
         end
         
         function bd = x_ub(obj)
-            xub=[];
+            bd=[];
             for k=1:length(obj.states)
-                xub = [xub(:); obj.states(k).ub(:)];
+                bd = [bd(:); obj.states(k).ub(:)];
             end
-            bd  = xub(obj.e2i);
         end
         
         function bd = x_lb(obj)
-            xlb=[];
+            bd=[];
             for k=1:length(obj.states)
-                xlb = [xlb(:); obj.states(k).lb(:)];
+                bd = [bd(:); obj.states(k).lb(:)];
             end
-            bd  = xlb(obj.e2i);
         end
         
         function bd = xf_ub(obj)
-            xfub=[];
+            bd=[];
             for k=1:length(obj.states)
-                xfub = [xfub(:); obj.states(k).ubf(:)];
+                bd = [bd(:); obj.states(k).ubf(:)];
             end
-            bd = xfub(obj.e2i);
         end
         
         function bd = xf_lb(obj)
-            xflb=[];
+            bd=[];
             for k=1:length(obj.states)
-                xflb = [xflb(:); obj.states(k).lbf(:)];
+                bd = [bd(:); obj.states(k).lbf(:)];
             end
-            bd = xflb(obj.e2i);
         end
         
         function bd = u0_ub(obj)
@@ -1672,7 +1287,7 @@ classdef ocp < handle
             end
         end
         
-        function [bool, T] = fixed_horizon(obj)
+        function [bool, t0, tf] = fixed_horizon(obj)
             %______________________________________________________________
             %|YOP.OCP/FIXED_HORIZON Test if the problem horizon is fixed. |
             %|                                                            |
@@ -1697,7 +1312,8 @@ classdef ocp < handle
             else
                 bool = false;
             end
-            T = obj.tf_lb - obj.t0_lb;
+            t0 = obj.t0_lb;
+            tf = obj.tf_lb;
         end
         
     end
@@ -1764,16 +1380,16 @@ classdef ocp < handle
             end
             
             
-            if ~isempty(obj.differential_equation)
+            if ~isempty(obj.ode)
                 fprintf('  ODE\n');
             end
             
             fprintf('\tder(');
-            fprintf(char(propagate_value(obj.differential_equation.lhs)));
+            fprintf(char(propagate_value(obj.ode.lhs)));
             fprintf(') == ');
-            rhs = propagate_value(obj.differential_equation.rhs);
+            rhs = propagate_value(obj.ode.rhs);
             if length(char(rhs)) > 40
-                vs = yop.get_vars(obj.differential_equation.rhs);
+                vs = yop.get_vars(obj.ode.rhs);
                 args = '';
                 for n=1:length(vs)
                     args = [args(:).', vs{n}.name, ', '];
@@ -1832,3 +1448,47 @@ classdef ocp < handle
         
     end
 end
+
+% function obj = discretize(obj, tro)
+% [sn, n_tp, n_int, n_der] = mx_functionx( ...
+%     obj.objective, ...
+%     obj.independent, ...
+%     obj.states, ...
+%     obj.controls, ...
+%     obj.parameters ...
+%     );
+% tro.add_objective(obj.objective, sn, n_tp, n_int, n_der);
+%
+% mx_function( ...
+%     obj.ode.rhs, ...
+%     obj.independent, ...
+%     obj.states, ...
+%     obj.controls, ...
+%     obj.parameters ...
+%     );
+% tro.add_ode(obj.ode.rhs.fn);
+%
+% for eq = obj.equality_constraints
+%     [sn, n_tp, n_int, n_der] = ...
+%         mx_functionx( ...
+%         eq, ...
+%         obj.independent, ...
+%         obj.states, ...
+%         obj.controls, ...
+%         obj.parameters ...
+%         );
+%     tro.add_eq(eq, sn, n_tp, n_int, n_der);
+% end
+%
+% for ieq = obj.inequality_constraints
+%     [sn, n_tp, n_int, n_der] = ...
+%         mx_functionx( ...
+%         ieq, ...
+%         obj.independent, ...
+%         obj.states, ...
+%         obj.controls, ...
+%         obj.parameters ...
+%         );
+%     tro.add_ieq(ieq, sn, n_tp, n_int, n_der);
+% end
+% end

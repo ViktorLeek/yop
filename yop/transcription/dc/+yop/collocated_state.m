@@ -1,17 +1,10 @@
-function obj = collocated_state(name, nx ,N, d, points)
-
-x = [0, casadi.collocation_points(d, points)];
-
-obj = yop.lagrange_polynomial.empty(1,0);
+function obj = collocated_state(nx ,N, tau)
+y = cell(N+1,1);
 for n=1:N
-    y = casadi.MX.sym(label(name,n), nx, d+1);
-    obj(n) = yop.lagrange_polynomial(x, y);
+    y{n} = casadi.MX.sym(['x_' num2str(n)], nx, length(tau));
 end
-y = casadi.MX.sym(label(name, N+1), nx);
-obj(N+1) = yop.lagrange_polynomial(0, y);
+y{N+1} = casadi.MX.sym(['x_' num2str(N+1)], nx);
+obj = yop.collocated_expression(N, tau, y);
 
 end
 
-function l = label(name, n)
-l = [name, '_' num2str(n)];
-end
