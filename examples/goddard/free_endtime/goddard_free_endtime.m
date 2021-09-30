@@ -20,7 +20,20 @@ ocp.st( ...
     0 <= rocket.fuel_mass_flow <= 9.5 ...
     );
 
-[sol, nlp] = ocp.solve('intervals', 100);
+sol = ocp.solve('intervals', 50);
+
+%%
+figure(1);
+subplot(411); hold on
+sol.plot(t, x(1));
+sol.plot(t(t==1), x(1).at(t==1), 'x')
+plot(sol.resolved_value(t, 1000), sol.resolved_value(x(1), 1000))
+subplot(412); hold on
+sol.plot(t, x(2));
+subplot(413); hold on
+sol.plot(t, x(3));
+subplot(414); hold on
+sol.stairs(t, u);
 
 %%
 expr = yop.ocp_expr(int(x(1)));
@@ -47,8 +60,10 @@ end
 
 expr.fn = casadi.Function('fn', args, {fw_eval(expr.ast)});
 
+t0 = full(sol.x(1));
+tf = full(sol.x(2));
 [tpv, intv] = yop.param_special_nodes(sn, n_elem(tps), n_elem(ints), ...
-    nlp.N, nlp.tau, nlp.dt, full(sol.x(1)), full(sol.x(2)), nlp.t, nlp.x, nlp.u, nlp.p);
+    nlp.N, nlp.tau, nlp.dt, t0, tf, nlp.t, nlp.x, nlp.u, nlp.p);
 
 disc = yop.parameterize_expression( ...
     expr, ...
@@ -96,8 +111,8 @@ end
 y{nlp.N+1} = uu(:,end);
 ulp = yop.collocated_expression(nlp.N, 0, y);
 
-expr = yop.ocp_expr([t; x; u]);
-% expr = yop.ocp_expr(at(t==10, x(3)));
+% expr = yop.ocp_expr([t; x; u]);
+expr = yop.ocp_expr(x(1).at(t==212));
 
 [vars, tps, ints, ders, sn] = yop.ocp.find_special_nodes(expr.ast);
 
@@ -137,7 +152,7 @@ if expr.is_transcription_invariant
         ulp(1).evaluate(0), ...
         pp, TP, I, []);
 else
-    pnts = 25;
+    pnts = 200;
     grid = linspace(tlp(1).evaluate(0), tlp(end).evaluate(0), pnts);
     v = [];
     for tp=grid

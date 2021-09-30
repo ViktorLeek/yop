@@ -164,7 +164,6 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             %    lp.evaluate(0:0.1:1);
             %    evaluate(lp, 2);
             %    evaluate(lp, 1:10);
-            
             values = [];
             for n=1:length(t)
                 v = 0;

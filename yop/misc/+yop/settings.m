@@ -1,7 +1,15 @@
 classdef settings < handle
+    
     properties
         m_warnings = true
+        m_cx_type = yop.settings.SX
     end
+    
+    properties (Constant, Hidden)
+        MX = 1
+        SX = 2
+    end
+    
     methods
         function obj = settings()
             persistent OBJ
@@ -15,6 +23,7 @@ classdef settings < handle
     end
     
     methods (Static)
+        
         function bool = warnings(value)
             obj = yop.settings();
             if nargin == 1
@@ -22,5 +31,14 @@ classdef settings < handle
             end
             bool = obj.m_warnings;
         end
+        
+        function type = cx_type(value)
+            obj = yop.settings();
+            if nargin == 1
+                obj.m_cx_type = value;
+            end
+            type = obj.m_cx_type;
+        end
+        
     end
 end

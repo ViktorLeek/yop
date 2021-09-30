@@ -303,6 +303,22 @@ classdef ast_expression < yop.node & yop.ast_ool
             % This means that neasted cases do not work. Should be improved
             % later.
             
+            % in the future: matlab.mixin.indexing (package)
+            
+            % Ugly fix to enable expr.at(t==tp)
+            if length(s) > 1 && s(1).type == "()"
+                indexing = true;
+                for k=1:length(s(1).subs)
+                    indexing = (isnumeric(s(1).subs{k}) || ischar(s(1).subs{k}) || islogical(s(1).subs{k}) ) ...
+                        && indexing;
+                end
+                if indexing
+                    varargout{1} = subsref(subsref(obj, s(1)), s(2:end));
+                    return;
+                end
+                % if it is not indexing, then we simply continue
+            end
+            
             if length(s) > 1 || s(1).type ~= "()"
                 % This needs to be revised because it only works with
                 % objects of size [1, 1]. Must overload 

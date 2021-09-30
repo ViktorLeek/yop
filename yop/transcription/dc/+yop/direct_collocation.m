@@ -1,17 +1,13 @@
 function nlp = direct_collocation(ocp, N, d, cp)
 tau = [0, casadi.collocation_points(d, cp)];
 
-[is_fixed, t0, tf] = fixed_horizon(ocp);
-if ~is_fixed
-    t0 = casadi.MX.sym('t0');
-    tf = casadi.MX.sym('tf');
-end
-dt = (tf - t0)/N;
-
+t0 = yop.cx('t0');
+tf = yop.cx('tf');
 t = yop.collocated_time(t0, tf, N);
 x = yop.collocated_state(n_x(ocp), N, tau);
 u = yop.collocated_control(n_u(ocp), N);
-p = casadi.MX.sym('p', n_p(ocp));
+p = yop.cx('p', n_p(ocp));
+dt = (tf - t0)/N;
 
 [tps, ints] = yop.param_special_nodes(ocp.special_nodes, ocp.n_tp, ...
     ocp.n_int, N, tau, dt, t0, tf, t, x, u, p);

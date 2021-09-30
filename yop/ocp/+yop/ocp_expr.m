@@ -18,7 +18,7 @@ classdef ocp_expr < handle
                 end
             end
             sz = size(expr);
-            obj.mx = casadi.MX.sym('expr', sz(1), sz(2));
+            obj.mx = yop.cx('expr', sz(1), sz(2));
             obj.sym = sym('expr', sz);
         end
         
@@ -77,34 +77,3 @@ classdef ocp_expr < handle
         end
     end
 end
-
-%         function [sn, n_tp, n_int, n_der] = mx_functionx(obj, t, x, u, p) 
-%             % x for extra parameters
-% 
-%             [sn, tps, ints, ders] = yop.ocp.find_special_nodes(obj.ast);
-%             
-%             n_tp = n_elem(tps);
-%             n_int = n_elem(ints);
-%             n_der = n_elem(ders);
-%             
-%             set_mx([t, x, u, p]);
-%             set_mx([tps, ints, ders]);
-%             
-%             args =  {mx_vec(t), mx_vec(x), mx_vec(u), mx_vec(p), ...
-%                 mx_vec(tps), mx_vec(ints)};
-%             
-%             for node = [tps, ints]
-%                 mx_expr = fw_eval(node.ast.expr);
-%                 node.fn = casadi.Function('fn', args, {mx_expr});
-%             end
-%             
-%             mx_expr = fw_eval(obj.ast);
-%             obj.fn = casadi.Function('fn', args, {mx_expr});
-%         end
-%         
-%         function mx_function(obj, t, x, u, p)
-%             set_mx([t, x, u, p]);
-%             mx_expr = fw_eval(obj.ast);
-%             args = {mx_vec(t), mx_vec(x), mx_vec(u), mx_vec(p)};
-%             obj.fn = casadi.Function('fn', args, {mx_expr});
-%         end

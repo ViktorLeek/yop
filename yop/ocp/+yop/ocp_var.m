@@ -16,7 +16,7 @@ classdef ocp_var < handle
     methods
         function obj = ocp_var(var)       
             obj.var = var;
-            obj.mx = casadi.MX.sym(['ocp_', var.name], size(var,1), size(var,2));
+            obj.mx = yop.cx(['ocp_', var.name], size(var,1), size(var,2));
             obj.sym = sym(var.name, size(var));
             obj.ub0 = nan(size(var));
             obj.lb0 = nan(size(var));

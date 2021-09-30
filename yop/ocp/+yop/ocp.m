@@ -87,9 +87,8 @@ classdef ocp < handle
                 'ubg', [nlp.g_ub; nlp.h_ub], ...
                 'lbg', [nlp.g_lb; nlp.h_lb] ...
                 );
-            
-            
-            
+            sol = yop.ocp_sol(sol, solver, nlp, obj.independent, ...
+                obj.states, obj.algebraics, obj.controls, obj.parameters);
         end
         
         function obj = to_canonical(obj)
