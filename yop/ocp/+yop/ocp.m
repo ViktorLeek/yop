@@ -267,7 +267,7 @@ classdef ocp < handle
         
         function obj = set_objective_function(obj, tps, ints, ders)
             % The objective should be a functino in tps and ints only.
-            args = {mx_vec(tps), mx_vec(ints)};
+            args = {mx_vec(obj.parameters), mx_vec(tps), mx_vec(ints)};
             
             set_mx(obj.variables); % To avoid undefined behaviour.
             set_mx([tps, ints, ders]);

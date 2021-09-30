@@ -9,19 +9,23 @@ u = yop.collocated_control(n_u(ocp), N);
 p = yop.cx('p', n_p(ocp));
 dt = (tf - t0)/N;
 
+[~, T0, Tf] = fixed_horizon(ocp);
 [tps, ints] = yop.param_special_nodes(ocp.special_nodes, ocp.n_tp, ...
-    ocp.n_int, N, tau, dt, t0, tf, t, x, u, p);
+    ocp.n_int, N, tau, dt, T0, Tf, t, x, u, p);
+ders = [];
 
-J = ocp.objective.fn(tps, ints);
+J = ocp.objective.fn(p, tps, ints);
 
 g = yop.discretize_ode(ocp, N, tau, dt, t, x, u, p);
 for pc = ocp.equality_constraints
-    g = [g; yop.parameterize_expression(pc, N, tau, t, x, u, p, tps, ints)];
+    g = [g; yop.parameterize_expression( ...
+        pc, N, tau, t, x, u, p, tps, ints, ders)];
 end
 
 h = [];
 for pc = ocp.inequality_constraints
-    h = [h; yop.parameterize_expression(pc, N, tau, t, x, u, p, tps, ints)];
+    h = [h; yop.parameterize_expression( ...
+        pc, N, tau, t, x, u, p, tps, ints, ders)];
 end
 
 [w_lb, w_ub] = yop.box_bnd(N, d, ocp);

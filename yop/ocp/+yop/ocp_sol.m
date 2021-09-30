@@ -32,7 +32,13 @@ classdef ocp_sol < handle
             
             expr = yop.ocp_expr(expr);
             
-            [~,tps,ints,ders,sn] = yop.ocp.find_special_nodes(expr.ast);
+            [vars,tps,ints,ders,sn] = yop.ocp.find_special_nodes(expr.ast);
+            
+            for k=1:length(vars)
+                if isa(vars{k}, 'yop.ast_independent')
+                    vars{k}.m_value = obj.ocp_t.mx;
+                end
+            end
             
             args = { ...
                 mx_vec(obj.ocp_t), ...
@@ -68,7 +74,7 @@ classdef ocp_sol < handle
             v = full(f(obj.sol.x));
         end
         
-        function v = resolved_value(obj, expr, grid_points)
+        function v = valuex(obj, expr, refinement)
             expr = yop.ocp_expr(expr);
             
             %% This could be part of the contructor and tt, xx ... could be
@@ -102,7 +108,12 @@ classdef ocp_sol < handle
             ulp = yop.collocated_expression(obj.nlp.N, 0, y);
             %%
             
-            [~,tps,ints,ders,sn] = yop.ocp.find_special_nodes(expr.ast);
+            [vars,tps,ints,ders,sn] = yop.ocp.find_special_nodes(expr.ast);
+            for k=1:length(vars)
+                if isa(vars{k}, 'yop.ast_independent')
+                    vars{k}.m_value = obj.ocp_t.mx;
+                end
+            end
             
             args = { ...
                 mx_vec(obj.ocp_t), ...
@@ -143,12 +154,14 @@ classdef ocp_sol < handle
                     ulp(1).evaluate(0), ...
                     pp, TP, I, []);
             else
-                grid = linspace( ...
-                    tlp(1).evaluate(0), ...
-                    tlp(end).evaluate(0), ...
-                    grid_points);
+                t = tt(1:2:end);
+                dt = t(2)-t(1);
+                tvec = t;
+                for k=1:refinement-1
+                    tvec = [tvec; t+k*dt/refinement];
+                end
                 v = [];
-                for tp=grid
+                for tp=tvec(:)'
                     vk = expr.fn( ...
                         tlp.value(tp, tlp(1).evaluate(0), tlp(end).evaluate(0)), ...
                         xlp.value(tp, tlp(1).evaluate(0), tlp(end).evaluate(0)), ...
@@ -161,24 +174,65 @@ classdef ocp_sol < handle
         end
         
         function varargout = plot(obj, varargin)
-            for k=1:length(varargin)
-                if isa(varargin{k}, 'yop.node')
-                    varargin{k} = obj.value(varargin{k});
+            
+            args = {};
+            refine = false;
+            refinement = 0;
+            k = 1;
+            while k <= length(varargin)
+                if strcmp(varargin{k}, 'refine')
+                    refine = true;
+                    refinement = varargin{k+1};
+                    k = k + 2;
+                else
+                    args{end+1} = varargin{k};
+                    k = k + 1;
                 end
             end
-            h = plot(varargin{:});
+            
+            for k=1:length(args)
+                if isa(args{k}, 'yop.node')
+                    if refine
+                        args{k} = obj.valuex(varargin{k}, refinement);
+                    else
+                        args{k} = obj.value(varargin{k});
+                    end
+                end
+            end
+            
+            h = plot(args{:});
             if nargout > 0
                 varargout{1} = h;
             end 
         end
         
         function varargout = stairs(obj, varargin)
-            for k=1:length(varargin)
-                if isa(varargin{k}, 'yop.node')
-                    varargin{k} = obj.value(varargin{k});
+            args = {};
+            refine = false;
+            refinement = 0;
+            k = 1;
+            while k <= length(varargin)
+                if strcmp(varargin{k}, 'refine')
+                    refine = true;
+                    refinement = varargin{k+1};
+                    k = k + 2;
+                else
+                    args{end+1} = varargin{k};
+                    k = k + 1;
                 end
             end
-            h = stairs(varargin{:});
+            
+            for k=1:length(args)
+                if isa(args{k}, 'yop.node')
+                    if refine
+                        args{k} = obj.valuex(varargin{k}, refinement);
+                    else
+                        args{k} = obj.value(varargin{k});
+                    end
+                end
+            end
+            
+            h = stairs(args{:});
             if nargout > 0
                 varargout{1} = h;
             end 

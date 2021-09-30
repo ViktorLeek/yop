@@ -1,3 +1,3 @@
-function [t, t0, tf] = time(varargin)
-[t, t0, tf] = yop.independent(varargin{:});
+function t = time(varargin)
+t = yop.independent(varargin{:});
 end
