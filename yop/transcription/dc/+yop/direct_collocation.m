@@ -5,6 +5,7 @@ t0 = yop.cx('t0');
 tf = yop.cx('tf');
 t = yop.collocated_time(t0, tf, N);
 x = yop.collocated_state(n_x(ocp), N, tau);
+z = [];
 u = yop.collocated_control(n_u(ocp), N);
 p = yop.cx('p', n_p(ocp));
 dt = (tf - t0)/N;
@@ -18,14 +19,14 @@ J = ocp.objective.fn(p, tps, ints);
 
 g = yop.discretize_ode(ocp, N, tau, dt, t, x, u, p);
 for pc = ocp.equality_constraints
-    g = [g; yop.parameterize_expression( ...
-        pc, N, tau, t, x, u, p, tps, ints, ders)];
+    disc = yop.parameterize_expression(pc,N,tau,t,x,u,p,tps,ints,ders);
+    g = [g; disc(:)];
 end
 
 h = [];
 for pc = ocp.inequality_constraints
-    h = [h; yop.parameterize_expression( ...
-        pc, N, tau, t, x, u, p, tps, ints, ders)];
+    disc = yop.parameterize_expression(pc,N,tau,t,x,u,p,tps,ints,ders);
+    h = [h; disc(:)];
 end
 
 [w_lb, w_ub] = yop.box_bnd(N, d, ocp);
@@ -43,6 +44,7 @@ nlp.h_ub = zeros(size(h));
 nlp.h_lb = -inf(size(h));
 nlp.t = t;
 nlp.x = x;
+nlp.z = z;
 nlp.u = u;
 nlp.p = p;
 nlp.N = N;

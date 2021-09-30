@@ -8,7 +8,7 @@ a  = yop.control('a');   % acceleration
 l  = yop.parameter('l'); % maximum position of the cart
 
 ocp = yop.ocp('Bryson-Denham Problem');
-ocp.min( 1/2 * int(a^2) + 30*l );
+ocp.min( 1/2 * int(a^2) );
 ocp.st( ...
     t0==0, tf==1, ...
     der(v) == a, ...
@@ -18,15 +18,23 @@ ocp.st( ...
     x <= l == 1/9 ...
     );
 
-sol = ocp.solve('intervals', 20);
+sol = ocp.solve('intervals', 50);
 
 figure(1);
 subplot(311); hold on
 sol.plot(t, x);
+sol.plot(t, x, 'refine', 10);
+
 subplot(312); hold on
-sol.plot(t, v);
+sol.area(t, v);
+sol.stem(t, v);
+td = sol.value(int(abs(v)));
+text(0.3, 0.5, ['Traveled distance is ', num2str(td)], 'FontSize', 14)
+
 subplot(313); hold on
 sol.stairs(t, a);
+J_min = sol.value(0.5*int(a^2));
+text(0.35, -2, ['Minimum cost ', num2str(J_min)], 'FontSize', 14)
 
 %% Guaranteed box constraints for boundary conditions
 t0 = yop.time0('t0');
@@ -80,7 +88,7 @@ sol.stairs(t, u);
 %% Minreal
 [t0, tf, t, x, u] = yop.ocp_variables('nx', 2, 'nu', 1);
 yop.ocp().min(1/2*int(u^2)).st(tf==1, der(x)==[x(2);u], x(t0)==[0; 1], ...
-    x(tf)==[0;-1], x(1)<=1/9).solve('intervals',20).plot(t,[x;u]);
+    x(tf)==[0;-1], x(1)<=1/9).solve('intervals',40).plot(t,[x;u]);
 
 %% Trade-off between control effort and traveled distance
 t0 = yop.time0('t0');
