@@ -18,11 +18,11 @@ ocp.st( ...
     x <= l == 1/9 ...
     );
 
-sol = ocp.solve('intervals', 50);
+sol = ocp.solve('intervals', 10);
 
 figure(1);
 subplot(311); hold on
-sol.plot(t, x);
+sol.plot(t, x, '-x');
 sol.plot(t, x, 'refine', 10);
 
 subplot(312); hold on
@@ -88,7 +88,7 @@ sol.stairs(t, u);
 %% Minreal
 [t0, tf, t, x, u] = yop.ocp_variables('nx', 2, 'nu', 1);
 yop.ocp().min(1/2*int(u^2)).st(tf==1, der(x)==[x(2);u], x(t0)==[0; 1], ...
-    x(tf)==[0;-1], x(1)<=1/9).solve('intervals',40).plot(t,[x;u]);
+    x(tf)==[0;-1], x(1)<=1/9).solve('intervals', 40).plot(t, [x;u]);
 
 %% Trade-off between control effort and traveled distance
 t0 = yop.time0('t0');
@@ -122,3 +122,65 @@ subplot(312); hold on
 sol.plot(t, v, 'refine', 5);
 subplot(313); hold on
 sol.stairs(t, a, 'refine', 5);
+
+%% Simulation
+
+
+
+t0 = yop.time0('t0');
+t  = yop.time('t');
+x  = yop.state('x');     % position
+v  = yop.state('v');     % speed
+a  = yop.control('a');   % acceleration
+l  = yop.parameter('l'); % maximum position of the cart
+
+ocp = yop.ivp('Bryson-Denham Problem');
+ivp = yop.ivp( ...
+    t0==0, tf==1, ...
+    der(v) == a, ...
+    der(x) == v, ...
+    v(t0) == 1, ...
+    x(t0) == 0, ...
+    a == -2 ...
+    );
+ivp.solve()
+
+
+
+%%
+t = opts.grid;
+x = full(res.xf);
+figure(1)
+subplot(311)
+plot(t, x(2,:))
+subplot(312)
+plot(t, x(1,:))
+subplot(313)
+plot(t, t*0 - 2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

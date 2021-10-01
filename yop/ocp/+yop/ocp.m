@@ -642,26 +642,9 @@ classdef ocp < handle
             end
         end
         
-        function [ast_var, ocp_var] = find_variable(obj, id)
-            %______________________________________________________________
-            %|YOP.OCP/FIND_VARIABLE Find a problem variable by its ID.    |
-            %|Error if the ID is not found among the problem variables.   |
-            %|                                                            |
-            %| Use:                                                       |
-            %|   [ast_var, ocp_var] = find_variable(obj, id)              |
-            %|   [ast_var, ocp_var] = obj.find_variable(id)               |
-            %|                                                            |
-            %| Parameters:                                                |
-            %|   obj - Handle to the ocp.                                 |
-            %|   id - Id of the sought variable.                          |
-            %|                                                            |
-            %| Return values:                                             |
-            %|   ast_var - The ast node of the variable.                  |
-            %|   ocp_var - The ocp information on the variable.           |
-            %|____________________________________________________________|
+        function ocp_var = find_variable(obj, id)
             for ocp_var = obj.variables
                 if ocp_var.var.id == id
-                    ast_var = ocp_var;
                     return;
                 end
             end
@@ -682,6 +665,8 @@ classdef ocp < handle
             %| Return values:                                             |
             %|   vars - All problem variables vectorized.                 |
             %|____________________________________________________________|
+            
+            % Made row vectors so that the elements can be looped over
             vars = [obj.independent(:).', ...
                 obj.independent_initial(:).', ...
                 obj.independent_final(:).', ...

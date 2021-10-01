@@ -1,4 +1,4 @@
-function res = open(filename, t, x, u, p)
+function res = load(filename, t, x, u, p)
 z = [];
 
 data = load(filename);

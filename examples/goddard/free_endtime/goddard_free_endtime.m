@@ -27,8 +27,8 @@ sol.plot(t, x(3));
 subplot(414); hold on
 sol.stairs(t, u);
 
-% sol.save('Goddard');
-% yop.open('Goddard', t, t0, tf, x, u, p);
+% sol.save('Goddard.mat');
+% sol = yop.load('Goddard', t, t0, tf, x, u, p);
 
 %% Formulation 2
 t0 = yop.time0('t0');

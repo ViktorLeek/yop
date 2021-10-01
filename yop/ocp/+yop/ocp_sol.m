@@ -77,8 +77,12 @@ classdef ocp_sol < handle
             res.nz = 0;
             res.np = n_elem(obj.ocp_p);
             
-            if strcmp(filename(end-3:end), '.mat')
+            if length(filename) < 4
+                save([filename, '.mat'], '-struct', 'res');
+                
+            elseif strcmp(filename(end-3:end), '.mat')
                 save(filename, '-struct', 'res');
+                
             else
                 save([filename, '.mat'], '-struct', 'res');
             end
