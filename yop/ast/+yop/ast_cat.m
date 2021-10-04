@@ -73,6 +73,58 @@ classdef ast_cat < yop.ast_expression
             id = cat(obj.d, tmp_id{:});
         end
         
+        function [bool, id] = isa_independent(obj)
+            [bool, id] = isa_independent(obj.args{1});
+            tmp_bool = {bool};
+            tmp_id = {id};
+            for k=2:length(obj.args)
+                [bk, ik] = isa_independent(obj.args{k});
+                tmp_bool = {tmp_bool{:}, bk};
+                tmp_id = {tmp_id{:}, ik};
+            end      
+            bool = cat(obj.d, tmp_bool{:});
+            id = cat(obj.d, tmp_id{:});
+        end
+        
+        function [bool, id] = isa_parameter(obj)
+            [bool, id] = isa_parameter(obj.args{1});
+            tmp_bool = {bool};
+            tmp_id = {id};
+            for k=2:length(obj.args)
+                [bk, ik] = isa_parameter(obj.args{k});
+                tmp_bool = {tmp_bool{:}, bk};
+                tmp_id = {tmp_id{:}, ik};
+            end      
+            bool = cat(obj.d, tmp_bool{:});
+            id = cat(obj.d, tmp_id{:});
+        end
+        
+        function [bool, id] = isa_control(obj)
+            [bool, id] = isa_control(obj.args{1});
+            tmp_bool = {bool};
+            tmp_id = {id};
+            for k=2:length(obj.args)
+                [bk, ik] = isa_control(obj.args{k});
+                tmp_bool = {tmp_bool{:}, bk};
+                tmp_id = {tmp_id{:}, ik};
+            end      
+            bool = cat(obj.d, tmp_bool{:});
+            id = cat(obj.d, tmp_id{:});
+        end
+        
+        function [bool, id] = isa_algebraic(obj)
+            [bool, id] = isa_algebraic(obj.args{1});
+            tmp_bool = {bool};
+            tmp_id = {id};
+            for k=2:length(obj.args)
+                [bk, ik] = isa_algebraic(obj.args{k});
+                tmp_bool = {tmp_bool{:}, bk};
+                tmp_id = {tmp_id{:}, ik};
+            end      
+            bool = cat(obj.d, tmp_bool{:});
+            id = cat(obj.d, tmp_id{:});
+        end
+        
         function [bool, tp] = isa_timepoint(obj)
             [bool, tp] = isa_timepoint(obj.args{1});
             tmp_bool = {bool};

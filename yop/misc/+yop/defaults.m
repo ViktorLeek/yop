@@ -1,6 +1,5 @@
 classdef defaults
-    properties (Constant)
-        
+    properties (Constant) % OCP
         independent_ub0 = 0;
         independent_lb0 = 0;
         independent_ub  = 0;
@@ -32,8 +31,9 @@ classdef defaults
         collocation_points = 'legendre';
         control_invervals = 50;
         rk4_steps = 4;
-        
-        
-        
+    end
+    
+    properties (Constant)
+        independent_num = 0;
     end
 end

@@ -18,20 +18,17 @@ classdef ivp < handle
         end
         
         function sol = solve(obj)
-            vars = yop.ocp.find_special_nodes(obj.equations{:});
+            vars = yop.ivp.find_variables(obj.equations{:});
             obj.classify_variables(vars);
             
             srf = yop.ocp.to_srf(obj.equations);
-            [box, nbox] = yop.ocp.separate_box(srf);
-            obj.set_box(box);
+            [T, iv, dae_eq] = yop.ivp.split_iv(srf);
+            obj.set_horizon(T);
+            obj.set_iv(iv);
             
-            [odes, algs, eqs, ieqs] = yop.ocp.sort_nonbox(nbox);
+            [odes, algs] = yop.ivp.sort_eqs(dae_eq);
             obj.vectorize_ode(odes);
-            obj.vectorize_alg(eqs);
-            
-            if ~isempty(algs) || ~isempty(ieqs)
-                error(yop.msg.unexpected_error);
-            end
+            obj.vectorize_alg(algs);
             
             [odee, alge] = obj.set_ivp_functions();
             dae = struct;
@@ -40,24 +37,21 @@ classdef ivp < handle
             dae.z = mx_vec(obj.algebraics);
             dae.p = mx_vec(obj.parameters);
             dae.ode = odee;
-            dae.alg = dae.z+2.0;
+            dae.alg = alge;
             
             opts = struct;
             opts.output_t0 = true;
-            opts.grid = linspace( ...
-                obj.independent_initial.lb, ...
-                obj.independent_final.lb, ...
-                200);
+            opts.grid = linspace(t0(obj), tf(obj), 200);
             opts.print_stats = true;
             
             x0=[];
             for k=1:length(obj.states)
-                x0 = [x0(:); obj.states(k).lb0(:)];
+                x0 = [x0(:); obj.states(k).lb(:)];
             end
             
             z0=[];
             for k=1:length(obj.algebraics)
-                z0 = [z0(:); obj.algebraics(k).lb0(:)];
+                z0 = [z0(:); obj.algebraics(k).lb(:)];
             end
             
             p=[];
@@ -137,33 +131,76 @@ classdef ivp < handle
             end
         end
         
-        function obj = set_box(obj, box)
-            [box_t, box_t0, box_tf] = yop.ocp.timed_box(box);
-            obj.parse_box(box_t, 'lb', 'ub');
-            obj.parse_box(box_t0, 'lb0', 'ub0');
-            obj.parse_box(box_tf, 'lbf', 'ubf');
-            obj.set_box_bounds(); % Includes processing default values
-        end
-        
-        function obj = parse_box(obj, box, lb, ub)
-            for k=1:length(box)
-                re = yop.reaching_elems(box{k}.lhs);
-                bnd = yop.prop_num(box{k}.rhs);
+        function [T0, Tf] = set_horizon(obj, T)
+            % T0 <= t <= TF
+            for k=1:length(T)
+                re = yop.reaching_elems(T{k}.lhs);
+                bnd = yop.prop_num(T{k}.rhs);
                 var = obj.find_variable(re.var.id);
-                switch class(box{k})
+                switch class(T{k})
                     case 'yop.ast_eq' % var == bnd
-                        var.(ub)(re.reaching_idx) = ...
-                            yop.get_subexpr(bnd, re.expr_elem);
-                        var.(lb)(re.reaching_idx) = ...
-                            yop.get_subexpr(bnd, re.expr_elem);
+                        value = yop.get_subexpr(bnd, re.expr_elem);
+                        var.ub(re.reaching_idx) = value;
+                        var.lb(re.reaching_idx) = value;
                     case {'yop.ast_le', 'yop.ast_lt'} % var < bnd
-                        var.(ub)(re.reaching_idx) = ...
+                        var.ub(re.reaching_idx) = ...
                             yop.get_subexpr(bnd, re.expr_elem);
                     case {'yop.ast_ge', 'yop.ast_gt'} % var > bnd
-                        var.(lb)(re.reaching_idx) = ...
+                        var.lb(re.reaching_idx) = ...
                             yop.get_subexpr(bnd, re.expr_elem);
                     otherwise
                         error('[Yop] Error: Wrong constraint class.');
+                end
+            end
+            [T0, Tf] = horizon(obj);
+        end
+        
+        function [T0, Tf] = horizon(obj)
+            T0 = t0(obj);
+            Tf = tf(obj);
+        end
+        
+        function t = t0(obj)
+            if isnan(obj.independent.lb)
+                t = obj.independent_initial.lb;
+                assert(t==obj.independent_initial.ub, ...
+                    yop.msg.ivp_ub_differ);
+            else
+                t = obj.independent.lb;
+                assert(~isnan(t), yop.msg.ivp_no_start_time);
+            end
+        end
+        
+        function t = tf(obj)
+            if isnan(obj.independent.ub)
+                t = obj.independent_final.lb;
+                assert(t==obj.independent_final.ub, ...
+                    yop.msg.ivp_ub_differ);
+            else
+                t = obj.independent.ub;
+                assert(~isnan(t), yop.msg.ivp_no_start_time);
+            end
+        end
+        
+        function obj = set_iv(obj, iv)
+            for k=1:length(iv)
+                re = yop.reaching_elems(iv{k}.lhs);
+                bnd = yop.prop_num(iv{k}.rhs);
+                var = obj.find_variable(re.var.id);
+                switch class(iv{k})
+                    case 'yop.ast_eq'
+                        value = yop.get_subexpr(bnd, re.expr_elem);
+                        var.ub(re.reaching_idx) = value;
+                        var.lb(re.reaching_idx) = value;
+                    otherwise
+                        error('[Yop] Error: Wrong constraint class.');
+                end
+                
+                [bool, tp] = iv{k}.lhs.isa_timepoint();
+                if bool % Should be scalar! otherwise error is good!
+                    if tp ~= t0(obj) && tp ~= yop.initial_timepoint
+                        error(yop.msg.ivp_t0_err);
+                    end
                 end
             end
         end
@@ -263,104 +300,170 @@ classdef ivp < handle
         
         function obj = add_independent(obj, t)
             if isempty(obj.independent)
-                obj.independent = yop.ocp_var(t);
+                obj.independent = yop.ivp_var(t);
             else
-                error(['[Yop] Error: An OCP can only have one ' ...
+                error(['[Yop] Error: An IVP can only have one ' ...
                     'independent variable']);
             end
         end
         
         function obj = add_independent_initial(obj, t)
             if isempty(obj.independent_initial)
-                obj.independent_initial = yop.ocp_var(t);
+                obj.independent_initial = yop.ivp_var(t);
             else
-                error(['[Yop] Error: An OCP can only have one ' ...
+                error(['[Yop] Error: An IVP can only have one ' ...
                     'initial bound for the independent variable']);
             end
         end
         
         function obj = add_independent_final(obj, t)
             if isempty(obj.independent_final)
-                obj.independent_final = yop.ocp_var(t);
+                obj.independent_final = yop.ivp_var(t);
             else
-                error(['[Yop] Error: An OCP can only have one ' ...
+                error(['[Yop] Error: An IVP can only have one ' ...
                     'terminal bound for the independent variable']);
             end
         end
         
         function obj = add_state(obj, x)
             if isempty(obj.states)
-                obj.states = yop.ocp_var.empty(1,0);
+                obj.states = yop.ivp_var.empty(1,0);
             end
-            obj.states(end+1) = yop.ocp_var(x);
+            obj.states(end+1) = yop.ivp_var(x);
         end
         
         function obj = add_algebraic(obj, z)
             if isempty(obj.algebraics)
-                obj.algebraics = yop.ocp_var.empty(1,0);
+                obj.algebraics = yop.ivp_var.empty(1,0);
             end
-            obj.algebraics(end+1) = yop.ocp_var(z);
+            obj.algebraics(end+1) = yop.ivp_var(z);
         end
         
         function obj = add_parameter(obj, p)
             if isempty(obj.parameters)
-                obj.parameters = yop.ocp_var.empty(1,0);
+                obj.parameters = yop.ivp_var.empty(1,0);
             end
-            obj.parameters(end+1) = yop.ocp_var(p);
-        end
-        
-        function obj = set_box_bounds(obj)
-            obj.set_box_bnd('independent', 'lb', 'ub', ...
-                yop.defaults().independent_lb, ...
-                yop.defaults().independent_ub);
-            
-            obj.set_box_bnd('independent_initial', 'lb', 'ub', ...
-                yop.defaults().independent_lb0, ...
-                yop.defaults().independent_ub0);
-            
-            obj.set_box_bnd('independent_final', 'lb', 'ub', ...
-                yop.defaults().independent_lbf, ...
-                yop.defaults().independent_ubf);
-            
-            obj.set_box_bnd('states', 'lb', 'ub', ...
-                yop.defaults().state_lb, yop.defaults().state_ub);
-            
-            obj.set_box_bnd('states', 'lb0', 'ub0', ...
-                yop.defaults().state_lb0, yop.defaults().state_ub0);
-            
-            obj.set_box_bnd('states', 'lbf', 'ubf', ...
-                yop.defaults().state_lbf, yop.defaults().state_ubf);
-            
-            obj.set_box_bnd('algebraics', 'lb', 'ub', ...
-                yop.defaults().algebraic_lb, yop.defaults().algebraic_ub);
-            
-            obj.set_box_bnd('parameters', 'lb', 'ub', ...
-                yop.defaults().parameter_lb, yop.defaults().parameter_ub);
-        end 
-        
-        
-        function obj = set_box_bnd(obj, var_field, lb_field, ...
-                ub_field, lb_def, ub_def)
-            for v=obj.(var_field)
-                
-                ub = v.(ub_field); % The full bound vector
-                not_set = isnan(ub); % The elements not set
-                
-                bd = v.ub(not_set); % The ub for t = (t0, tf)
-                bd(isnan(bd)) = ub_def; % Default for unsets
-                
-                ub(not_set) = bd; % Timed bound
-                v.(ub_field) = ub; % Set variable timed bound
-                
-                % Same procedure for lb
-                lb = v.(lb_field);
-                not_set = isnan(lb);
-                bd = v.lb(not_set);
-                bd(isnan(bd)) = lb_def;
-                lb(not_set) = bd;
-                v.(lb_field) = lb;
-            end
+            obj.parameters(end+1) = yop.ivp_var(p);
         end
         
     end
+    
+    methods (Static)
+        
+        
+        function vars = find_variables(varargin)
+            vars = {};
+            visited = [];
+            for k=1:length(varargin)
+                [tsort, N, visited]=topological_sort(varargin{k}, visited);
+                for n=1:N
+                    if isa(tsort{n}, 'yop.ast_variable')
+                        vars{end+1} = tsort{n};
+                    end
+                end
+            end
+        end
+        
+        function [T, iv, rem] = split_iv(srf)
+            % Split into time horizon equations, initial values and 
+            % problem eqs.
+            T = {};
+            iv = {};
+            rem = {};
+            for n=1:length(srf)
+                var_num = yop.ivp.isa_T(srf{n}.lhs, srf{n}.rhs);                
+                num_var = yop.ivp.isa_T(srf{n}.rhs, srf{n}.lhs);
+                isT = var_num | num_var;
+                T{end+1} = yop.get_subrel(srf{n}, isT);
+                
+                var_num = yop.ivp.isa_iv(srf{n}.lhs, srf{n}.rhs);                
+                num_var = yop.ivp.isa_iv(srf{n}.rhs, srf{n}.lhs);
+                isiv = var_num | num_var;
+                iv{end+1} = yop.get_subrel(srf{n}, isiv);
+                
+                rem{end+1} = yop.get_subrel(srf{n}, ~isiv & ~isT);
+            end
+            
+            T = T(~cellfun('isempty', T));
+            for k=1:length(T)
+                T{k} = canonicalize_box(T{k});
+            end
+            T = yop.ocp.unique_box(T);
+            
+            iv = iv(~cellfun('isempty', iv));
+            for k=1:length(iv)
+                iv{k} = canonicalize_box(iv{k});
+            end
+            iv = yop.ocp.unique_box(iv);
+            
+            rem = rem(~cellfun('isempty', rem));
+        end
+        
+        function boolv = isa_T(var_cand, num_cand)
+            boolv = isa_independent(var_cand)  & isa_numeric(num_cand);
+        end
+        
+        function boolv = isa_iv(var_cand, num_cand)
+            boolv = (...
+                (isa_state(var_cand)     & isa_timepoint(var_cand)) | ...
+                (isa_algebraic(var_cand) & isa_timepoint(var_cand)) | ...
+                isa_parameter(var_cand) ...
+                ) & ~isa_der(var_cand) & ...
+                isa_numeric(num_cand);
+        end
+        
+        function [ode, alg] = sort_eqs(nbox)
+            ode={}; 
+            alg={};
+            for k=1:length(nbox)
+                if isa(nbox{k}, 'yop.ast_eq')
+                    [~, ode_k, alg_k] = isa_ode(nbox{k});
+                    ode{end+1} = ode_k;
+                    alg{end+1} = alg_k; % is canonicalized
+                    
+                else 
+                    error(yop.msg.ivp_relation);
+                    
+                end
+            end
+            ode = ode(~cellfun('isempty', ode));
+            alg = alg(~cellfun('isempty', alg));
+        end 
+    end
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

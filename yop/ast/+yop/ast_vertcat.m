@@ -68,6 +68,42 @@ classdef ast_vertcat < yop.ast_expression
             end       
         end
         
+        function [bool, id] = isa_independent(obj)
+            [bool, id] = isa_independent(obj.args{1});
+            for k=2:length(obj.args)
+                [bk, ik] = isa_independent(obj.args{k});
+                bool = [bool; bk];
+                id = [id; ik];
+            end       
+        end
+        
+        function [bool, id] = isa_parameter(obj)
+            [bool, id] = isa_parameter(obj.args{1});
+            for k=2:length(obj.args)
+                [bk, ik] = isa_parameter(obj.args{k});
+                bool = [bool; bk];
+                id = [id; ik];
+            end       
+        end
+        
+        function [bool, id] = isa_control(obj)
+            [bool, id] = isa_control(obj.args{1});
+            for k=2:length(obj.args)
+                [bk, ik] = isa_control(obj.args{k});
+                bool = [bool; bk];
+                id = [id; ik];
+            end       
+        end
+        
+        function [bool, id] = isa_algebraic(obj)
+            [bool, id] = isa_algebraic(obj.args{1});
+            for k=2:length(obj.args)
+                [bk, ik] = isa_algebraic(obj.args{k});
+                bool = [bool; bk];
+                id = [id; ik];
+            end       
+        end
+        
         function value = evaluate(obj)
             tmp = cell(size(obj.args));
             for k=1:length(tmp)

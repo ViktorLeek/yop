@@ -36,6 +36,8 @@ sol.stairs(t, a);
 J_min = sol.value(0.5*int(a^2));
 text(0.35, -2, ['Minimum cost ', num2str(J_min)], 'FontSize', 14)
 
+der( expr(0 <= t <= 2) ) <= num;
+
 %% Guaranteed box constraints for boundary conditions
 t0 = yop.time0('t0');
 tf = yop.timef('tf');
@@ -124,43 +126,57 @@ subplot(313); hold on
 sol.stairs(t, a, 'refine', 5);
 
 %% Simulation
-
-
-
 t0 = yop.time0('t0');
+tf = yop.timef('tf');
 t  = yop.time('t');
 x  = yop.state('x');     % position
 v  = yop.state('v');     % speed
 a  = yop.control('a');   % acceleration
 l  = yop.parameter('l'); % maximum position of the cart
 
-ocp = yop.ivp('Bryson-Denham Problem');
 ivp = yop.ivp( ...
+    ...0 <= t <= 1, ...
     t0==0, tf==1, ...
-    der(v) == a, ...
-    der(x) == v, ...
-    v(t0) == 1, ...
     x(t0) == 0, ...
-    a == -2 ...
+    v(t0) == 1, ...
+    der(x) == v, ...
+    der(v) == a, ...
+    a == -24*(t-0.5)^2 ...
     );
 ivp.solve()
-
-
 
 %%
 t = opts.grid;
 x = full(res.xf);
+z = full(res.zf);
 figure(1)
 subplot(311)
 plot(t, x(2,:))
 subplot(312)
 plot(t, x(1,:))
 subplot(313)
-plot(t, t*0 - 2)
+plot(t, z)
 
+%% 
+expr = obj.states(2).var;
+vars = yop.ivp.find_variables(expr);
 
+for k=1:length(vars)
+    if isa(vars{k}, 'yop.ast_independent')
+        vars{k}.m_value = obj.independent.mx;
+    end
+end
 
+args = { ...
+    mx_vec(obj.independent), ...
+    mx_vec(obj.states), ...
+    mx_vec(obj.algebraics), ...
+    mx_vec(obj.parameters) ...
+    };
 
+set_mx([obj.independent, obj.states, obj.algebraics, obj.parameters]);
+
+fn = casadi.Function('fn', args, {fw_eval(expr)});
 
 
 

@@ -37,6 +37,30 @@ classdef ast_transpose < yop.ast_expression
             id = transpose(id);
         end
         
+        function [bool, id] = isa_independent(obj)
+            [bool, id] = isa_independent(obj.expr);
+            bool = transpose(bool);
+            id = transpose(id);
+        end
+        
+        function [bool, id] = isa_parameter(obj)
+            [bool, id] = isa_parameter(obj.expr);
+            bool = transpose(bool);
+            id = transpose(id);
+        end
+        
+        function [bool, id] = isa_control(obj)
+            [bool, id] = isa_control(obj.expr);
+            bool = transpose(bool);
+            id = transpose(id);
+        end
+        
+        function [bool, id] = isa_algebraic(obj)
+            [bool, id] = isa_algebraic(obj.expr);
+            bool = transpose(bool);
+            id = transpose(id);
+        end
+        
         function boolv = is_transcription_invariant(obj)
             boolv = transpose(is_transcription_invariant(obj.expr));
         end

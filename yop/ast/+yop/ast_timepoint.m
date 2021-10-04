@@ -122,6 +122,22 @@ classdef ast_timepoint < yop.ast_expression
             [bool, id] = isa_state(obj.expr);
         end
         
+        function [bool, id] = isa_independent(obj)
+            [bool, id] = isa_independent(obj.expr);
+        end
+        
+        function [bool, id] = isa_parameter(obj)
+            [bool, id] = isa_parameter(obj.expr);
+        end
+        
+        function [bool, id] = isa_control(obj)
+            [bool, id] = isa_control(obj.expr);
+        end
+        
+        function [bool, id] = isa_algebraic(obj)
+            [bool, id] = isa_algebraic(obj.expr);
+        end
+        
         function draw(obj)
             fprintf(['[', num2str(obj.id), ']:', ...
                 'timepoint(timepoint, expr)\n']);

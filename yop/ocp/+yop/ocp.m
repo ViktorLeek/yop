@@ -857,8 +857,8 @@ classdef ocp < handle
                 relations = get_relations(cn);
                 for k=1:length(relations)
                     rk = relations{k};
-                    fnh = get_constructor(rk);
-                    srf{end+1} = fnh(rmost(rk.lhs), lmost(rk.rhs));
+                    rel = get_constructor(rk);
+                    srf{end+1} = rel(rmost(rk.lhs), lmost(rk.rhs));
                 end
             end
         end

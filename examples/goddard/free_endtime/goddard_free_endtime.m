@@ -5,7 +5,8 @@
 rocket = y.rocket;
 
 ocp = yop.ocp('Goddard''s Rocket Problem');
-ocp.max( rocket.height(tf) );
+% ocp.max( rocket.height(tf) );
+ocp.max( int(rocket.velocity) );
 ocp.st( ...
     der(x) == rocket_model(x, u), ...
     rocket.height(t0)   == 0    , ...
