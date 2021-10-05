@@ -18,16 +18,14 @@ ocp.st( ...
     x <= l == 1/9 ...
     );
 
-sol = ocp.solve('intervals', 10);
+sol = ocp.solve('intervals', 25);
 
 figure(1);
 subplot(311); hold on
-sol.plot(t, x, '-x');
 sol.plot(t, x, 'refine', 10);
 
 subplot(312); hold on
-sol.area(t, v);
-sol.stem(t, v);
+sol.plot(t, v);
 td = sol.value(int(abs(v)));
 text(0.3, 0.5, ['Traveled distance is ', num2str(td)], 'FontSize', 14)
 
@@ -35,8 +33,6 @@ subplot(313); hold on
 sol.stairs(t, a);
 J_min = sol.value(0.5*int(a^2));
 text(0.35, -2, ['Minimum cost ', num2str(J_min)], 'FontSize', 14)
-
-der( expr(0 <= t <= 2) ) <= num;
 
 %% Guaranteed box constraints for boundary conditions
 t0 = yop.time0('t0');
@@ -56,7 +52,6 @@ ocp.st( ...
     v(t0) == 1, ...
     x(tf) == 0, ...
     v(tf) == -1, ...
-    p == int(a^2), ...
     x <= 1/9 ...
     );
 
@@ -69,7 +64,6 @@ subplot(312); hold on
 sol.plot(t, v, 'refine', 5);
 subplot(313); hold on
 sol.stairs(t, a, 'refine', 5);
-
 
 %% Compact representation
 [t0, tf, t, x, u] = yop.ocp_variables('nx', 2, 'nu', 1);
@@ -135,53 +129,28 @@ a  = yop.control('a');   % acceleration
 l  = yop.parameter('l'); % maximum position of the cart
 
 ivp = yop.ivp( ...
-    ...0 <= t <= 1, ...
     t0==0, tf==1, ...
-    x(t0) == 0, ...
-    v(t0) == 1, ...
-    der(x) == v, ...
-    der(v) == a, ...
+    x(t0) == 0  , ...
+    v(t0) == 1  , ...
+    der(x) == v , ...
+    der(v) == a , ...
     a == -24*(t-0.5)^2 ...
     );
-ivp.solve()
+sol = ivp.solve();
 
-%%
-t = opts.grid;
-x = full(res.xf);
-z = full(res.zf);
-figure(1)
-subplot(311)
-plot(t, x(2,:))
-subplot(312)
-plot(t, x(1,:))
-subplot(313)
-plot(t, z)
+figure(1);
+subplot(311); hold on
+sol.plot(t, x);
 
-%% 
-expr = obj.states(2).var;
-vars = yop.ivp.find_variables(expr);
+subplot(312); hold on
+sol.plot(t, v);
+td = sol.value(int(abs(v)));
+text(0.33, 0.8, ['Guess distance is ', num2str(td)], 'FontSize', 14)
 
-for k=1:length(vars)
-    if isa(vars{k}, 'yop.ast_independent')
-        vars{k}.m_value = obj.independent.mx;
-    end
-end
-
-args = { ...
-    mx_vec(obj.independent), ...
-    mx_vec(obj.states), ...
-    mx_vec(obj.algebraics), ...
-    mx_vec(obj.parameters) ...
-    };
-
-set_mx([obj.independent, obj.states, obj.algebraics, obj.parameters]);
-
-fn = casadi.Function('fn', args, {fw_eval(expr)});
-
-
-
-
-
+subplot(313); hold on
+sol.plot(t, a);
+J_min = sol.value(0.5*int(a^2));
+text(0.38, -1, ['Guess cost ', num2str(J_min)], 'FontSize', 14)
 
 
 

@@ -39,10 +39,14 @@ classdef ivp < handle
             dae.ode = odee;
             dae.alg = alge;
             
+            d = 5;
+            N = 10;
+            [grid, tau] = obj.grid(N, d);
+            
             opts = struct;
             opts.output_t0 = true;
-            opts.grid = linspace(t0(obj), tf(obj), 200);
-            opts.print_stats = true;
+            opts.grid = grid;
+            opts.print_stats = false;
             
             x0=[];
             for k=1:length(obj.states)
@@ -60,8 +64,20 @@ classdef ivp < handle
             end
             
             F = casadi.integrator('F', 'idas', dae, opts);
-            res = F('x0', x0, 'p', p);
-            
+            sol = F('x0', x0, 'p', p);
+            sol = yop.ivp_sol(obj, sol, F, grid, p, N, tau);
+        end
+        
+        function [g, tau] = grid(obj, N, d)
+            tau = full([0, casadi.collocation_points(d, 'legendre')]);
+            dt = (obj.tf-obj.t0)/N;
+            g = [];
+            tn = obj.t0;
+            for n=1:N
+                g = [g, tn + tau*dt];
+                tn = tn + dt;
+            end
+            g(end+1) = obj.tf;
         end
         
         function obj = vectorize_alg(obj, algs)

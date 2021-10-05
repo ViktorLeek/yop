@@ -35,13 +35,13 @@ classdef lagrange_signal < yop.lagrange_polynomial
             end
         end
         
-        function t = t0(obj)
-            t = obj(1).T0;
-        end
-        
-        function dt = h(obj)
-            % last object is a point, therefore -1.
-            dt = (obj(1).tf - obj(1).t0)/(length(obj)-1);
-        end
+        %         function t = t0(obj)
+        %             t = obj(1).T0;
+        %         end
+        %
+        %         function dt = h(obj)
+        %             % last object is a point, therefore -1.
+        %             dt = (obj(1).tf - obj(1).t0)/(length(obj)-1);
+        %         end
     end
 end

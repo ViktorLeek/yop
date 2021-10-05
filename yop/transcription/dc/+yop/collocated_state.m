@@ -5,6 +5,5 @@ for n=1:N
 end
 y{N+1} = yop.cx(['x_' num2str(N+1)], nx);
 obj = yop.collocated_expression(N, tau, y);
-
 end
 

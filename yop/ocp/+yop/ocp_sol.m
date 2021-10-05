@@ -258,9 +258,9 @@ classdef ocp_sol < handle
             for k=1:length(args)
                 if isa(args{k}, 'yop.node')
                     if refine
-                        args{k} = obj.valuex(input{k}, refinement);
+                        args{k} = obj.valuex(args{k}, refinement);
                     else
-                        args{k} = obj.value(input{k});
+                        args{k} = obj.value(args{k});
                     end
                 end
             end
