@@ -63,11 +63,13 @@ classdef ocp < handle
             ip.addParameter('intervals', yop.defaults.control_invervals);
             ip.addParameter('degree', yop.defaults.polynomial_degree);
             ip.addParameter('points', yop.defaults.collocation_points);
+            ip.addParameter('guess', []);
             ip.parse(varargin{:});
             
             N  = ip.Results.intervals;
             d  = ip.Results.degree;
             cp = ip.Results.points;
+            guess = ip.Results.guess;
             
             obj.to_canonical();
             
@@ -79,7 +81,31 @@ classdef ocp < handle
                 struct('f', nlp.J, 'x', nlp.w, 'g', [nlp.g; nlp.h]) ...
                 );
             
-            w0 = ones(size(nlp.w));
+            if isempty(guess)
+                w0 = ones(size(nlp.w));
+            else
+                tau = full([0, casadi.collocation_points(d, cp)]);
+                T = guess.t0;
+                dt = (guess.tf-guess.t0)/N;
+                tx = [];
+                tu = [];
+                for k=1:N
+                    tx = [tx, T + tau*dt];
+                    tu = [tu; T];
+                    T = T + dt;
+                end
+                tx(end+1) = guess.tf;
+                tt = interp1(guess.value(obj.independent.var), guess.value(obj.independent.var), tx);
+                xx = interp1(guess.value(obj.independent.var)',guess.value(obj.states.vec)', tx);
+                xx = xx';
+                xx = xx(:);
+                uu = interp1(guess.value(obj.independent.var)', guess.value(obj.controls.vec)', tu);
+                uu = uu';
+                uu = uu(:);
+                pp = guess.value(obj.parameters.vec);
+                pp = pp(:);
+                w0 = [guess.t0; guess.tf; xx; uu; pp];
+            end
             sol = solver( ...
                 'x0', w0, ...
                 'lbx', nlp.w_lb, ...

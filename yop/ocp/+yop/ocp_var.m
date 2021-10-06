@@ -56,5 +56,12 @@ classdef ocp_var < handle
                 vec = [vec(:); obj(k).mx(:)];
             end
         end
+        
+        function vec = vec(obj)
+            vec = [];
+            for k=1:length(obj)
+                vec = [vec(:); obj(k).var(:)];
+            end
+        end
     end
 end

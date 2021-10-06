@@ -13,7 +13,11 @@ classdef lagrange_signal < yop.lagrange_polynomial
                 v = obj(1).evaluate(0);
             elseif isa(x, 'yop.ast_independent_final')
                 v = obj(end).evaluate(0);
-            else    
+            elseif yop.EQ(rem(x-t0, (tf - t0)/(length(obj)-1)), 0)
+                h = (tf - t0)/(length(obj)-1);
+                n = 1 + round((x-t0)/h);
+                v = obj(n).evaluate(0);
+            else
                 h = (tf - t0)/(length(obj)-1);
                 n = 1 + floor((x-t0)/h);
                 tau = rem(x-t0, h)/h;

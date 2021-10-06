@@ -140,7 +140,7 @@ classdef ocp_sol < handle
             v = full(f(obj.sol.x));
         end
         
-        function v = valuex(obj, expr, refinement)
+        function v = valuex(obj, expr, mag_factor)
             expr = yop.ocp_expr(expr);
             
             %% This could be part of the contructor and tt, xx ... could be
@@ -223,11 +223,15 @@ classdef ocp_sol < handle
                 t = tt(1:2:end);
                 dt = t(2)-t(1);
                 tvec = t;
-                for k=1:refinement-1
-                    tvec = [tvec; t+k*dt/refinement];
+                for k=1:mag_factor-1
+                    tvec = [tvec; t+k*dt/mag_factor];
+                end
+                tvec = tvec(:)';
+                if ~isempty(k)
+                    tvec = tvec(1:end-k);
                 end
                 v = [];
-                for tp=tvec(:)'
+                for tp=tvec
                     vk = expr.fn( ...
                         tlp.value(tp, tlp(1).evaluate(0), tlp(end).evaluate(0)), ...
                         xlp.value(tp, tlp(1).evaluate(0), tlp(end).evaluate(0)), ...
@@ -242,12 +246,12 @@ classdef ocp_sol < handle
         function args = filter(obj, input)
             args = {};
             refine = false;
-            refinement = 0;
+            mag_factor = 0;
             k = 1;
             while k <= length(input)
-                if strcmp(input{k}, 'refine')
+                if strcmp(input{k}, 'mag')
                     refine = true;
-                    refinement = input{k+1};
+                    mag_factor = input{k+1};
                     k = k + 2;
                 else
                     args{end+1} = input{k};
@@ -258,7 +262,7 @@ classdef ocp_sol < handle
             for k=1:length(args)
                 if isa(args{k}, 'yop.node')
                     if refine
-                        args{k} = obj.valuex(args{k}, refinement);
+                        args{k} = obj.valuex(args{k}, mag_factor);
                     else
                         args{k} = obj.value(args{k});
                     end

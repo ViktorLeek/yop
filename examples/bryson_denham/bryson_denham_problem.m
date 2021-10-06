@@ -22,7 +22,7 @@ sol = ocp.solve('intervals', 25);
 
 figure(1);
 subplot(311); hold on
-sol.plot(t, x, 'refine', 10);
+sol.plot(t, x, 'mag', 10);
 
 subplot(312); hold on
 sol.plot(t, v);
@@ -59,11 +59,11 @@ sol = ocp.solve('intervals', 20);
 
 figure(1);
 subplot(311); hold on
-sol.plot(t, x, 'refine', 5);
+sol.plot(t, x, 'mag', 5);
 subplot(312); hold on
-sol.plot(t, v, 'refine', 5);
+sol.plot(t, v, 'mag', 5);
 subplot(313); hold on
-sol.stairs(t, a, 'refine', 5);
+sol.stairs(t, a, 'mag', 5);
 
 %% Compact representation
 [t0, tf, t, x, u] = yop.ocp_variables('nx', 2, 'nu', 1);
@@ -112,12 +112,12 @@ sol = ocp.solve('intervals', 20);
 
 figure(1);
 subplot(311); hold on
-sol.plot(t, x, 'refine', 5);
+sol.plot(t, x, 'mag', 5);
 sol.plot(t, 0*t + l);
 subplot(312); hold on
-sol.plot(t, v, 'refine', 5);
+sol.plot(t, v, 'mag', 5);
 subplot(313); hold on
-sol.stairs(t, a, 'refine', 5);
+sol.stairs(t, a, 'mag', 5);
 
 %% Simulation
 t0 = yop.time0('t0');
@@ -134,23 +134,33 @@ ivp = yop.ivp( ...
     v(t0) == 1  , ...
     der(x) == v , ...
     der(v) == a , ...
-    a == -24*(t-0.5)^2 ...
+    a == -24*(t-0.5)^2, ...
+    l == 0 ...
     );
-sol = ivp.solve();
+sim = ivp.solve();
+
+ocp = yop.ocp('Bryson-Denham Problem');
+ocp.min( 1/2 * int(a^2) );
+ocp.st( ...
+    t0==0, tf==1, ...
+    der(v) == a, ...
+    der(x) == v, ...
+    v(t0) == -v(tf) == 1, ...
+    x(t0) ==  x(tf) == 0, ...
+    x <= l == 1/9 ...
+    );
+sol = ocp.solve('intervals', 40, 'guess', sim);
 
 figure(1);
 subplot(311); hold on
+sim.plot(t, x);
 sol.plot(t, x);
-
 subplot(312); hold on
+sim.plot(t, v);
 sol.plot(t, v);
-td = sol.value(int(abs(v)));
-text(0.33, 0.8, ['Guess distance is ', num2str(td)], 'FontSize', 14)
-
 subplot(313); hold on
-sol.plot(t, a);
-J_min = sol.value(0.5*int(a^2));
-text(0.38, -1, ['Guess cost ', num2str(J_min)], 'FontSize', 14)
+sim.plot(t, a);
+sol.stairs(t, a);
 
 
 

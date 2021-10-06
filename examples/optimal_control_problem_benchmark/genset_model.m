@@ -200,6 +200,10 @@ y.cylinder.temperature_out = T_eo;
 y.cylinder.fuel_max = u_f_max;
 y.cylinder.lambda_min = 1.2;
 
+y.phi_max = 1/1.2;
+y.phi = phi;
+y.u_f_max = u_f_max;
+
 y.engine.speed = w_ice;
 % y.engine.efficiency = if_else(u_f <= 0, 0, P_ice/(dot_m_f*param.Hlhv));
 y.engine.torque = M_ice;

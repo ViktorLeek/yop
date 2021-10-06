@@ -45,6 +45,7 @@ param.gamma_e= 1.2734;
 param.gen2= [2.1584e-06 -6.2603e-04 1.0956 -1.5119e-06 8.0325e-04 0.8229 360.3522];
 param.h_tot= 44.6091;
 param.lambda_min= 1.2;
+param.phi_max= 1/1.2; 
 param.n_cyl= 6;
 param.p_amb= 1.0111e+05;
 param.p_c_b= 9.9510e+04;
