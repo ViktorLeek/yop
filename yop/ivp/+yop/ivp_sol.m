@@ -64,7 +64,7 @@ classdef ivp_sol < handle
             obj.p = p;
         end
         
-        function v = value(obj, expr, samples)
+        function v = value(obj, expr)
             expr = yop.ocp_expr(expr);
             [vars,tps,ints,ders,sn] = yop.ocp.find_special_nodes(expr.ast);
             for k=1:length(vars)
@@ -84,7 +84,7 @@ classdef ivp_sol < handle
                 };
             
             set_mx([obj.ivp.independent, obj.ivp.states, ...
-                obj.ivp.algebraics, obj.ivp.parameters])
+                obj.ivp.algebraics, obj.ivp.parameters]);
             set_mx([tps, ints, ders]);
             
             for node = [tps, ints, ders]
@@ -102,11 +102,10 @@ classdef ivp_sol < handle
                     obj.z(1).evaluate(0), ...
                     obj.p, tpv, intv, []);
             else
-                ttt = linspace(obj.t0, obj.tf, samples);
-                v = [];
-                for tk = ttt
-                    v = [v, expr.fn(obj.t.value(tk), obj.x.value(tk), obj.z.value(tk), obj.p, tpv, intv, [])];
-                end
+                tt = mat(obj.t);
+                xx = mat(obj.x);
+                zz = mat(obj.z);
+                v = expr.fn(tt,xx,zz,obj.p,tpv,intv,[]);
             end
             v = full(v);
         end
@@ -168,7 +167,9 @@ classdef ivp_sol < handle
         function args = filter(obj, input)           
             for k=1:length(input)
                 if isa(input{k}, 'yop.node')
-                    args{k} = obj.value(input{k}, 100);
+                    args{k} = obj.value(input{k});
+                else
+                    args{k} = input{k};
                 end
             end
         end

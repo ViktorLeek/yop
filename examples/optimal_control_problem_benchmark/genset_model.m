@@ -35,7 +35,6 @@ w_ice = state(1);
 p_im = state(2);
 p_em = state(3);
 w_tc = state(4);
-E_gen = state(5);
 
 u_f = control(1);
 u_wg = control(2);
@@ -176,9 +175,7 @@ dpem = param.R_e * T_em * (dot_m_ci + dot_m_f - dot_m_t - dot_m_wg) / param.V_em
 
 dwtc = (P_t_eta_tm - P_c) / (w_tc * param.J_tc);
 
-dE_gen = P_gen;
-
-dx = [dwice; dpim; dpem; dwtc; dE_gen];
+dx = [dwice; dpim; dpem; dwtc];
 
 %% Signals
 y.compressor.speed = w_tc;
@@ -200,7 +197,7 @@ y.cylinder.indicated_torque = W_ig/(4*pi);
 y.cylinder.pumping_torque = W_pump/(4*pi);
 y.cylinder.friction_torque = W_fric/(4*pi);
 y.cylinder.temperature_out = T_eo;
-y.cylinder.fuel_limiter = u_f_max;
+y.cylinder.fuel_max = u_f_max;
 y.cylinder.lambda_min = 1.2;
 
 y.engine.speed = w_ice;
@@ -228,7 +225,6 @@ y.wastegate.massflow = dot_m_wg;
 y.turbocharger.speed = w_tc;
 
 y.generator.power = P_gen;
-y.generator.energy = E_gen;
 
 
 end

@@ -39,14 +39,15 @@ classdef ivp < handle
             dae.ode = odee;
             dae.alg = alge;
             
-            d = 5;
-            N = 10;
+            d = 9;
+            N = ceil(obj.tf-obj.t0)*200;
             [grid, tau] = obj.grid(N, d);
             
             opts = struct;
             opts.output_t0 = true;
             opts.grid = grid;
             opts.print_stats = false;
+            opts.reltol = 1e-5;
             
             x0=[];
             for k=1:length(obj.states)
