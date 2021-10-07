@@ -1,4 +1,5 @@
 function var = cx(name, rows, cols)
+% casadi expression
 switch nargin
     case 0
         name = 'v';
