@@ -18,7 +18,7 @@ ocp.st( ...
     x <= l == 1/9 ...
     );
 
-sol = ocp.solve('intervals', 25);
+sol = ocp.solve('intervals', 40);
 
 figure(1);
 subplot(311); hold on
