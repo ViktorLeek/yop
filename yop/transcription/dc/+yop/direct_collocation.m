@@ -56,8 +56,15 @@ for pc = ocp.inequality_constraints
     h = [h; disc(:)];
 end
 
-w = vertcat(t0, tf, vec(x), vec(z), vec(u), vec(p));
 [w_lb, w_ub] = box_bnd(N, d, ocp);
+w = vertcat(t0, tf, vec(x), vec(z), vec(u), vec(p));
+t0 = casadi.Function('t0', {w}, {t0});
+tf = casadi.Function('tf', {w}, {tf});
+t  = casadi.Function('t' , {w}, {mat(t)});
+x  = casadi.Function('x' , {w}, {mat(x)});
+z  = casadi.Function('z' , {w}, {mat(z)});
+u  = casadi.Function('u' , {w}, {mat(u)});
+p  = casadi.Function('p' , {w}, {p});
 
 nlp = struct;
 nlp.J = J;
@@ -70,13 +77,13 @@ nlp.g_lb = zeros(size(g));
 nlp.h = h;
 nlp.h_ub = zeros(size(h));
 nlp.h_lb = -inf(size(h));
-nlp.t0 = casadi.Function('t0', {w}, {t0});
-nlp.tf = casadi.Function('tf', {w}, {tf});
-nlp.t  = casadi.Function('t' , {w}, {mat(t)});
-nlp.x  = casadi.Function('x' , {w}, {mat(x)});
-nlp.z  = casadi.Function('z' , {w}, {mat(z)});
-nlp.u  = casadi.Function('u' , {w}, {mat(u)});
-nlp.p  = casadi.Function('p' , {w}, {p});
+nlp.t0 = @(w) full(t0(w));
+nlp.tf = @(w) full(tf(w));
+nlp.t  = @(w) full(t(w));
+nlp.x  = @(w) full(x(w));
+nlp.z  = @(w) full(z(w));
+nlp.u  = @(w) full(u(w));
+nlp.p  = @(w) full(p(w));
 end
 
 
@@ -128,7 +135,7 @@ for n=1:N
         tt = t(n).y(r);
         xx = x(n).y(:, r);
         zz = z(n).evaluate(tau(r)); % Does not have a parameter at tau==0
-        uu = u(n).y(:);
+        uu = u(n).y;
         pp = p;
         val_r = i.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, ders);
         yval = [yval, val_r(:)];

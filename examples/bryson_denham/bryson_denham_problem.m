@@ -22,7 +22,7 @@ sol = ocp.solve('intervals', 25);
 
 figure(1);
 subplot(311); hold on
-sol.plot(t, x, 'mag', 10);
+sol.plot(t, x, 'mag', 1);
 
 subplot(312); hold on
 sol.plot(t, v);

@@ -18,8 +18,8 @@ sol = ocp.solve('intervals', 20);
 
 figure(1)
 subplot(311); hold on;
-sol.plot(t, 1200*x(1), 'mag', 10)
+sol.plot(t, 1200*x(1))
 subplot(312); hold on;
-sol.plot(t, x(2), 'mag', 10)
+sol.plot(t, x(2))
 subplot(313); hold on;
-sol.stairs(t, u, 'mag', 10)
+sol.stairs(t, u)

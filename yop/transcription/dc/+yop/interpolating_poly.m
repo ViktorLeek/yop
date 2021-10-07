@@ -15,19 +15,24 @@ classdef interpolating_poly < yop.lagrange_polynomial
         end
         
         function v = value(obj, x)
+            v = [];
             if isa(x, 'yop.ast_independent_initial')
                 v = obj(1).evaluate(0);
                 
             elseif isa(x, 'yop.ast_independent_final')
                 v = obj(end).evaluate(0);
                 
-            elseif yop.EQ(rem(x-obj.t0, obj.h), 0)
-                n = 1 + round((x-obj.t0)/obj.h);
-                v = obj(n).evaluate(0);
+            elseif yop.EQ(rem(x-obj(1).t0, obj.h), 0)
+                n = 1 + round((x-obj(1).t0)/obj.h);
+                if n > length(obj)
+                    obj(end).evaluate(1);
+                else
+                    v = obj(n).evaluate(0);
+                end
                 
             else
-                n = 1 + floor((x-obj.t0)/obj.h);
-                tau = rem(x-obj.t0, obj.h)/obj.h;
+                n = 1 + floor((x-obj(1).t0)/obj.h);
+                tau = rem(x-obj(1).t0, obj.h)/obj.h;
                 v = obj(n).evaluate(tau);
                 
             end
@@ -50,7 +55,7 @@ classdef interpolating_poly < yop.lagrange_polynomial
         end
         
         function dt = h(obj)
-            dt = (obj.tf - obj.t0)/obj.N;
+            dt = (obj(1).tf - obj(1).t0)/obj(1).N;
         end
         
     end

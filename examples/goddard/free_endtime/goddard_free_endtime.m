@@ -62,7 +62,7 @@ sol = ocp.solve('intervals', 50);
 
 figure(1);
 subplot(411); hold on
-sol.plot(t, v, 'refine', 2);
+sol.plot(t, v, 'mag', 2);
 subplot(412); hold on
 sol.plot(t, h);
 subplot(413); hold on
