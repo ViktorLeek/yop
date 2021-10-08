@@ -41,16 +41,22 @@ classdef ocp_sol < handle
                 zz(n) = ip(obj.tau(2:end), z(:,cz));
                 uu(n) = ip(0, u(:,n));
             end
-            tt(obj.N+1) = ip(0, obj.tf);
-            xx(obj.N+1) = ip(0, x(:, end));
+            tt(n+1) = ip(0, obj.tf);
+            xx(n+1) = ip(0, x(:, end));
             obj.t = tt;
             obj.x = xx;
             obj.z = zz;
             obj.u = uu;
         end
         
-        function v = value(obj, expr, mag)            
-            [vars,tps,ints,ders,sn] = yop.ocp.find_special_nodes(expr);
+        function v = value(obj, expr, mag)    
+            
+            if nargin == 2
+                mag = 1;
+            end
+            
+            
+            [vars, tps, ints, ders, sn] = yop.ocp.find_special_nodes(expr);
             
             % Ensure that the independent variable always can be plotted by
             % setting its mx value to that of the ocp.
@@ -63,8 +69,12 @@ classdef ocp_sol < handle
             end
             
             % Create functions for the special nodes and expression
-            args = {obj.mx_args{:}, mx_vec(tps), mx_vec(ints), ...
-                    mx_vec(ders)};
+            args = { ...
+                obj.mx_args{:}, ...
+                mx_vec(tps), ...
+                mx_vec(ints), ...
+                mx_vec(ders) ...
+                };
             set_mx(obj.ocp_vars);
             set_mx([tps, ints, ders]);
             for node = [tps, ints, ders]
@@ -84,54 +94,38 @@ classdef ocp_sol < handle
                     obj.z(1).evaluate(0), ...
                     obj.u(1).evaluate(0), ...
                     obj.p, tpv, intv, derv);
-            elseif mag > 1
-                teval = [];
-                tvec = vec(obj.t);
-                for n=1:length(tvec)-1
-                    teval(end+1) = tvec(n);
-                    T = tvec(n+1) - tvec(n);
-                    for k=1:mag-1
-                        teval(end+1) = tvec(n) + T*k/mag;
-                    end
-                end
-                teval(end+1) = tvec(end);
                 
-                v = [];
-                for tp=teval
-                    vk = fn(obj.t0, obj.tf, ...
-                        obj.t.value(tp), ...
-                        obj.x.value(tp), ...
-                        obj.z.value(tp), ...
-                        obj.u.value(tp), ...
-                        obj.p, tpv, intv, derv);
-                    v = [v, vk];
-                end
-                
-            else % eval at all collocation points
-                v = [];
+            else
+                tt = [];
+                xx = [];
+                zz = [];
+                uu = [];
                 for n=1:obj.N
-                    uu = obj.u(n).y;
-                    v = [v, fn(obj.t0, obj.tf, ...
-                        obj.t(n).y(1), ...
-                        obj.x(n).y(:,1), ...
-                        obj.z(n).evaluate(obj.tau(1)), ...
-                        uu, ...
-                        obj.p, tpv, intv, derv)];
-                    for r=2:length(obj.tau)
-                        v = [v, fn(obj.t0, obj.tf, ...
-                        obj.t(n).y(r), ...
-                        obj.x(n).y(:,r), ...
-                        obj.z(n).y(:,r-1), ...
-                        uu, ...
-                        obj.p, tpv, intv, derv)];
+                    un = obj.u(n).y;
+                    for r=1:length(obj.tau)-1
+                        tt = [tt, obj.t(n).y(r)];
+                        xx = [xx, obj.x(n).y(:,r)];
+                        zz = [zz, obj.z(n).evaluate(obj.tau(r))];
+                        uu = [uu, un];
+                        dT = obj.tau(r+1)-obj.tau(r);
+                        for k=1:mag-1 % Magnification
+                            tau_k = obj.tau(r) + k/mag*dT;
+                            tt = [tt, obj.t(n).evaluate(tau_k)];
+                            xx = [xx, obj.x(n).evaluate(tau_k)];
+                            zz = [zz, obj.z(n).evaluate(tau_k)];
+                            uu = [uu, un];
+                        end
                     end
+                    tt = [tt, obj.t(n).y(r+1)];
+                    xx = [xx, obj.x(n).y(:,r+1)];
+                    zz = [zz, obj.z(n).y(:,r)];
+                    uu = [uu, un];
                 end
-                v = [v, fn(obj.t0, obj.tf, ...
-                    obj.t(n+1).y(1), ...
-                    obj.x(n+1).y(:), ...
-                    obj.z(n).evaluate(obj.tau(1)), ...
-                    uu, ...
-                    obj.p, tpv, intv, derv)];
+                tt = [tt, obj.t(n+1).y(1)];
+                xx = [xx, obj.x(n+1).y(:)];
+                zz = [zz, obj.z(n).evaluate(1)];
+                uu = [uu, obj.u(n).y];
+                v = fn(obj.t0,obj.tf,tt,xx,zz,uu,obj.p,tpv,intv,derv);
             end
             v = full(v);
         end
@@ -145,13 +139,13 @@ classdef ocp_sol < handle
                 tmp_int = [ints; zeros(n_int - length(ints), 1)];
                 switch node.type
                     case yop.ocp_expr.tp
-                        tp = obj.parameterize_timepoint(node, tmp_tp, ...
-                            tmp_int, ders);
+                        tp = obj.compute_timepoint( ...
+                            node, tmp_tp, tmp_int, ders);
                         tps = [tps; tp(:)];
                         
                     case yop.ocp_expr.int
-                        int = obj.parameterize_integral(node, tmp_tp, ...
-                            tmp_int, ders);
+                        int = obj.compute_integral( ...
+                            node, tmp_tp, tmp_int, ders);
                         ints = [ints; int(:)];
                         
                     case yop.ocp_expr.der
@@ -165,7 +159,7 @@ classdef ocp_sol < handle
             end
         end
         
-        function val = parameterize_timepoint(obj, tp, tps, ints, ders)
+        function val = compute_timepoint(obj, tp, tps, ints, ders)
             val = tp.fn(obj.t0, obj.tf, ...
                 obj.t.value(tp.timepoint), ...
                 obj.x.value(tp.timepoint), ...
@@ -174,7 +168,7 @@ classdef ocp_sol < handle
                 obj.p, tps, ints, ders);
         end
         
-        function I = parameterize_integral(obj, int, tps, ints, ders)
+        function I = compute_integral(obj, int, tps, ints, ders)
             I = 0;
             for n=1:obj.N
                 yval = [];

@@ -18,17 +18,15 @@ ocp.st( ...
     x <= l == 1/9 ...
     );
 
-sol = ocp.solve('intervals', 40);
+sol = ocp.solve();
 
 figure(1);
 subplot(311); hold on
-sol.plot(t, x, 'mag', 1);
-
+sol.plot(t, x);
 subplot(312); hold on
 sol.plot(t, v);
 td = sol.value(int(abs(v)));
 text(0.3, 0.5, ['Traveled distance is ', num2str(td)], 'FontSize', 14)
-
 subplot(313); hold on
 sol.stairs(t, a);
 J_min = sol.value(0.5*int(a^2));
@@ -55,15 +53,14 @@ ocp.st( ...
     x <= 1/9 ...
     );
 
-sol = ocp.solve('intervals', 20);
-
+sol = ocp.solve('intervals', 15);
 figure(1);
 subplot(311); hold on
-sol.plot(t, x, 'mag', 5);
+sol.plot(t, x);
 subplot(312); hold on
-sol.plot(t, v, 'mag', 5);
+sol.plot(t, v);
 subplot(313); hold on
-sol.stairs(t, a, 'mag', 5);
+sol.stairs(t, a);
 
 %% Compact representation
 [t0, tf, t, x, u] = yop.ocp_variables('nx', 2, 'nu', 1);
@@ -74,7 +71,7 @@ ocp.st(tf==1, ...
     x(tf)  == [0; -1], ...
     x(1)   <= 1/9 ...
     );
-sol = ocp.solve('intervals', 20);
+sol = ocp.solve('intervals', 40);
 figure(1);
 subplot(211); hold on
 sol.plot(t, x);
@@ -84,7 +81,7 @@ sol.stairs(t, u);
 %% Minreal
 [t0, tf, t, x, u] = yop.ocp_variables('nx', 2, 'nu', 1);
 yop.ocp().min(1/2*int(u^2)).st(tf==1, der(x)==[x(2);u], x(t0)==[0; 1], ...
-    x(tf)==[0;-1], x(1)<=1/9).solve('intervals', 40).plot(t, [x;u]);
+    x(tf)==[0;-1], x(1)<=1/9).solve().plot(t, [x;u]);
 
 %% Trade-off between control effort and traveled distance
 t0 = yop.time0('t0');

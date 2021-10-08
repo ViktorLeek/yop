@@ -7,7 +7,7 @@ function nlp = direct_collocation(ocp, N, d, cp)
 t0 = yop.cx('t0');
 tf = yop.cx('tf');
 dt = (tf - t0)/N;
-tau = [0, casadi.collocation_points(d, cp)];
+tau = full([0, casadi.collocation_points(d, cp)]);
 
 t = yop.interpolating_poly.empty(N+1, 0);
 t_n = t0;
@@ -234,6 +234,6 @@ u_ub(end - ocp.n_u + 1 : end) = ocp.uf_ub;
 p_lb = ocp.p_lb;
 p_ub = ocp.p_ub;
 
-w_ub = vertcat(t0_ub, tf_ub, x_ub, z_lb, u_ub, p_ub);
-w_lb = vertcat(t0_lb, tf_lb, x_lb, z_ub, u_lb, p_lb);
+w_lb = vertcat(t0_lb, tf_lb, x_lb, z_lb, u_lb, p_lb);
+w_ub = vertcat(t0_ub, tf_ub, x_ub, z_ub, u_ub, p_ub);
 end

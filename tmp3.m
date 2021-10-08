@@ -1,13 +1,22 @@
-figure(1);
+for k=1:10
+figure(1)
+subplot(411); hold on
+sol.plot(t, w_ice);
+subplot(412); hold on
+sol.plot(t, p_im);
+subplot(413); hold on
+sol.plot(t, p_em);
+subplot(414); hold on
+sol.plot(t, w_tc);
+
+figure(2)
 subplot(311); hold on
-sol.plot(t, x, 'mag', 10);
-
+sol.stairs(t, u_f)
+sol.plot(t, y.u_f_max);
 subplot(312); hold on
-sol.plot(t, v);
-td = sol.value(int(abs(v)));
-text(0.3, 0.5, ['Traveled distance is ', num2str(td)], 'FontSize', 14)
-
+sol.stairs(t, u_wg)
 subplot(313); hold on
-sol.stairs(t, a);
-J_min = sol.value(0.5*int(a^2));
-text(0.35, -2, ['Minimum cost ', num2str(J_min)], 'FontSize', 14)
+sol.stairs(t, P_gen)
+
+sol.value(int(y.cylinder.fuel_massflow));
+end

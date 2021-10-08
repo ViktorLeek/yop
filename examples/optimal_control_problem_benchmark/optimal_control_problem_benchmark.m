@@ -59,7 +59,7 @@ ivp = yop.ivp( ...
     I(t0)  == 0 ...
     );
 sim = ivp.solve();
-
+%%
 figure(1)
 subplot(411); hold on
 sim.plot(t, rad2rpm(w_ice))
@@ -73,7 +73,7 @@ sim.plot(t, w_tc)
 figure(2)
 subplot(311); hold on
 sim.plot(t, u_f)
-%sim.plot(t, y.u_f_max, '--', 'LineWidth', 2);
+sim.plot(t, y.u_f_max, '--', 'LineWidth', 2);
 subplot(312); hold on
 sim.stairs(t, u_wg)
 subplot(313); hold on
@@ -81,10 +81,10 @@ sim.plot(t, P_gen)
 
 %%
 ocp = yop.ocp('Optimal Control Problem Benchmark');
-ocp.min( int(y.cylinder.fuel_massflow) + 1e-5*int((P_gen/1e5)^2) );
+ocp.min( int(y.cylinder.fuel_massflow) );
 ocp.st( ...
     ... Problem horizon
-    t0==0, tf==1.32, ...
+    t0==0, tf<=1.4, ...
     ... Differential constraint
     der(x) == dx, ...
     x(t0)  == x0, ...
@@ -99,7 +99,7 @@ ocp.st( ...
     y.engine.torque >= 0, ...
     hard(y.phi <= y.phi_max) ...
     );
-sol = ocp.solve('intervals', 80, 'degree', 3, 'guess', sim);
+sol = ocp.solve('intervals', 80, 'guess', sol);
 
 %%
 figure(1)
@@ -115,7 +115,7 @@ sol.plot(t, w_tc);
 figure(2)
 subplot(311); hold on
 sol.stairs(t, u_f)
-% sol.plot(t, y.u_f_max);
+sol.plot(t, y.u_f_max);
 subplot(312); hold on
 sol.stairs(t, u_wg)
 subplot(313); hold on

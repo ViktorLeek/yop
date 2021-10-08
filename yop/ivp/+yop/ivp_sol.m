@@ -1,9 +1,8 @@
 classdef ivp_sol < handle
     
     properties
-        sol
-        solver
-        ivp
+        ivp_vars
+        mx_args        
         t0
         tf
         t
@@ -11,165 +10,194 @@ classdef ivp_sol < handle
         z
         p
         N
-        d
         tau
+        dt
     end
     
     methods
         
-        function obj = ivp_sol(ivp, sol, solver, t, p, N, tau)
-            obj.sol = sol;
-            obj.solver = solver;
-            obj.ivp = ivp;
-            obj.t0 = t(1);
-            obj.tf = t(end);
-            obj.N = N;
-            obj.tau = tau;
-            
-            d = length(tau)-1;
-            x = full(sol.xf);
-            z = full(sol.zf);
-            p = p;
-            ts = {};
-            xs = {};
-            zs = {};
-            for n=1:N
-                cols = (n-1)*(d+1)+1 : n*(d+1);
-                ts{n} = t(cols);
-                xs{n} = x(:, cols);
-                zs{n} = z(:, cols);
-            end
-            ts{N+1} = t(end);
-            xs{N+1} = x(:,end);
-            zs{N+1} = z(:,end);
-            
-            tlp = yop.sim_poly.empty(1,0);
-            xlp = yop.sim_poly.empty(1,0);
-            zlp = yop.sim_poly.empty(1,0);
-            for n=1:N
-                T0 = ts{n}(1);
-                Tf = ts{n+1}(1);
-                dt = (Tf-T0)/N;
-                tlp(n) = yop.sim_poly(tau, ts{n}, T0, Tf);
-                xlp(n) = yop.sim_poly(tau, xs{n}, T0, Tf);
-                zlp(n) = yop.sim_poly(tau, zs{n}, T0, Tf);
-            end
-            tlp(N+1) = yop.sim_poly(0, ts{N+1}, Tf, Tf);
-            xlp(N+1) = yop.sim_poly(0, xs{N+1}, Tf, Tf);
-            zlp(N+1) = yop.sim_poly(0, zs{N+1}, Tf, Tf);
-            
-            obj.t = tlp;
-            obj.x = xlp;
-            obj.z = zlp;
+        function obj = ivp_sol(ivp_vars,mx_args,t0,tf,t,x,z,p,N,d,cp)
+            obj.ivp_vars = ivp_vars;
+            obj.mx_args = mx_args;
+            obj.t0 = t0;
+            obj.tf = tf;
             obj.p = p;
+            obj.N = N;
+            obj.tau = full([0, casadi.collocation_points(d, cp)]);
+            obj.dt = (tf-t0)/N;
+            obj.parameterize_polynomials(t, x, z);
         end
         
-        function v = value(obj, expr)
-            expr = yop.ocp_expr(expr);
-            [vars,tps,ints,ders,sn] = yop.ocp.find_special_nodes(expr.ast);
+        function obj = parameterize_polynomials(obj, t, x, z)
+            ip = @(x,y)yop.interpolating_poly(x, y, obj.t0, obj.tf, obj.N);
+            tt = yop.interpolating_poly.empty(obj.N+1, 0);
+            xx = yop.interpolating_poly.empty(obj.N+1, 0);
+            zz = yop.interpolating_poly.empty(obj.N+1, 0);
+            d = length(obj.tau)-1;
+            for n=1:obj.N
+                cols = (n-1)*(d+1)+1 : n*(d+1);
+                tt(n) = ip(obj.tau, t(   cols));
+                xx(n) = ip(obj.tau, x(:, cols));
+                zz(n) = ip(obj.tau, z(:, cols));
+            end
+            tt(n+1) = ip(0, t(end));
+            xx(n+1) = ip(0, x(:, end));
+            zz(n+1) = ip(0, z(:, end));
+            obj.t = tt;
+            obj.x = xx;
+            obj.z = zz;
+        end
+        
+        function v = value(obj, expr, mag)
+            
+            if nargin == 2
+                mag = 1;
+            end
+            
+            [vars, tps, ints, ders, sn] = yop.ocp.find_special_nodes(expr);
+            
             for k=1:length(vars)
                 if isa(vars{k}, 'yop.ast_independent')
-                    vars{k}.m_value = obj.ivp.independent.mx;
+                    vars{k}.m_value = obj.ivp_vars(3).mx;
                 end
             end
             
             args = { ...
-                mx_vec(obj.ivp.independent), ...
-                mx_vec(obj.ivp.states), ...
-                mx_vec(obj.ivp.algebraics), ...
-                mx_vec(obj.ivp.parameters) ...
+                obj.mx_args{:}, ...
                 mx_vec(tps), ...
                 mx_vec(ints), ...
                 mx_vec(ders) ...
                 };
             
-            set_mx([obj.ivp.independent, obj.ivp.states, ...
-                obj.ivp.algebraics, obj.ivp.parameters]);
+            set_mx(obj.ivp_vars);
             set_mx([tps, ints, ders]);
             
             for node = [tps, ints, ders]
                 mx_expr = fw_eval(node.ast.expr);
                 node.fn = casadi.Function('fn', args, {mx_expr});
             end
-            expr.fn = casadi.Function('fn', args, {fw_eval(expr.ast)});
+            fn = casadi.Function('fn', args, {fw_eval(expr)});
             
-            [tpv, intv] = obj.parameterize_special_nodes(sn, n_elem(tps), n_elem(ints));
+            % Compute the numerical values of the special nodes
+            [tpv, intv, derv] = obj.comp_sn(sn, ...
+                n_elem(tps), n_elem(ints), n_elem(ders));
             
-            if expr.is_transcription_invariant
-                v = expr.fn( ...
+            if is_transcription_invariant(expr)
+                v = fn(obj.t0, obj.tf, ...
                     obj.t(1).evaluate(0), ...
                     obj.x(1).evaluate(0), ...
                     obj.z(1).evaluate(0), ...
-                    obj.p, tpv, intv, []);
-            else
+                    obj.p, tpv, intv, derv);
+            elseif mag == 1
                 tt = mat(obj.t);
                 xx = mat(obj.x);
                 zz = mat(obj.z);
-                v = expr.fn(tt,xx,zz,obj.p,tpv,intv,[]);
+                v = fn(obj.t0, obj.tf, tt, xx, zz, obj.p, tpv, intv, derv);
+                
+            else
+                tt = [];
+                xx = [];
+                zz = [];
+                for n=1:obj.N
+                    for r=1:length(obj.tau)-1
+                        tt = [tt, obj.t(n).y(r)];
+                        xx = [xx, obj.x(n).y(:,r)];
+                        zz = [zz, obj.z(n).y(:,r)];
+                        dT = obj.tau(r+1)-obj.tau(r);
+                        for k=1:mag-1 % Magnification
+                            tau_k = obj.tau(r) + k/mag*dT;
+                            tt = [tt, obj.t(n).evaluate(tau_k)];
+                            xx = [xx, obj.x(n).evaluate(tau_k)];
+                            zz = [zz, obj.z(n).evaluate(tau_k)];
+                        end
+                    end
+                    tt = [tt, obj.t(n).y(r+1)];
+                    xx = [xx, obj.x(n).y(:,r+1)];
+                    zz = [zz, obj.z(n).y(:,r)];
+                end
+                tt = [tt, obj.t(n+1).y(1)];
+                xx = [xx, obj.x(n+1).y(:)];
+                zz = [zz, obj.z(n+1).y(:)];
+                v = fn(obj.t0, obj.tf, tt, xx, zz, obj.p, tpv, intv, derv); 
             end
             v = full(v);
         end
         
-        function [tpv, intv] = parameterize_special_nodes(obj, sn, n_tp, n_int)
-            tpv = [];
-            intv = [];
+        function [tps, ints, ders] = comp_sn(obj, sn, n_tp, n_int, n_der)
+            tps = [];
+            ints = [];
             ders = [];
             for node = sn
-                tmp_tp  = [tpv;  zeros(n_tp  - length(tpv), 1)];
-                tmp_int = [intv; zeros(n_int - length(intv), 1)];
+                tmp_tp  = [tps;  zeros(n_tp  - length(tps), 1)];
+                tmp_int = [ints; zeros(n_int - length(ints), 1)];
                 switch node.type
                     case yop.ocp_expr.tp
                         tp = obj.compute_timepoint( ...
                             node, tmp_tp, tmp_int, ders);
-                        tpv = [tpv; tp(:)];
+                        tps = [tps; tp(:)];
                         
                     case yop.ocp_expr.int
                         int = obj.compute_integral( ...
                             node, tmp_tp, tmp_int, ders);
-                        intv = [intv; int(:)];
+                        ints = [ints; int(:)];
                         
                     case yop.ocp_expr.der
                         error(yop.msg.not_implemented);
-                        warning(['When implementing do not forget to ' ...
+                        warning(['When implementing dont forget to ' ...
                             'multiply derivative with step length']);
+                        
                     otherwise
                         error(yop.msg.unexpected_error);
                 end
             end
         end
         
-        function v = compute_timepoint(obj, tp, tpv, intv, der)
-            v = tp.fn( ...
+        function val = compute_timepoint(obj, tp, tps, ints, ders)
+            val = tp.fn(obj.t0, obj.tf, ...
                 obj.t.value(tp.timepoint), ...
                 obj.x.value(tp.timepoint), ...
                 obj.z.value(tp.timepoint), ...
-                obj.p, tpv, intv, der);
+                obj.p, tps, ints, ders);
         end
         
         function I = compute_integral(obj, int, tpv, intv, der)
             I = 0;
             for n=1:obj.N
                 yval = [];
-                for r=obj.tau
-                    tt = obj.t(n).evaluate(r);
-                    xx = obj.x(n).evaluate(r);
-                    zz = obj.z(n).evaluate(r);
-                    val_r = int.fn(tt, xx, zz, obj.p, tpv, intv, der);
+                for r=1:length(obj.tau)
+                    val_r = int.fn(obj.t0, obj.tf, ...
+                        obj.t(n).y(r), ...
+                        obj.x(n).y(:,r), ...
+                        obj.z(n).y(:,r), ...
+                        obj.p, tpv, intv, der);
                     yval = [yval, val_r(:)];
                 end
                 lp = yop.lagrange_polynomial(obj.tau, yval).integrate();
-                dt = obj.t(n).tf - obj.t(n).t0;
-                I = I + lp.evaluate(1)*dt;
+                I = I + lp.evaluate(1)*obj.dt;
             end
         end
         
         
-        function args = filter(obj, input)           
-            for k=1:length(input)
-                if isa(input{k}, 'yop.node')
-                    args{k} = obj.value(input{k});
+        function args = filter(obj, input)
+            args = {};
+            
+            % First filter out magnification
+            mag = 1;
+            k = 1;
+            while k <= length(input)
+                if strcmp(input{k}, 'mag')
+                    mag = input{k+1};
+                    k = k + 2;
                 else
-                    args{k} = input{k};
+                    args{end+1} = input{k};
+                    k = k + 1;
+                end
+            end
+            
+            % Get values
+            for k=1:length(args)
+                if isa(args{k}, 'yop.node')
+                    args{k} = obj.value(args{k}, round(mag));
                 end
             end
         end

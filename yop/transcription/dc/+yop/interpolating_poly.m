@@ -40,7 +40,6 @@ classdef interpolating_poly < yop.lagrange_polynomial
         
         function y = vec(obj)
             y = [];
-            %for ok = obj(1:end-obj(1).exclude_last)
             for ok = obj(1:end)
                 y = [y; ok.y(:)];
             end
@@ -48,7 +47,6 @@ classdef interpolating_poly < yop.lagrange_polynomial
         
         function y = mat(obj)
             y = [];
-            %for ok = obj(1:end-obj(1).exclude_last)
             for ok = obj(1:end)
                 y = [y, ok.y];
             end

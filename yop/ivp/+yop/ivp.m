@@ -41,7 +41,8 @@ classdef ivp < handle
             
             d = 9;
             N = ceil(obj.tf-obj.t0)*200;
-            [grid, tau] = obj.grid(N, d);
+            cp = 'legendre';
+            [grid, tau] = obj.grid(N, d, cp);
             
             opts = struct;
             opts.output_t0 = true;
@@ -65,12 +66,22 @@ classdef ivp < handle
             end
             
             F = casadi.integrator('F', 'idas', dae, opts);
-            sol = F('x0', x0, 'p', p);
-            sol = yop.ivp_sol(obj, sol, F, grid, p, N, tau);
+            res = F('x0', x0, 'p', p);
+            
+            sol = yop.ivp_sol( ...
+                obj.variables, ...
+                obj.mx_args, ...
+                grid(1), ...
+                grid(end), ...
+                grid, ...
+                full(res.xf), ...
+                full(res.zf), ...
+                p, N, d, cp ...
+                );
         end
         
-        function [g, tau] = grid(obj, N, d)
-            tau = full([0, casadi.collocation_points(d, 'legendre')]);
+        function [g, tau] = grid(obj, N, d, cp)
+            tau = full([0, casadi.collocation_points(d, cp)]);
             dt = (obj.tf-obj.t0)/N;
             g = [];
             tn = obj.t0;
@@ -93,17 +104,22 @@ classdef ivp < handle
         end
         
         function [ode_expr, alg_expr] = set_ivp_functions(obj)
+            set_mx(obj.variables);
+            ode_expr = fw_eval(obj.ode.ast.rhs);
+            alg_expr = fw_eval(obj.alg.ast.lhs);
+            obj.ode.fn = casadi.Function('ode', obj.mx_args, {ode_expr});
+            obj.alg.fn = casadi.Function('alg', obj.mx_args, {alg_expr});
+        end
+        
+        function args = mx_args(obj)
             args = { ...
+                mx_vec(obj.independent_initial), ...
+                mx_vec(obj.independent_final), ...
                 mx_vec(obj.independent), ...
                 mx_vec(obj.states), ...
                 mx_vec(obj.algebraics), ...
                 mx_vec(obj.parameters) ...
                 };
-            set_mx(obj.variables);
-            ode_expr = fw_eval(obj.ode.ast.rhs);
-            alg_expr = fw_eval(obj.alg.ast.lhs);
-            obj.ode.fn = casadi.Function('ode', args, {ode_expr});
-            obj.alg.fn = casadi.Function('ode', args, {alg_expr});
         end
         
         function obj = classify_variables(obj, vars)
@@ -232,9 +248,10 @@ classdef ivp < handle
         end
         
         function vars = variables(obj)
-            vars = [obj.independent(:).', ...
+            vars = [ ...
                 obj.independent_initial(:).', ...
                 obj.independent_final(:).', ...
+                obj.independent(:).', ...
                 obj.states(:).', ...
                 obj.algebraics(:).', ...
                 obj.parameters(:).'];

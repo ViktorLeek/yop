@@ -76,6 +76,7 @@ classdef ocp < handle
             
             nlp = yop.direct_collocation(obj, N, d, cp);
             
+            % Initial guess needs a fix!
             if isempty(guess)
                 w0 = ones(size(nlp.w));
             else
