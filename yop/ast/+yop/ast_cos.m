@@ -48,7 +48,7 @@ classdef ast_cos < yop.ast_expression
                     % Start new sort: topological_sort(obj)
                     visited = [];
                     topsort = ...
-                        cell(yop.constants().topsort_preallocation_size, 1);
+                        cell(yop.constants().topsort_preallocation_size,1);
                     n_elem = 0;
                     
                 case 2
@@ -58,7 +58,7 @@ classdef ast_cos < yop.ast_expression
                     % for finding all variables in a number of expressions 
                     % that are suspected to contain common subexpressions.
                     topsort = ...
-                        cell(yop.constants().topsort_preallocation_size, 1);
+                        cell(yop.constants().topsort_preallocation_size,1);
                     n_elem = 0;
                     
                 otherwise

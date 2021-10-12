@@ -1,65 +1,30 @@
-classdef ast_timepoint < yop.ast_expression
+classdef ast_timeinterval < yop.ast_expression
     properties
-        timepoint
+        t0
+        tf
         expr
     end
     methods
-        function obj = ast_timepoint(tp, expr)
+        function obj = ast_timeinterval(t0, tf, expr)
             obj@yop.ast_expression();
             obj.dim = expr.dim;
             
-            switch class(tp)
-                case 'yop.ast_eq'
-                    if isa(tp.lhs, 'yop.ast_independent') && ...
-                            isnumeric(tp.rhs)
-                        % t == 2
-                        if isinf(tp.rhs)
-                            error(['[Yop] Error: inf is not a '...
-                                'valid timepoint']);
-                        end
-                        timepoint = tp.rhs;
-                        
-                    elseif isnumeric(tp.lhs) && ...
-                            isa(tp.rhs, 'yop.ast_independent')
-                        % 2 == t
-                        if isinf(tp.lhs)
-                            error(['[Yop] Error: inf is not a '...
-                                'valid timepoint']);
-                        end
-                        timepoint = tp.lhs;
-                        
-                    elseif isa(tp.lhs, 'yop.ast_independent') && ...
-                            (isa(tp.rhs, 'yop.ast_independent_initial')...
-                            || isa(tp.rhs, 'yop.ast_independent_final'))
-                         % t == t0 || t == tf
-                         timepoint = tp.rhs;
-                         
-                    elseif (isa(tp.lhs, 'yop.ast_independent_initial')...
-                           || isa(tp.lhs, 'yop.ast_independent_final'))...
-                            && isa(tp.rhs, 'yop.ast_independent')
-                        % t0 == t || tf == t
-                        timepoint = tp.lhs;
-                        
-                    else
-                        m='[yop] Error: Illegal relation for a timepoint';
-                        error(m);
-                        
-                    end
-                    
-                case {'yop.ast_independent_initial', ...
-                      'yop.ast_independent_final'}
-                  timepoint = tp;
-                  
-                case 'yop.ast_independent'
-                  error(['[yop] Error: Do not specify the independent', ...
-                      ' variable as a timepoint. It represents the '...
-                      'evolution of time, not a timepoint'])
-                  
-                otherwise
-                    error('[yop] Error: Illegal relation for a timepoint');
+            if isnumeric(t0) 
+                obj.t0 = t0;
+            elseif isa(t0, 'yop.ast_independent_initial')
+                obj.t0 = yop.initial_timepoint;
+            else
+                error(yop.msg.illegal_timepoint);
             end
             
-            obj.timepoint = timepoint;
+            if isnumeric(tf) 
+                obj.tf = tf;
+            elseif isa(tf, 'yop.ast_independent_final')
+                obj.tf = yop.final_timepoint;
+            else
+                error(yop.msg.illegal_timepoint);
+            end
+            
             obj.expr = expr;
         end
         
@@ -70,22 +35,7 @@ classdef ast_timepoint < yop.ast_expression
         end
         
         function boolv = is_transcription_invariant(obj)
-            boolv = true(size(obj));
-        end
-        
-        function [bool, tp] = isa_timepoint(obj)
-            bool = true(size(obj.expr));
-            switch class(obj.timepoint)    
-                case 'yop.ast_independent_initial'
-                    tp = yop.initial_timepoint(size(obj.expr));
-                    
-                case 'yop.ast_independent_final'
-                    tp = yop.final_timepoint(size(obj.expr));
-                    
-                otherwise
-                    % numeric types
-                    tp = obj.timepoint*ones(size(obj.expr));
-            end
+            boolv = false(size(obj));
         end
         
         function value = evaluate(obj)            
@@ -94,7 +44,7 @@ classdef ast_timepoint < yop.ast_expression
             % needs to be parameterized separately. Before parametrization
             % has occured, the idea is that an MX/sym variable (of the
             % right size) is used to represent its value.
-            value = obj.m_value;
+            value = evaluate(obj.expr);
         end
         
         function v = forward(obj)
@@ -103,6 +53,7 @@ classdef ast_timepoint < yop.ast_expression
             % needs to be parameterized separately. Before parametrization
             % has occured, the idea is that an MX/sym variable (of the
             % right size) is used to represent its value.
+            obj.m_value = value(obj.expr);
             v = obj.m_value;
         end
         
@@ -132,10 +83,10 @@ classdef ast_timepoint < yop.ast_expression
         
         function draw(obj)
             fprintf(['[', num2str(obj.id), ']:', ...
-                'timepoint(timepoint, expr)\n']);
+                'interval(timepoint, expr)\n']);
             
             begin_child(obj);
-            draw(obj.timepoint);
+            draw(obj.ival);
             end_child(obj);
             
             last_child(obj);
@@ -176,10 +127,6 @@ classdef ast_timepoint < yop.ast_expression
             
             % Mark node as visited
             visited = [visited, obj.id];
-            
-            % Visit child
-            [topsort, n_elem, visited] = ...
-                topological_sort(obj.timepoint, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
                 topological_sort(obj.expr, visited, topsort, n_elem);

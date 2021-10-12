@@ -204,6 +204,86 @@ if is_transcription_invariant(expr)
     uu = u(1).evaluate(0);
     dd = ders(1).evaluate(0);
     disc = expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd);
+    
+elseif expr.is_ival % && (expr.T0 ~= yop.initial_timepoint && expr.Tf ~= yop.final_timepoint)
+    disc = [];
+    if expr.T0 == yop.initial_timepoint
+        n0 = 1;
+        r0 = 1;
+    else
+        % Find closest discretization point and evaluate at first timepoint
+        [n0, r0] = x.get_next_index(expr.T0);
+        tt = t(n0).evaluate(expr.T0);
+        xx = x(n0).evaluate(expr.T0);
+        zz = z(n0).evaluate(expr.T0);
+        uu = u(n0).evaluate(expr.T0);
+        dd = ders(n0).evaluate(expr.T0);
+        disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd)];
+    end
+    
+    if r0 ~= 1
+        % Not at a control interval boundary, so we add the steps up to
+        % one, and then continue the algorithm from there.
+        for r=r0:(length(tau)*(n0<N+1) + (n0==N+1))
+            tt = t(n0).y(r);
+            xx = x(n0).y(:, r);
+            zz = z(n0).y(:, r-1);
+            uu = u(n0).y(:);
+            dd = ders(n0).evaluate(tau(r));
+            disc = [disc, ...
+                expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd)];
+        end
+        n0 = n0+1;
+    end
+    
+    if expr.Tf == yop.final_timepoint
+        nf = N+1;
+        rf = 1;
+        
+    else
+        [nf, rf] = x.get_prev_index(expr.Tf);
+        tt = t(nf).evaluate(expr.Tf);
+        xx = x(nf).evaluate(expr.Tf);
+        zz = z(nf).evaluate(expr.Tf);
+        uu = u(nf).evaluate(expr.Tf);
+        dd = ders(nf).evaluate(expr.Tf);
+        disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd)];
+    end
+    
+    if rf ~= 1
+        for r=1:(rf*(nf<N+1) + (nf==N+1))
+            tt = t(n0).y(r);
+            xx = x(n0).y(:, r);
+            zz = z(n0).evaluate(tau(r));
+            uu = u(n0).y(:);
+            dd = ders(n0).evaluate(tau(r));
+            disc = [disc, ...
+                expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd)];
+        end
+        nf = nf-1;
+    end
+    
+    for n=n0:nf
+        tt = t(n).y(1);
+        xx = x(n).y(:,1);
+        zz = z(n).evaluate(0);
+        uu = u(n).y(:);
+        pp = p;
+        dd = ders(n).evaluate(0);
+        disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
+        if expr.is_hard
+            for r = 2:length(tau)
+                tt = t(n).y(r);
+                xx = x(n).y(:, r);
+                zz = z(n).y(:, r-1);
+                uu = u(n).y(:);
+                dd = ders(n).evaluate(tau(r));
+                disc = [disc, ...
+                    expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
+            end
+        end
+    end
+    
 else
     disc = [];
     for n=1:N
@@ -213,8 +293,7 @@ else
         uu = u(n).y(:);
         pp = p;
         dd = ders(n).evaluate(0);
-        disc = [disc, ...
-            expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
+        disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
         if expr.is_hard
             for r = 2:length(tau)
                 tt = t(n).y(r);

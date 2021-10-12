@@ -435,6 +435,10 @@ classdef ocp < handle
             for pc = [obj.equality_constraints, obj.inequality_constraints]
                 mx_expr = fw_eval(pc.ast);
                 pc.fn = casadi.Function('fn', args, {mx_expr});
+                [is_ival, T0, Tf] = isa_timeinterval(pc.ast);
+                pc.is_ival = is_ival;
+                pc.T0 = T0;
+                pc.Tf = Tf;
             end
         end
     end
@@ -1219,9 +1223,9 @@ classdef ocp < handle
             ieq = ieq(~cellfun('isempty', ieq));
             eq  =  eq(~cellfun('isempty', eq));
             
-            eq = yop.ocp.split_hard(eq);
+            eq  = yop.ocp.split_hard(eq);
             ieq = yop.ocp.split_hard(ieq);
-            eq = yop.ocp.split_transcription_invariance(eq);
+            eq  = yop.ocp.split_transcription_invariance(eq);
             ieq = yop.ocp.split_transcription_invariance(ieq);
         end
         

@@ -10,6 +10,25 @@ classdef ast_expression < yop.node & yop.ast_ool
     end
     
     methods
+        function [bool, t0, tf] = isa_timeinterval(obj)
+            t0 = yop.initial_timepoint;
+            tf = yop.final_timepoint;
+            bool = false;
+            [tsort, N] = topological_sort(obj);
+            for n=1:N
+                if isa(tsort{n}, 'yop.ast_timeinterval')
+                    % The function returns here, so having more than one
+                    % interval in an expression is undefined behaviour.
+                    bool = true;
+                    t0 = tsort{n}.t0;
+                    tf = tsort{n}.tf;
+                    return
+                end
+            end
+        end
+    end
+    
+    methods
         
         function obj = ast_expression()
             obj@yop.node();
@@ -345,7 +364,8 @@ classdef ast_expression < yop.node & yop.ast_ool
                 % Error handling in ast_timepoint class, as it easier to
                 % intuitively understand where that logic is placed if it
                 % is inside the constructor of that class.
-                varargout{1} = yop.ast_timepoint(s.subs{1}, obj);
+                varargout{1} = yop.ast_expression.timed_expression( ...
+                    s.subs{1}, obj);
                 
             else
                 % Use built-in for any other expression
@@ -381,5 +401,99 @@ classdef ast_expression < yop.node & yop.ast_ool
             
         end  
         
-    end    
+    end
+    
+    methods (Static)
+        function ast = timed_expression(texpr, expr)
+            
+            if isa(texpr, 'yop.ast_independent_initial') || ...
+                    isa(texpr, 'yop.ast_independent_final')
+                ast = yop.ast_timepoint(texpr, expr);
+                return;
+            end
+            
+            if isa(texpr, 'yop.ast_independent')
+                ast = expr; % Nothing to be done, expr(t) == expr
+                return;
+            end
+            
+            % Slimy, but filling.
+            if isa(texpr, 'yop.ast_relation')
+                srf = yop.ocp.to_srf({texpr});
+                switch length(srf)
+                    case 1
+                        switch class(srf{1})
+                            case 'yop.ast_eq'
+                                ast = yop.ast_timepoint(texpr, expr);
+                                
+                            case {'yop.ast_lt', 'yop.ast_le'}
+                                if isa(srf{1}.lhs, 'yop.ast_independent')
+                                    % t < value
+                                    ast = yop.ast_timeinterval( ...
+                                        yop.initial_timepoint, ...
+                                        srf{1}.rhs, expr);
+                                    
+                                else % value < t
+                                    ast = yop.ast_timeinterval( ...
+                                        srf{1}.lhs, ...
+                                        yop.final_timepoint,...
+                                        expr);
+                                end
+                            case {'yop.ast_gt', 'yop.ast_ge'}
+                                if isa(srf{1}.lhs, 'yop.ast_independent')
+                                    % t > value
+                                    ast = yop.ast_timeinterval( ...
+                                        srf{1}.rhs, ...
+                                        yop.final_timepoint,...
+                                        expr);
+                                    
+                                else % value > t
+                                    ast = yop.ast_timeinterval( ...
+                                        yop.initial_timepoint, ...
+                                        srf{1}.lhs, expr);
+                                end
+                        end
+                        
+                    case 2
+                        t0=[]; tf=[];
+                        for k=1:2
+                            switch class(srf{k})
+                                case {'yop.ast_lt', 'yop.ast_le'}
+                                    if isa(srf{k}.lhs, ...
+                                            'yop.ast_independent')
+                                        % t < value
+                                        tf = srf{k}.rhs;
+                                    else % value < t. Should be an elseif to test rhs for independent
+                                        t0 = srf{k}.lhs;
+                                    end
+                                case {'yop.ast_gt', 'yop.ast_ge'}
+                                    if isa(srf{k}.lhs, ...
+                                            'yop.ast_independent')
+                                        % t > value
+                                        t0 = srf{k}.rhs;
+                                        
+                                    else % value > t
+                                        tf = srf{k}.lhs;
+                                    end
+                                    
+                                otherwise
+                                    error(yop.msg.ival_relation_error(...
+                                        class(srf{k})));
+                            end
+                        end
+                        if isempty(t0) || isempty(tf)
+                            error(yop.msg.ambig_ival);
+                        end
+                        ast = yop.ast_timeinterval(t0, tf, expr);
+                        
+                    otherwise
+                        error(yop.msg.timed_expr_relation_overflow);
+                end
+                
+            else
+                error(yop.msg.illegal_timepoint);
+            end
+            
+        end
+    end
 end

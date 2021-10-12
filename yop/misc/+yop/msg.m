@@ -59,5 +59,31 @@ classdef msg < handle
                 yop.msg.stop];
         end
         
+        function m = ival_relation_error(clss)
+            m = [yop.msg.start, 'The only relations allowd in a time ' ...
+                'intervals are relations. You have ''',  clss, '''', ...
+                yop.msg.stop];
+        end
+        
+        function m = timed_expr_ill_expr()
+            m = [yop.msg.start, 'Illegal expression for timepoint or ' ...
+                'time interval detected', yop.msg.stop];
+        end
+        
+        function m = timed_expr_relation_overflow()
+            m = [yop.msg.start, 'Too many relations for a timepoint or '...
+                'time interval', yop.msg.stop];
+        end
+        
+        function m = illegal_timepoint()
+            m = [yop.msg.start, 'Cannot parse the supplied timepoint', ...
+                yop.msg.stop];
+        end
+        
+        function m = ambig_ival()
+            m = [yop.msg.start, 'Time interval is ambiguous', ...
+                yop.msg.stop];
+        end
+        
     end
 end

@@ -6,6 +6,9 @@ classdef ocp_expr < handle
         sym
         fn
         is_hard
+        T0 = yop.initial_timepoint
+        Tf = yop.final_timepoint
+        is_ival = false;
     end
     methods
         function obj = ocp_expr(expr, aux)
