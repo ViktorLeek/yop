@@ -4,7 +4,7 @@ tf = yop.timef('tf');
 t  = yop.time('t');
 x  = yop.state('x');     % position
 v  = yop.state('v');     % speed
-a  = yop.control('a');   % acceleration
+[a, da] = yop.control('name', 'a', 'pw', 'linear');   % acceleration
 l  = yop.parameter('l'); % maximum position of the cart
 
 ocp = yop.ocp('Bryson-Denham Problem');
@@ -17,7 +17,6 @@ ocp.st( ...
     x(t0) ==  x(tf) == 0, ...
     x <= l == 1/9 ...
     );
-
 sol = ocp.solve();
 
 figure(1);
@@ -28,7 +27,8 @@ sol.plot(t, v);
 td = sol.value(int(abs(v)));
 text(0.3, 0.5, ['Traveled distance is ', num2str(td)], 'FontSize', 14)
 subplot(313); hold on
-sol.stairs(t, a);
+sol.plot(t, a);
+sol.stairs(t, da);
 J_min = sol.value(0.5*int(a^2));
 text(0.35, -2, ['Minimum cost ', num2str(J_min)], 'FontSize', 14)
 

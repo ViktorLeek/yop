@@ -26,7 +26,7 @@ if ~isempty(nz)
 end
 
 if ~isempty(nu)
-    varargout{end+1} = yop.control('u', nu);
+    varargout{end+1} = yop.control(nu);
 end
 
 if ~isempty(np)

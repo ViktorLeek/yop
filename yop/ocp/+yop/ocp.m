@@ -480,6 +480,31 @@ classdef ocp < handle
                         error('[Yop] Error: Unknown variable type');
                 end
             end
+            
+            % Augment system based on control parametrization
+            % Step 1: Account for all control inputs
+            for uk=obj.controls
+                du = uk.var.der;
+                while ~isempty(du)
+                    obj.add_unique_control(du);
+                    du = du.der;
+                end
+            end
+            
+            % Step 2: Promote integrated controls to states and add
+            %         augmenting equations
+            keep = [];
+            for k=1:length(obj.controls)
+                uk = obj.controls(k);
+                if ~isempty(uk.var.der)
+                    obj.states(end+1) = uk;
+                    obj.constraints{end+1} = ode(der(uk.var)==uk.var.der);
+                else
+                    keep(end+1) = k;
+                end
+            end
+            obj.controls = obj.controls(keep);
+            
             % If we do not have some of the variables, they are set to
             % something in order for the transcription methods to query
             % them, and also to be able to set bounds on the independent
@@ -649,6 +674,15 @@ classdef ocp < handle
                 obj.controls = yop.ocp_var.empty(1,0);
             end
             obj.controls(end+1) = yop.ocp_var(u);
+        end
+        
+        function obj = add_unique_control(obj, u)
+            for uk = obj.controls
+                if uk.var.id == u.id
+                    return;
+                end
+            end
+            obj.add_control(u);
         end
         
         function obj = add_parameter(obj, p)

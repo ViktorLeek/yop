@@ -1,17 +1,13 @@
 classdef ast_control < yop.ast_variable
     properties
-        du
+        der
     end
     methods
-        function obj = ast_control(name, rows, cols)
+        function obj = ast_control(name, rows, cols, pwd)
             obj@yop.ast_variable(name, rows, cols);
-        end
-        
-        function du = get_du(obj)
-            if isempty(obj.du)
-                obj.du = yop.ast_control(['D', obj.name], size(obj,1), size(obj,2));
+            if pwd > 0
+                obj.der = yop.ast_control(['D', obj.name],rows,cols,pwd-1);
             end
-            du = obj.du;
         end
         
         function boolv = is_transcription_invariant(obj)
@@ -19,7 +15,20 @@ classdef ast_control < yop.ast_variable
         end
         
         function [bool, id] = isa_control(obj)
-            bool = true(size(obj));
+            if isempty(obj.der)
+                bool = true(size(obj));
+            else
+                bool = false(size(obj));
+            end
+            id = obj.id*ones(size(obj));
+        end
+        
+        function [bool, id] = isa_state(obj)
+            if isempty(obj.der)
+                bool = false(size(obj));
+            else
+                bool = true(size(obj));
+            end
             id = obj.id*ones(size(obj));
         end
     end

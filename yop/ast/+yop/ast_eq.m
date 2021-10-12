@@ -1,6 +1,7 @@
 classdef ast_eq < yop.ast_relation
     
     properties
+        m_ode = false
          m_alg = false
     end
     
@@ -9,11 +10,12 @@ classdef ast_eq < yop.ast_relation
     end
     
     methods
-        function obj = ast_eq(lhs, rhs, ishard, isalg)
+        function obj = ast_eq(lhs, rhs, ishard, isode, isalg)
             obj@yop.ast_relation(lhs, rhs);
             obj.dim = size(eq(ones(size(lhs)), ones(size(rhs))));
             if nargin > 2
                 obj.m_hard = ishard;
+                obj.m_ode = isode;
                 obj.m_alg = isalg;
             end
         end
@@ -27,6 +29,10 @@ classdef ast_eq < yop.ast_relation
             v = obj.m_value;
         end
         
+        function obj = ode(obj)
+            obj.m_ode = true;
+        end
+        
         function obj = alg(obj)
             obj.m_alg = true;
         end
@@ -36,11 +42,23 @@ classdef ast_eq < yop.ast_relation
         end
         
         function fn = get_constructor(obj)
-            fn = @(lhs, rhs) yop.ast_eq(lhs, rhs, obj.m_hard, obj.m_alg);
+            fn = @(lhs, rhs) yop.ast_eq( ...
+                lhs, rhs, obj.m_hard, obj.m_ode, obj.m_alg);
         end
         
         function [isode, ode, non_ode, der_id] = isa_ode(obj)
             der_id = [];
+            
+            if obj.m_ode
+                % Makes it possible to use non-states as part of the ODE,
+                % must be already on canonicalized form der(x) == expr 
+                isode = true(size(obj.lhs));
+                ode = obj;
+                non_ode = [];
+                [~, der_id] = isa_der(obj.lhs);
+                der_id = der_id(:);
+                return
+            end
             
             %ISA_ODE
             [isa_der_lhs, ID_lhs] = isa_der(obj.lhs);

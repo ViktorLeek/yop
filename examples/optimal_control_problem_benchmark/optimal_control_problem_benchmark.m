@@ -8,9 +8,9 @@ p_im  = yop.state('p_im');  % Intake manifold pressure
 p_em  = yop.state('p_em');  % Exhause manifold pressure
 w_tc  = yop.state('w_tc');  % Turbocharger angular velocity
 
-u_f   = yop.control('u_f');   % Fuel injection per cycle per cylinder
-u_wg  = yop.control('u_wg');  % Wastegate control 0-close, 1-fully open
-P_gen = yop.control('P_gen'); % Generator power
+[u_f, duf, dduf] = yop.control('name', 'u_f', 'pw', 'quadratic');   % Fuel injection per cycle per cylinder
+u_wg  = yop.control('name', 'u_wg');  % Wastegate control 0-close, 1-fully open
+[P_gen, dP_gen] = yop.control('name', 'P_gen', 'pw', 'linear'); % Generator power
 
 %             [rad/s]       [Pa]      [Pa]   [rad/s]
 x =     [        w_ice;     p_im;     p_em;     w_tc]; % State vector
@@ -52,8 +52,11 @@ ivp = yop.ivp( ...
     x(t0) == x0, ... 
     der(x)== dx, ...
     u_f   == smoke_limiter(u_pi, y.u_f_max, u_min(1), u_max(1)), ...
+    duf == 0, ...
+    dduf == 0, ...
     u_wg  == 0, ...
     P_gen == P_dem, ...
+    dP_gen == 0, ...
     ... Engine speed controller
     der(I) == K/Ti*e + es/Tt, ...
     I(t0)  == 0 ...
@@ -114,9 +117,9 @@ sol.plot(t, w_tc);
 
 figure(2)
 subplot(311); hold on
-sol.stairs(t, u_f)
+sol.plot(t, u_f, 'mag', 5)
 sol.plot(t, y.u_f_max);
 subplot(312); hold on
 sol.stairs(t, u_wg)
 subplot(313); hold on
-sol.stairs(t, P_gen)
+sol.plot(t, P_gen, 'mag', 5)

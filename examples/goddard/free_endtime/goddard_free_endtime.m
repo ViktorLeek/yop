@@ -12,7 +12,7 @@ ocp.st( ...
     rocket.height(t0)   == 0    , ...
     rocket.velocity(t0) == 0    , ...
     rocket.mass(t0)     == 215  , ...
-    68 <= rocket.mass <= 215, ...
+    68 <= rocket.mass <= 215 , ...
     0 <= rocket.fuel_mass_flow <= 9.5 ...
     );
 
@@ -30,6 +30,37 @@ sol.stairs(t, u);
 
 % sol.save('Goddard.mat');
 % sol = yop.load('Goddard', t, t0, tf, x, u, p);
+
+%% Formulation 1 - variation 1: PWX control
+[t0, tf, t, x] = yop.ocp_variables('nx', 3);
+u = yop.control('pw', 'quadratic'); % <-- Option for control parametrization
+
+[~, y] = rocket_model(x, u);
+rocket = y.rocket;
+
+ocp = yop.ocp('Goddard''s Rocket Problem');
+% ocp.max( rocket.height(tf) );
+ocp.max( int(rocket.velocity) );
+ocp.st( ...
+    der(x) == rocket_model(x, u), ...
+    rocket.height(t0)   == 0    , ...
+    rocket.velocity(t0) == 0    , ...
+    rocket.mass(t0)     == 215  , ...
+    68 <= rocket.mass <= 215 , ...
+    0 <= rocket.fuel_mass_flow <= 9.5 ...
+    );
+
+sol = ocp.solve('intervals', 80);
+
+figure(1);
+subplot(411); hold on
+sol.plot(t, x(1), 'mag', 5);
+subplot(412); hold on
+sol.plot(t, x(2), 'mag', 5);
+subplot(413); hold on
+sol.plot(t, x(3), 'mag', 5);
+subplot(414); hold on
+sol.plot(t, u, 'mag', 5);
 
 %% Formulation 2
 t0 = yop.time0('t0');
