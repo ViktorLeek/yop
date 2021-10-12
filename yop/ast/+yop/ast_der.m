@@ -9,8 +9,9 @@ classdef ast_der < yop.ast_expression
             obj.dim = size(var);
         end
         
-        function boolv = isa_der(obj)
+        function [boolv, id] = isa_der(obj)
             boolv = true(size(obj.expr));
+            id = obj.id*ones(size(obj));
         end
         
         function boolv = isa_numeric(obj)
@@ -36,11 +37,10 @@ classdef ast_der < yop.ast_expression
         end
         
         function value = evaluate(obj)
-            value = evaluate(obj.expr);
+            value = obj.m_value;
         end
         
         function v = forward(obj)
-            obj.m_value = value(obj.expr);
             v = obj.m_value;
         end
         

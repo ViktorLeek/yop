@@ -39,12 +39,17 @@ classdef ast_cat < yop.ast_expression
             end
         end
         
-        function boolv = isa_der(obj)
-            tmp = {isa_der(obj.args{1})};
+        function [bool, id] = isa_der(obj)
+            [bool, id] = isa_der(obj.args{1});
+            tmp_bool = {bool};
+            tmp_id = {id};
             for k=2:length(obj.args)
-                tmp = {tmp{:}, isa_der(obj.args{k})};
-            end
-            boolv = cat(obj.d, tmp{:});
+                [bk, ik] = isa_der(obj.args{k});
+                tmp_bool = {tmp_bool{:}, bk};
+                tmp_id = {tmp_id{:}, ik};
+            end      
+            bool = cat(obj.d, tmp_bool{:});
+            id = cat(obj.d, tmp_id{:});
         end
         
         function [bool, id] = isa_variable(obj)

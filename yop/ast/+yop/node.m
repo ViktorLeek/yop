@@ -42,7 +42,7 @@ classdef node < handle
             [sort, K] = topological_sort(expr);
             for k=1:K
                 switch class(sort{k})
-                    case {'yop.ast_int', 'yop.ast_timepoint'}
+                    case {'yop.ast_int', 'yop.ast_timepoint', 'yop.ast_der'}
                         % These do not propagate values, so we need a 
                         % manual bridge here.
                         sort{k}.m_value = value(sort{k}.expr);

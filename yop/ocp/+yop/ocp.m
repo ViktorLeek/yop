@@ -19,12 +19,14 @@ classdef ocp < handle
         special_nodes
         timepoints
         integrals
+        derivatives
         
         equality_constraints
         inequality_constraints
     end
     
     properties (Hidden)
+        conservative
         %         built = false;
     end
     
@@ -65,12 +67,14 @@ classdef ocp < handle
             ip.addParameter('degree', yop.defaults.polynomial_degree);
             ip.addParameter('points', yop.defaults.collocation_points);
             ip.addParameter('guess', []);
+            ip.addParameter('conservative', false); 
             ip.parse(varargin{:});
             
             N  = ip.Results.intervals;
             d  = ip.Results.degree;
             cp = ip.Results.points;
             guess = ip.Results.guess;
+            obj.conservative = ip.Results.conservative;
             
             obj.to_canonical();
             
@@ -84,23 +88,40 @@ classdef ocp < handle
                 T = guess.t0;
                 dt = (guess.tf-guess.t0)/N;
                 tx = [];
+                tz = [];
                 tu = [];
                 for k=1:N
                     tx = [tx, T + tau*dt];
+                    tz = [tz, T + tau(2:end)*dt];
                     tu = [tu; T];
                     T = T + dt;
                 end
                 tx(end+1) = guess.tf;
-                tt = interp1(guess.value(obj.independent.var), guess.value(obj.independent.var), tx);
-                xx = interp1(guess.value(obj.independent.var)',guess.value(obj.states.vec)', tx);
+                tt = interp1( ...
+                    guess.value(obj.independent.var), ...
+                    guess.value(obj.independent.var), ...
+                    tx);
+                xx = interp1( ...
+                    guess.value(obj.independent.var)', ...
+                    guess.value(obj.states.vec)', ...
+                    tx);
                 xx = xx';
                 xx = xx(:);
-                uu = interp1(guess.value(obj.independent.var)', guess.value(obj.controls.vec)', tu);
+                zz = guess.value(obj.algebraics.vec)';
+                if ~isempty(zz)
+                    zz=interp1(guess.value(obj.independent.var)', zv, tz);
+                end
+                zz = zz';
+                zz = zz(:);
+                uu = interp1( ...
+                    guess.value(obj.independent.var)', ...
+                    guess.value(obj.controls.vec)', ...
+                    tu);
                 uu = uu';
                 uu = uu(:);
                 pp = guess.value(obj.parameters.vec);
                 pp = pp(:);
-                w0 = [guess.t0; guess.tf; xx; uu; pp];
+                w0 = [guess.t0; guess.tf; xx; zz; uu; pp];
             end
             
             solver = casadi.nlpsol( ...
@@ -137,6 +158,7 @@ classdef ocp < handle
                 obj.objective.ast, obj.constraints{:});
             obj.timepoints = tps;
             obj.integrals = ints;
+            obj.derivatives = ders;
             obj.special_nodes = sn;
             
             obj.classify_variables(vars);
@@ -145,8 +167,9 @@ classdef ocp < handle
             [box, nbox] = yop.ocp.separate_box(srf);
             obj.set_box(box);
             
-            [odes, algs, eqs, ieqs] = yop.ocp.sort_nonbox(nbox);
+            [odes, algs, eqs, ieqs, derid] = yop.ocp.sort_nonbox(nbox);
             obj.vectorize_ode(odes);
+            obj.remove_state_der(derid);
             
             alg_expr = [];
             for k=1:length(algs)
@@ -172,6 +195,48 @@ classdef ocp < handle
             obj.set_pathcon_functions(tps, ints, ders);
             
             % Error/semantic checking
+        end
+        
+        function obj = remove_state_der(obj, derid)
+            % Remove derivatives that are part of the ODE from the
+            % derivatives list to avoid double work in differentiation.
+            
+            % Executional time increases by a lot if derivatives if they
+            % are covered twice (differentiation of dynamics, and
+            % differentation of general expressions). To avoid that,
+            % derivatives part of the ODE are removed, unless in
+            % conservative mode. The reason for having conservative mode is
+            % that it is possible to take the derivative of an expression
+            % where some of the elements are states, and then reuse that
+            % exact node in both the ode and the constraints. If the
+            % derivative is removed in that case, the discretization of the
+            % problem will be erroneous, unless in conservative mode, where
+            % all derivatives are kept. A simple rule of thumb to avoid
+            % this completely is to never reuse ast_der - nodes. 
+            if ~obj.conservative
+                for k=derid(:)'
+                    for n=1:length(obj.derivatives)
+                        if k==obj.derivatives(n).ast.id
+                            idx = true(size(obj.derivatives));
+                            idx(n) = false;
+                            obj.derivatives = obj.derivatives(idx);
+                            break;
+                        end
+                    end
+                end
+                    
+                for k=derid(:)'
+                    for n=1:length(obj.special_nodes)
+                        if k == obj.special_nodes(n).ast.id
+                            idx = true(size(obj.special_nodes));
+                            idx(n) = false;
+                            obj.special_nodes = obj.special_nodes(idx);
+                            break;
+                        end
+                    end
+                    
+                end
+            end
         end
         
         function obj = vectorize_ode(obj, odes)
@@ -897,9 +962,9 @@ classdef ocp < handle
                         ints(end+1) = sn;
                         sorted(end+1) = sn;
                     elseif isa(tsort{n}, 'yop.ast_der')
-                        %sn = yop.ocp_expr(node, yop.ocp_expr.der);
-                        %obj.derivatives(end+1) = sn;
-                        %obj.special_nodes(end+1) = sn;
+                        sn = yop.ocp_expr(tsort{n}, yop.ocp_expr.der);
+                        ders(end+1) = sn;
+                        sorted(end+1) = sn;
                     end
                 end
             end
@@ -1081,7 +1146,7 @@ classdef ocp < handle
             bc_tf = bc_tf(~cellfun('isempty', bc_tf));
         end
         
-        function [ode, alg, eq, ieq] = sort_nonbox(nbox)
+        function [ode, alg, eq, ieq, der_id] = sort_nonbox(nbox)
             %______________________________________________________________
             %|YOP.OCP.SORT_NONBOX Sorts the constraints that are not box  |
             %|constraints. It returns constraints in the categories       |
@@ -1100,16 +1165,16 @@ classdef ocp < handle
             %|   eq - Cell array with equality constraints.               |
             %|   ieq - Cell array with inequality constraints.            |
             %|____________________________________________________________|
-            ode={};alg={};eq={};ieq={};
+            ode={};alg={};eq={};ieq={};der_id=[];
             for k=1:length(nbox)
                 if is_alg(nbox{k})
                     alg{end+1} = canonicalize(nbox{k});
                     
                 elseif isa(nbox{k}, 'yop.ast_eq')
-                    [~, ode_k, eq_k] = isa_ode(nbox{k});
+                    [~, ode_k, eq_k, did] = isa_ode(nbox{k});
                     ode{end+1} = ode_k;
                     eq{end+1} = eq_k; % is canonicalized
-                    
+                    der_id = [der_id; did];
                 else
                     ieq{end+1} = canonicalize(nbox{k});
                     
@@ -1223,6 +1288,10 @@ classdef ocp < handle
         
         function n = n_int(obj)
             n = n_elem(obj.integrals);
+        end
+        
+        function n = n_der(obj)
+            n = n_elem(obj.derivatives);
         end
                 
         function bd = t0_ub(obj)

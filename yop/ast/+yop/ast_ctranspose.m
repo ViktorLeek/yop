@@ -21,8 +21,10 @@ classdef ast_ctranspose < yop.ast_expression
             tp = ctranspose(tp);
         end
         
-        function boolv = isa_der(obj)
-            boolv = ctranspose(isa_der(obj.expr));
+        function [bool, id] = isa_der(obj)
+            [bool, id] = isa_der(obj.expr);
+            bool = ctranspose(bool);
+            id = ctranspose(id);
         end
         
         function [bool, id] = isa_variable(obj)

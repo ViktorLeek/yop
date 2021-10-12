@@ -39,10 +39,14 @@ classdef ast_eq < yop.ast_relation
             fn = @(lhs, rhs) yop.ast_eq(lhs, rhs, obj.m_hard, obj.m_alg);
         end
         
-        function [isode, ode, non_ode] = isa_ode(obj)
+        function [isode, ode, non_ode, der_id] = isa_ode(obj)
+            der_id = [];
+            
             %ISA_ODE
-            isode_lhs = isa_state(obj.lhs) & isa_der(obj.lhs);
-            isode_rhs = isa_state(obj.rhs) & isa_der(obj.rhs);
+            [isa_der_lhs, ID_lhs] = isa_der(obj.lhs);
+            [isa_der_rhs, ID_rhs] = isa_der(obj.rhs);
+            isode_lhs = isa_state(obj.lhs) & isa_der_lhs;
+            isode_rhs = isa_state(obj.rhs) & isa_der_rhs;
             isode = bitxor(isode_lhs, isode_rhs);
             
             if all(~isode)
@@ -53,6 +57,10 @@ classdef ast_eq < yop.ast_relation
                     isode_lhs(isode), ...
                     isode_rhs(isode) ...
                     );
+                idl = ID_lhs(isode);
+                idr = ID_rhs(isode);
+                der_id = [idl(:); idr(:)]; 
+                der_id = der_id(der_id~=0);
             end
             
             if all(isode)

@@ -171,5 +171,11 @@ classdef re_data < handle
             obj.reaching = re(re >= obj.enum(1) & re <= obj.enum(end));
         end
         
+        function vec = IDs(obj)
+            vec = [];
+            for k=1:length(obj)
+                vec(end+1) = obj(k).var.id;
+            end
+        end
     end
 end

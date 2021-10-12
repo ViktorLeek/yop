@@ -44,10 +44,12 @@ classdef ast_subsasgn < yop.ast_expression
             add_pred(obj.b, obj);
         end
         
-        function boolv = isa_der(obj)
-            boolv = isa_der(obj.node);
+        function [bool, id] = isa_der(obj)
+            [bool, id] = isa_der(obj.node);
+            [boolb, idb] = isa_der(obj.b);
             idx = get_indices(obj);
-            boolv(idx) = isa_der(obj.b);
+            bool(idx) = boolb;
+            id(idx) = idb;
         end
         
         function [bool, id] = isa_variable(obj)

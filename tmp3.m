@@ -1,22 +1,43 @@
-for k=1:10
-figure(1)
-subplot(411); hold on
-sol.plot(t, w_ice);
-subplot(412); hold on
-sol.plot(t, p_im);
-subplot(413); hold on
-sol.plot(t, p_em);
-subplot(414); hold on
-sol.plot(t, w_tc);
+%% Original formulation
+t0 = yop.time0('t0');
+tf = yop.timef('tf');
+t  = yop.time('t');
+x  = yop.state('x');     % position
+v  = yop.state('v');     % speed
+a  = yop.control('a');   % acceleration
+l  = yop.parameter('l'); % maximum position of the cart
 
-figure(2)
-subplot(311); hold on
-sol.stairs(t, u_f)
-sol.plot(t, y.u_f_max);
-subplot(312); hold on
-sol.stairs(t, u_wg)
-subplot(313); hold on
-sol.stairs(t, P_gen)
+ocp = yop.ocp('Bryson-Denham Problem');
+ocp.min( 1/2 * int(a^2) );
+ocp.st( ...
+    t0==0, tf==1, ...
+    der(v) == a, ...
+    der(x) == v, ...
+    v(t0) == -v(tf) == 1, ...
+    x(t0) ==  x(tf) == 0, ...
+    x <= l == 1/9 ...
+    );
+sol = ocp.solve();
 
-sol.value(int(y.cylinder.fuel_massflow));
-end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

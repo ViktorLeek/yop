@@ -67,11 +67,13 @@ classdef ast_horzcat < yop.ast_expression
             end       
         end
         
-        function boolv = isa_der(obj)
-            boolv = isa_der(obj.args{1});
+        function [bool, id] = isa_der(obj)
+            [bool, id] = isa_der(obj.args{1});
             for k=2:length(obj.args)
-                boolv = [boolv, isa_der(obj.args{k})];
-            end
+                [bk, ik] = isa_der(obj.args{k});
+                bool = [bool, bk];
+                id = [id, ik];
+            end       
         end
         
         function boolv = isa_numeric(obj)

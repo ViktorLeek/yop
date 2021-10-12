@@ -98,11 +98,11 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             %    % Vector valued values
             %    obj = yop.lagrange_polynomial([1 2 3], [1 4 9; 1 8 27])
             
-            assert(size(x,1)==1, ...
-                '[Yop] Error: Argument x is not a row vector.');
-            
-            assert(size(x,2)==size(y,2), ['[Yop] Error: Argument y ', ...
-                'does not have equally many columns as x.']);
+            %             assert(size(x,1)==1, ...
+            %                 '[Yop] Error: Argument x is not a row vector.');
+            %
+            %             assert(size(x,2)==size(y,2), ['[Yop] Error: Argument y ', ...
+            %                 'does not have equally many columns as x.']);
             
             obj.x = x;
             obj.y = y;
@@ -165,6 +165,11 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             %    evaluate(lp, 2);
             %    evaluate(lp, 1:10);
             values = [];
+            
+            if isempty(obj.y)
+                return
+            end
+               
             for n=1:length(t)
                 v = 0;
                 for j=1:obj.degree+1

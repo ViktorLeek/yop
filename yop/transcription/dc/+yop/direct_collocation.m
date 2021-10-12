@@ -39,7 +39,7 @@ end
 
 p = yop.cx('p', n_p(ocp));
 
-[tps, ints, ders] = param_special_nodes(ocp,N,tau,dt,t0,tf,t,x,z,u,p);
+[tps, ints, ders] = param_special_nodes(ocp,N,tau,dt,t0,tf,t,x,z,u,p,T0,Tf);
 
 J = ocp.objective.fn(t0, tf, p, tps, ints);
 
@@ -88,29 +88,32 @@ end
 
 
 function [tps, ints, ders] = param_special_nodes ...
-    (ocp, N, tau, dt, t0, tf, t, x, z, u, p)
+    (ocp, N, tau, dt, t0, tf, t, x, z, u, p, T0, Tf)
 
 tps = [];
 ints = [];
-ders = [];
+ders = yop.interpolating_poly.empty(N, 0);
+for n=1:N
+    ders(n) = yop.interpolating_poly(tau, [], T0, Tf, N);
+end
+
 for node = ocp.special_nodes
     tmp_tp  = [tps;  zeros(ocp.n_tp  - length(tps), 1)];
     tmp_int = [ints; zeros(ocp.n_int - length(ints), 1)];
     switch node.type
         case yop.ocp_expr.tp
             tp = parameterize_timepoint(node, t0, tf, t, x, z, ...
-                u, p, tmp_tp, tmp_int, ders);
+                u, p, tmp_tp, tmp_int, ders, ocp.n_der);
             tps = [tps; tp(:)];
             
         case yop.ocp_expr.int
             int = parameterize_integral(node, N, tau, dt, t0, tf, t, x, ...
-                z, u, p, tmp_tp, tmp_int, ders);
+                z, u, p, tmp_tp, tmp_int, ders, ocp.n_der);
             ints = [ints; int(:)];
             
         case yop.ocp_expr.der
-            error(yop.msg.not_implemented);
-            warning(['When implementing dont forget to ' ...
-                'multiply derivative with step length']);
+            ders = parameterize_derivative(node, N, tau, dt, t0, tf, t, ...
+                x, z, u, p, tmp_tp, tmp_int, ders, ocp.n_der);
             
         otherwise
             error(yop.msg.unexpected_error);
@@ -118,30 +121,54 @@ for node = ocp.special_nodes
 end
 end
 
-function val = parameterize_timepoint(tp,t0,tf,t,x,z,u,p,tps,ints,ders)
+function val = parameterize_timepoint(tp,t0,tf,t,x,z,u,p,tps,ints,ders,n_der)
 tt = t.value(tp.timepoint);
 xx = x.value(tp.timepoint);
 zz = z.value(tp.timepoint);
 uu = u.value(tp.timepoint); 
-val = tp.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, ders);
+dd = ders.value(tp.timepoint);
+dd = [dd;  zeros(n_der  - length(dd), 1)];
+val = tp.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd);
 end
 
-function I=parameterize_integral(i,N,tau,dt,t0,tf,t,x,z,u,p,tps,ints,ders)
-
+function I=parameterize_integral(i,N,tau,dt,t0,tf,t,x,z,u,p,tps,ints,ders,n_der)
 I = 0;
 for n=1:N
     yval = [];
     for r=1:length(tau)
         tt = t(n).y(r);
         xx = x(n).y(:, r);
-        zz = z(n).evaluate(tau(r)); % Does not have a parameter at tau==0
+        zz = z(n).evaluate(tau(r));
         uu = u(n).y;
         pp = p;
-        val_r = i.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, ders);
+        dd = ders(n).evaluate(tau(r));
+        dd = [dd;  zeros(n_der  - length(dd), 1)];
+        val_r = i.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd);
         yval = [yval, val_r(:)];
     end
     lp = yop.lagrange_polynomial(tau, yval).integrate();
     I = I + lp.evaluate(1)*dt;
+end
+end
+
+function ders = parameterize_derivative ...
+    (der, N, tau, dt, t0, tf, t, x, z, u, p, tps, ints, ders, n_der)
+
+for n=1:N
+    yval = [];
+    for r=1:length(tau)
+        tt = t(n).y(r);
+        xx = x(n).y(:, r);
+        zz = z(n).evaluate(tau(r));
+        uu = u(n).y;
+        pp = p;
+        dd = ders(n).evaluate(tau(r));
+        dd = [dd;  zeros(n_der  - length(dd), 1)];
+        val_r = der.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd);
+        yval = [yval, val_r(:)];
+    end
+    yn = yop.lagrange_polynomial(tau, yval/dt).differentiate().evaluate(tau);
+    ders(n).y = [ders(n).y; yn];
 end
 end
 
@@ -156,8 +183,9 @@ for n=1:N % Dynamics
         zz = z(n).y(:, r-1); % only has d parameters
         uu = u(n).y(:);
         pp = p;
-        f = ocp.ode.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, ders);
-        a = ocp.alg.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, ders);
+        dd = ders(n).evaluate(tau(r));
+        f = ocp.ode.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd);
+        a = ocp.alg.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd);
         g = [g; (dxr - dt*f); a];
     end
 end
@@ -174,8 +202,8 @@ if is_transcription_invariant(expr)
     xx = x(1).evaluate(0);
     zz = z(1).evaluate(0);
     uu = u(1).evaluate(0);
-    % dd = der(1).evaluate(0);
-    disc = expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, ders);
+    dd = ders(1).evaluate(0);
+    disc = expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd);
 else
     disc = [];
     for n=1:N
@@ -184,17 +212,18 @@ else
         zz = z(n).evaluate(0); % Does not have a parameter at tau==0
         uu = u(n).y(:);
         pp = p;
-        % dd = der(n).evaluate(0);
+        dd = ders(n).evaluate(0);
         disc = [disc, ...
-            expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, ders)];
+            expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
         if expr.is_hard
             for r = 2:length(tau)
                 tt = t(n).y(r);
                 xx = x(n).y(:, r);
                 zz = z(n).y(:, r-1);
                 uu = u(n).y(:);
+                dd = ders(n).evaluate(tau(r));
                 disc = [disc, ...
-                    expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, ders)];
+                    expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
             end
         end
     end
@@ -203,7 +232,8 @@ else
     zz = z(N).evaluate(1); % Does not have a parameter at N+1.
     uu = u(N).y(:); % Same control input as N, 
     pp = p;
-    disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, ders)];
+    dd = ders(n).evaluate(1);
+    disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
 end
 end
 

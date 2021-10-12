@@ -16,14 +16,13 @@ ocp.st( ...
     0 <= rocket.fuel_mass_flow <= 9.5 ...
     );
 
-sol = ocp.solve('intervals', 40);
+sol = ocp.solve('intervals', 80);
 
 figure(1);
 subplot(411); hold on
 sol.plot(t, x(1));
 subplot(412); hold on
 sol.plot(t, x(2));
-sol.plot(t(t==42), x(2).at(t==42), 'x')
 subplot(413); hold on
 sol.plot(t, x(3));
 subplot(414); hold on
