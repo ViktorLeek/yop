@@ -8,9 +8,9 @@ p_im  = yop.state('p_im');  % Intake manifold pressure
 p_em  = yop.state('p_em');  % Exhause manifold pressure
 w_tc  = yop.state('w_tc');  % Turbocharger angular velocity
 
-[u_f, duf, dduf] = yop.control('name', 'u_f', 'pw', 'quadratic');   % Fuel injection per cycle per cylinder
+u_f = yop.control('name', 'u_f', 'pw', 'linear');   % Fuel injection per cycle per cylinder
 u_wg  = yop.control('name', 'u_wg');  % Wastegate control 0-close, 1-fully open
-[P_gen, dP_gen] = yop.control('name', 'P_gen', 'pw', 'linear'); % Generator power
+P_gen = yop.control('name', 'P_gen', 'pw', 'linear'); % Generator power
 
 %             [rad/s]       [Pa]      [Pa]   [rad/s]
 x =     [        w_ice;     p_im;     p_em;     w_tc]; % State vector
@@ -52,11 +52,8 @@ ivp = yop.ivp( ...
     x(t0) == x0, ... 
     der(x)== dx, ...
     u_f   == smoke_limiter(u_pi, y.u_f_max, u_min(1), u_max(1)), ...
-    duf == 0, ...
-    dduf == 0, ...
     u_wg  == 0, ...
     P_gen == P_dem, ...
-    dP_gen == 0, ...
     ... Engine speed controller
     der(I) == K/Ti*e + es/Tt, ...
     I(t0)  == 0 ...
@@ -84,7 +81,7 @@ sim.plot(t, P_gen)
 
 %%
 ocp = yop.ocp('Optimal Control Problem Benchmark');
-ocp.min( int(y.cylinder.fuel_massflow) );
+ocp.min( 1e3*int(y.cylinder.fuel_massflow) );
 ocp.st( ...
     ... Problem horizon
     t0==0, tf<=1.4, ...
@@ -102,18 +99,18 @@ ocp.st( ...
     y.engine.torque >= 0, ...
     hard(y.phi <= y.phi_max) ...
     );
-sol = ocp.solve('intervals', 80, 'guess', sim);
+sol = ocp.solve('intervals', 50, 'guess', sim);
 
 %%
 figure(1)
 subplot(411); hold on
-sol.plot(t, rad2rpm(w_ice));
+sol.plot(t, rad2rpm(w_ice), 'mag', 5)
 subplot(412); hold on
-sol.plot(t, p_im);
+sol.plot(t, p_im, 'mag', 5)
 subplot(413); hold on
-sol.plot(t, p_em);
+sol.plot(t, p_em, 'mag', 5)
 subplot(414); hold on
-sol.plot(t, w_tc);
+sol.plot(t, w_tc, 'mag', 5)
 
 figure(2)
 subplot(311); hold on
@@ -123,3 +120,6 @@ subplot(312); hold on
 sol.stairs(t, u_wg)
 subplot(313); hold on
 sol.plot(t, P_gen, 'mag', 5)
+
+figure(3); hold on
+sol.stairs(t, der(P_gen), 'mag', 5)

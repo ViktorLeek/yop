@@ -27,7 +27,7 @@ classdef defaults
         parameter_ub = inf;
         parameter_lb = -inf;
         
-        polynomial_degree = 3;
+        polynomial_degree = 5;
         collocation_points = 'legendre';
         control_invervals = 50;
         rk4_steps = 4;

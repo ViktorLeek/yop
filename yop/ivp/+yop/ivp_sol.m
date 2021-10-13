@@ -56,11 +56,24 @@ classdef ivp_sol < handle
             
             [vars, tps, ints, ders, sn] = yop.ocp.find_special_nodes(expr);
             
+            tmp_id = 0;
             for k=1:length(vars)
                 if isa(vars{k}, 'yop.ast_independent')
                     vars{k}.m_value = obj.ivp_vars(3).mx;
+                    tmp_id = vars{k}.id;
                 end
             end
+            
+            known_vars = false;
+            IDs = [obj.ivp_vars.IDs, tmp_id];
+            for k=1:length(vars)
+                known_vars = known_vars || any(vars{k}.id == IDs);
+            end
+            
+            if ~known_vars
+                v = [];
+                return
+            end     
             
             args = { ...
                 obj.mx_args{:}, ...
@@ -83,68 +96,90 @@ classdef ivp_sol < handle
                 n_elem(tps), n_elem(ints), n_elem(ders));
             
             if is_transcription_invariant(expr)
-                v = fn(obj.t0, obj.tf, ...
-                    obj.t(1).evaluate(0), ...
-                    obj.x(1).evaluate(0), ...
-                    obj.z(1).evaluate(0), ...
-                    obj.p, tpv, intv, derv);
-            elseif mag == 1
+                v = obj.invariant_value(fn, tpv, intv, derv);
+                
+            elseif is_ival(expr)
+            else
+                v = obj.variant_value(fn, tpv, intv, derv, mag);
+            end
+            
+        end
+        
+        function v = invariant_value(obj, expr, tps, ints, ders)
+            
+            v = full(expr(obj.t0, obj.tf, ...
+                obj.t(1).evaluate(0), ...
+                obj.x(1).evaluate(0), ...
+                obj.z(1).evaluate(0), ...
+                obj.p, tps, ints, ders(1).evaluate(0)));
+        end
+        
+        function v = variant_value(obj, expr, tps, ints, ders, mag)
+            if false %mag == 1
                 tt = mat(obj.t);
                 xx = mat(obj.x);
                 zz = mat(obj.z);
-                v = fn(obj.t0, obj.tf, tt, xx, zz, obj.p, tpv, intv, derv);
+                dd = mat(ders);
+                v = full(expr(obj.t0,obj.tf,tt,xx,zz,obj.p,tps,ints,dd));
                 
             else
                 tt = [];
                 xx = [];
                 zz = [];
+                dd = [];
                 for n=1:obj.N
                     for r=1:length(obj.tau)-1
                         tt = [tt, obj.t(n).y(r)];
                         xx = [xx, obj.x(n).y(:,r)];
                         zz = [zz, obj.z(n).y(:,r)];
+                        dd = [dd, ders(n).evaluate(obj.tau(r))];
                         dT = obj.tau(r+1)-obj.tau(r);
                         for k=1:mag-1 % Magnification
                             tau_k = obj.tau(r) + k/mag*dT;
                             tt = [tt, obj.t(n).evaluate(tau_k)];
                             xx = [xx, obj.x(n).evaluate(tau_k)];
                             zz = [zz, obj.z(n).evaluate(tau_k)];
+                            dd = [dd, ders(n).evaluate(tau_k)];
                         end
                     end
                     tt = [tt, obj.t(n).y(r+1)];
                     xx = [xx, obj.x(n).y(:,r+1)];
                     zz = [zz, obj.z(n).y(:,r)];
+                    dd = [dd, ders(n).evaluate(obj.tau(r+1))];
                 end
-                tt = [tt, obj.t(n+1).y(1)];
+                tt = [tt, obj.t(n+1).y];
                 xx = [xx, obj.x(n+1).y(:)];
                 zz = [zz, obj.z(n+1).y(:)];
-                v = fn(obj.t0, obj.tf, tt, xx, zz, obj.p, tpv, intv, derv); 
+                dd = [dd, ders(n).evaluate(1)];
+                v = full(expr(obj.t0,obj.tf,tt,xx,zz,obj.p,tps,ints,dd)); 
             end
-            v = full(v);
         end
         
         function [tps, ints, ders] = comp_sn(obj, sn, n_tp, n_int, n_der)
             tps = [];
             ints = [];
-            ders = [];
+            ders = yop.interpolating_poly.empty(obj.N, 0);
+            for n=1:obj.N
+                ders(n) = yop.interpolating_poly(obj.tau, [], obj.t0, ...
+                    obj.tf, obj.N);
+            end
             for node = sn
                 tmp_tp  = [tps;  zeros(n_tp  - length(tps), 1)];
                 tmp_int = [ints; zeros(n_int - length(ints), 1)];
                 switch node.type
                     case yop.ocp_expr.tp
                         tp = obj.compute_timepoint( ...
-                            node, tmp_tp, tmp_int, ders);
+                            node, tmp_tp, tmp_int, ders, n_der);
                         tps = [tps; tp(:)];
                         
                     case yop.ocp_expr.int
                         int = obj.compute_integral( ...
-                            node, tmp_tp, tmp_int, ders);
+                            node, tmp_tp, tmp_int, ders, n_der);
                         ints = [ints; int(:)];
                         
                     case yop.ocp_expr.der
-                        error(yop.msg.not_implemented);
-                        warning(['When implementing dont forget to ' ...
-                            'multiply derivative with step length']);
+                        ders = obj.compute_derivative(node, tmp_tp, ...
+                            tmp_int, ders, n_der);
                         
                     otherwise
                         error(yop.msg.unexpected_error);
@@ -152,28 +187,52 @@ classdef ivp_sol < handle
             end
         end
         
-        function val = compute_timepoint(obj, tp, tps, ints, ders)
-            val = tp.fn(obj.t0, obj.tf, ...
+        function val = compute_timepoint(obj, tp, tps, ints, ders, n_der)
+            dd = ders.value(tp.timepoint);
+            dd = [dd;  zeros(n_der  - length(dd), 1)];
+            val = full(tp.fn(obj.t0, obj.tf, ...
                 obj.t.value(tp.timepoint), ...
                 obj.x.value(tp.timepoint), ...
                 obj.z.value(tp.timepoint), ...
-                obj.p, tps, ints, ders);
+                obj.p, tps, ints, dd));
         end
         
-        function I = compute_integral(obj, int, tpv, intv, der)
+        function I = compute_integral(obj, int, tpv, intv, ders, n_der)
             I = 0;
             for n=1:obj.N
                 yval = [];
                 for r=1:length(obj.tau)
-                    val_r = int.fn(obj.t0, obj.tf, ...
+                    dd = ders(n).evaluate(obj.tau(r));
+                    dd = [dd;  zeros(n_der  - length(dd), 1)];
+                    val_r = full(int.fn(obj.t0, obj.tf, ...
                         obj.t(n).y(r), ...
                         obj.x(n).y(:,r), ...
                         obj.z(n).y(:,r), ...
-                        obj.p, tpv, intv, der);
+                        obj.p, tpv, intv, dd));
                     yval = [yval, val_r(:)];
                 end
                 lp = yop.lagrange_polynomial(obj.tau, yval).integrate();
                 I = I + lp.evaluate(1)*obj.dt;
+            end
+        end
+        
+        function ders = compute_derivative(obj,der,tps,ints,ders,n_der)
+            for n=1:obj.N
+                yval = [];
+                for r=1:length(obj.tau)
+                    tt = obj.t(n).y(r);
+                    xx = obj.x(n).y(:, r);
+                    zz = obj.z(n).y(:, r);
+                    pp = obj.p;
+                    dd = ders(n).evaluate(obj.tau(r));
+                    dd = [dd;  zeros(n_der  - length(dd), 1)];
+                    val_r = full(der.fn(obj.t0, obj.tf, tt, xx, zz, pp, ...
+                        tps, ints, dd));
+                    yval = [yval, val_r(:)];
+                end
+                yn = yop.lagrange_polynomial(obj.tau, ...
+                    yval).differentiate().evaluate(obj.tau)/obj.dt;
+                ders(n).y = [ders(n).y; yn];
             end
         end
         

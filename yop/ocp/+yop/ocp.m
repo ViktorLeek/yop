@@ -80,54 +80,14 @@ classdef ocp < handle
             
             nlp = yop.direct_collocation(obj, N, d, cp);
             
-            % Initial guess needs a fix!
-            if isempty(guess)
-                w0 = ones(size(nlp.w));
-            else
-                tau = full([0, casadi.collocation_points(d, cp)]);
-                T = guess.t0;
-                dt = (guess.tf-guess.t0)/N;
-                tx = [];
-                tz = [];
-                tu = [];
-                for k=1:N
-                    tx = [tx, T + tau*dt];
-                    tz = [tz, T + tau(2:end)*dt];
-                    tu = [tu; T];
-                    T = T + dt;
-                end
-                tx(end+1) = guess.tf;
-                tt = interp1( ...
-                    guess.value(obj.independent.var), ...
-                    guess.value(obj.independent.var), ...
-                    tx);
-                xx = interp1( ...
-                    guess.value(obj.independent.var)', ...
-                    guess.value(obj.states.vec)', ...
-                    tx);
-                xx = xx';
-                xx = xx(:);
-                zz = guess.value(obj.algebraics.vec)';
-                if ~isempty(zz)
-                    zz=interp1(guess.value(obj.independent.var)', zv, tz);
-                end
-                zz = zz';
-                zz = zz(:);
-                uu = interp1( ...
-                    guess.value(obj.independent.var)', ...
-                    guess.value(obj.controls.vec)', ...
-                    tu);
-                uu = uu';
-                uu = uu(:);
-                pp = guess.value(obj.parameters.vec);
-                pp = pp(:);
-                w0 = [guess.t0; guess.tf; xx; zz; uu; pp];
-            end
+            w0 = obj.initial_value(guess, N, d, cp, size(nlp.w));
             
+            opts.ipopt.acceptable_tol = 1e-6;
             solver = casadi.nlpsol( ...
                 'solver', ...
                 'ipopt', ...
-                struct('f', nlp.J, 'x', nlp.w, 'g', [nlp.g; nlp.h]) ...
+                struct('f', nlp.J, 'x', nlp.w, 'g', [nlp.g; nlp.h]), ...
+                opts ...
                 );
             
             sol = solver( ...
@@ -150,6 +110,69 @@ classdef ocp < handle
                 nlp.p(sol.x), ...
                 N, d, cp ...
                 );
+        end
+        
+        function w0 = initial_value(obj, guess, N, d, cp, nw)
+            if isempty(guess)
+                w0 = ones(nw);
+            else
+                tau = full([0, casadi.collocation_points(d, cp)]);
+                T = guess.t0;
+                dt = (guess.tf-guess.t0)/N;
+                tx=[];  tz=[]; tu=[]; % Time vectors
+                for k=1:N
+                    tx = [tx, T + tau*dt];
+                    tz = [tz, T + tau(2:end)*dt];
+                    tu = [tu; T];
+                    T = T + dt;
+                end
+                tx(end+1) = guess.tf;
+                
+                t = obj.independent.var;
+                t_guess = guess.value(t)';
+                tt = interp1(t_guess, t_guess, tx);
+                
+                xx = [];
+                for x = obj.states
+                    for k=1:prod(size(x.var))
+                        x_guess = guess.value(x.var(k))';
+                        if isempty(x_guess)
+                            xk = ones(length(tx), 1);
+                        else
+                            xk = interp1(t_guess, x_guess, tx);
+                        end
+                        xx = [xx, xk(:)];
+                    end
+                end
+                xx = xx';
+                xx = xx(:);
+                
+                zz = guess.value(obj.algebraics.vec)';
+                if ~isempty(zz)
+                    zz=interp1(t_guess, zv, tz);
+                end
+                zz = zz';
+                zz = zz(:);
+                
+                uu = [];
+                for u = obj.controls
+                    for k=1:prod(size(u.var))
+                        u_guess = guess.value(u.var(k))';
+                        if isempty(u_guess)
+                            uk = ones(length(tu), 1);
+                        else
+                            uk = interp1(t_guess, u_guess, tu);
+                        end
+                        uu = [uu, uk(:)];
+                    end
+                end
+                uu = uu';
+                uu = uu(:);
+                
+                pp = guess.value(obj.parameters.vec);
+                pp = pp(:);
+                w0 = [guess.t0; guess.tf; xx; zz; uu; pp];
+            end
         end
         
         function obj = to_canonical(obj)

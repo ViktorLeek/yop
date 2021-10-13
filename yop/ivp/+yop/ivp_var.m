@@ -20,8 +20,8 @@ classdef ivp_var < handle
         
         function n = n_elem(obj)
             n = 0;
-            for k=1:length(obj)
-                n = n + prod(size(obj(k).var));
+            for o=obj
+                n = n + prod(size(o.var));
             end
         end
         
@@ -30,21 +30,28 @@ classdef ivp_var < handle
         end
         
         function obj = set_sym(obj)
-            for k=1:length(obj)
-                obj(k).var.m_value = obj(k).sym;
+            for o=obj
+                o.var.m_value = o.sym;
             end
         end
         
         function obj = set_mx(obj)
-            for k=1:length(obj)
-                obj(k).var.m_value = obj(k).mx;
+            for o=obj
+                o.var.m_value = o.mx;
             end
         end
         
         function vec = mx_vec(obj)
             vec = [];
-            for k=1:length(obj)
-                vec = [vec(:); obj(k).mx(:)];
+            for o=obj
+                vec = [vec(:); o.mx(:)];
+            end
+        end
+        
+        function ids = IDs(obj)
+            ids = [];
+            for o=obj
+                ids = [ids, o.var.id];
             end
         end
     end

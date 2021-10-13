@@ -167,7 +167,8 @@ for n=1:N
         val_r = der.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd);
         yval = [yval, val_r(:)];
     end
-    yn = yop.lagrange_polynomial(tau, yval/dt).differentiate().evaluate(tau);
+    yn = yop.lagrange_polynomial(tau, ...
+        yval).differentiate().evaluate(tau)/dt;
     ders(n).y = [ders(n).y; yn];
 end
 end
@@ -266,7 +267,7 @@ for n=1:N
         end
     end
 end
-tt = t(N+1).y(1);
+tt = t(N+1).y;
 xx = x(N+1).y(:); % Only a point
 zz = z(N).evaluate(1); % Does not have a parameter at N+1.
 uu = u(N).y(:); % Same control input as N,
