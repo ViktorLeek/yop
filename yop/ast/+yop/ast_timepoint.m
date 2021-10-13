@@ -5,7 +5,7 @@ classdef ast_timepoint < yop.ast_expression
     end
     methods
         function obj = ast_timepoint(tp, expr)
-            obj@yop.ast_expression();
+            obj@yop.ast_expression(false);
             obj.dim = expr.dim;
             
             switch class(tp)
@@ -58,6 +58,9 @@ classdef ast_timepoint < yop.ast_expression
                 otherwise
                     error('[yop] Error: Illegal relation for a timepoint');
             end
+            
+            % Here it could be implemented to test if the timepoint is
+            % inside a possible interval of expr.
             
             obj.timepoint = timepoint;
             obj.expr = expr;

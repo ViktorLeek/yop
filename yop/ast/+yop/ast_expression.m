@@ -7,31 +7,43 @@ classdef ast_expression < yop.node & yop.ast_ool
     
     properties
         dim = [1, 1] % dimensions of 'size'
+        m_ival = false
     end
     
     methods
-        function [bool, t0, tf] = isa_timeinterval(obj)
+        
+        function obj = ast_expression(ival)
+            obj@yop.node();
+            if nargin == 1
+                obj.m_ival = ival;
+            end
+        end
+        
+        function bool = is_ival(obj)
+            % Tests if a node is an interval
+            % The reason for having this implemented this way is that
+            % intervals are implicitly propagated to child nodes.
+            bool = obj.m_ival;
+        end
+        
+        function [t0, tf] = get_ival(obj)
+            % This analysis is optimistic, which is bad. This does not
+            % consider the case that the interval can be in a subexpression
+            % that does not reach the final expression. A fix that tests if
+            % the found interval reaches the expression is necessary in
+            % order for correct analysis.
             t0 = yop.initial_timepoint;
             tf = yop.final_timepoint;
-            bool = false;
             [tsort, N] = topological_sort(obj);
             for n=1:N
                 if isa(tsort{n}, 'yop.ast_timeinterval')
                     % The function returns here, so having more than one
                     % interval in an expression is undefined behaviour.
-                    bool = true;
                     t0 = tsort{n}.t0;
                     tf = tsort{n}.tf;
                     return
                 end
             end
-        end
-    end
-    
-    methods
-        
-        function obj = ast_expression()
-            obj@yop.node();
         end
         
         function sz = size(obj, varargin)

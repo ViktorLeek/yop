@@ -1,19 +1,21 @@
 %% Formulation 1
-[t0, tf, t, x, u] = yop.ocp_variables('nx', 3, 'nu', 1);
+%[t0, tf, t, x, u] = yop.ocp_variables('nx', 3, 'nu', 1);
+[t0, tf, t, x] = yop.ocp_variables('nx', 3);
+u = yop.control('pw', 'quadratic'); % <-- Option for control parametrization
 
 [~, y] = rocket_model(x, u);
 rocket = y.rocket;
 
 ocp = yop.ocp('Goddard''s Rocket Problem');
-% ocp.max( rocket.height(tf) );
-ocp.max( int(rocket.velocity) );
+ocp.max( rocket.height(tf) );
 ocp.st( ...
     t0==0, tf==212, ...
     der(x) == rocket_model(x, u), ...
     rocket.height(t0)   == 0    , ...
     rocket.velocity(t0) == 0    , ...
+    rocket.velocity(tf) == 0    , ...
     rocket.mass(t0)     == 215  , ...
-    hard(rocket.fuel_mass_flow(2.7 < t < 50)-1.7 <= 0), ...
+    der(rocket.height(10 < t < 50)) <= 200 + (500-200)/40*t, ...
     68 <= rocket.mass <= 215 , ...
     0 <= rocket.fuel_mass_flow <= 9.5 ...
     );
@@ -22,13 +24,13 @@ sol = ocp.solve('intervals', 80);
 
 figure(1);
 subplot(411); hold on
-sol.plot(t, x(1));
+sol.plot(t, x(1), 'mag', 5);
 subplot(412); hold on
-sol.plot(t, x(2));
+sol.plot(t, x(2), 'mag', 5);
 subplot(413); hold on
-sol.plot(t, x(3));
+sol.plot(t, x(3), 'mag', 5);
 subplot(414); hold on
-sol.stairs(t, u);
+sol.plot(t, u, 'mag', 5);
 
 % sol.save('Goddard.mat');
 % sol = yop.load('Goddard', t, t0, tf, x, u, p);

@@ -4,7 +4,7 @@ classdef ast_inv < yop.ast_expression
     end
     methods
         function obj = ast_inv(A)
-            obj@yop.ast_expression();
+            obj@yop.ast_expression(is_ival(A));
             obj.A = A;
             obj.dim = size(inv(ones(size(A))));
         end

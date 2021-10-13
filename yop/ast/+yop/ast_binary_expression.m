@@ -7,7 +7,7 @@ classdef ast_binary_expression < yop.ast_expression
     
     methods
         function obj = ast_binary_expression(lhs, rhs)
-            obj@yop.ast_expression();
+            obj@yop.ast_expression(is_ival(lhs) || is_ival(rhs));
             obj.lhs = lhs;
             obj.rhs = rhs;
         end

@@ -4,6 +4,11 @@ classdef ast_vertcat < yop.ast_expression
     end
     methods
         function obj = ast_vertcat(varargin)
+            isival = false;
+            for k=1:length(varargin)
+                isival = isival || is_ival(varargin{k});
+            end
+            obj@yop.ast_expression(isival);
             obj.args = varargin;
             tmp = cell(size(varargin));
             for k=1:length(varargin)

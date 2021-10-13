@@ -6,7 +6,7 @@ classdef ast_norm < yop.ast_expression
     end
     methods
         function obj = ast_norm(expr, p)
-            obj@yop.ast_expression();
+            obj@yop.ast_expression(is_ival(expr));
             obj.expr = expr;
             obj.nargs = nargin;
             obj.dim = [1, 1];

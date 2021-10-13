@@ -4,7 +4,7 @@ classdef ast_pinv < yop.ast_expression
     end
     methods
         function obj = ast_pinv(A)
-            obj@yop.ast_expression();
+            obj@yop.ast_expression(is_ival(expr));
             obj.A = A;
             obj.dim = size(pinv(ones(size(A))));
         end

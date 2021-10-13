@@ -198,122 +198,132 @@ end
 
 function disc = parameterize_expr(expr,N,tau,t0,tf,t,x,z,u,p,tps,ints,ders)
 if is_transcription_invariant(expr)
-    tt = t(1).evaluate(0);
-    xx = x(1).evaluate(0);
-    zz = z(1).evaluate(0);
-    uu = u(1).evaluate(0);
-    dd = ders(1).evaluate(0);
-    disc = expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd);
-    
-elseif expr.is_ival % && (expr.T0 ~= yop.initial_timepoint && expr.Tf ~= yop.final_timepoint)
-    disc = [];
-    if expr.T0 == yop.initial_timepoint
-        n0 = 1;
-        r0 = 1;
-    else
-        % Find closest discretization point and evaluate at first timepoint
-        [n0, r0] = x.get_next_index(expr.T0);
-        tt = t(n0).evaluate(expr.T0);
-        xx = x(n0).evaluate(expr.T0);
-        zz = z(n0).evaluate(expr.T0);
-        uu = u(n0).evaluate(expr.T0);
-        dd = ders(n0).evaluate(expr.T0);
-        disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd)];
+    disc = parameterize_invariant(expr,t0,tf,t,x,z,u,p,tps,ints,ders);
+elseif is_ival(expr)
+    disc = parameterize_ival(expr,N,tau,t0,tf,t,x,z,u,p,tps,ints,ders);
+else
+    disc = parameterize_all(expr,N,tau,t0,tf,t,x,z,u,p,tps,ints,ders);
+end
+end
+
+function disc = parameterize_invariant(expr,t0,tf,t,x,z,u,p,tps,ints,ders)
+tt = t(1).evaluate(0);
+xx = x(1).evaluate(0);
+zz = z(1).evaluate(0);
+uu = u(1).evaluate(0);
+dd = ders(1).evaluate(0);
+disc = expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd);
+end
+
+function disc = parameterize_ival(expr,N,tau,t0,tf,t,x,z,u,p,tps,ints,ders)
+disc = [];
+
+[I0, If] = get_ival(expr);
+
+% Evaluate at the beginning of the interval
+disc = [disc, expr.fn(t0, tf, t.value(I0), x.value(I0), z.value(I0), ...
+    u.value(I0), p, tps, ints, ders.value(I0))];
+
+% Evaluate all points that are in the interval
+[n0, r0, nf, rf] = get_ival_idx(I0, If, t(1).t0, t(1).tf, N, tau);
+for n=n0:min(nf, N) % N+1 is handled by evaluating at If
+    % Intervals are treated as hard constraints.
+    for r = yop.IF(n==n0, r0, 1) : yop.IF(n==nf, rf, length(tau))
+        tt = t(n).y(r);
+        xx = x(n).y(:, r);
+        zz = z(n).evaluate(tau(r));
+        uu = u(n).y(:);
+        dd = ders(n).evaluate(tau(r));
+        disc = [disc, ...
+            expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd)];
     end
-    
-    if r0 ~= 1
-        % Not at a control interval boundary, so we add the steps up to
-        % one, and then continue the algorithm from there.
-        for r=r0:(length(tau)*(n0<N+1) + (n0==N+1))
-            tt = t(n0).y(r);
-            xx = x(n0).y(:, r);
-            zz = z(n0).y(:, r-1);
-            uu = u(n0).y(:);
-            dd = ders(n0).evaluate(tau(r));
+end
+
+% Evaluate final point
+disc = [disc, expr.fn(t0, tf, t.value(If), x.value(If), z.value(If), ...
+    u.value(If), p, tps, ints, ders.value(If))];
+end
+
+function disc = parameterize_all(expr,N,tau,t0,tf,t,x,z,u,p,tps,ints,ders)
+disc = [];
+for n=1:N
+    tt = t(n).y(1);
+    xx = x(n).y(:,1);
+    zz = z(n).evaluate(0); % Does not have a parameter at tau==0
+    uu = u(n).y(:);
+    pp = p;
+    dd = ders(n).evaluate(0);
+    disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
+    if expr.is_hard
+        for r = 2:length(tau)
+            tt = t(n).y(r);
+            xx = x(n).y(:, r);
+            zz = z(n).y(:, r-1);
+            uu = u(n).y(:);
+            dd = ders(n).evaluate(tau(r));
             disc = [disc, ...
-                expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd)];
+                expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
         end
+    end
+end
+tt = t(N+1).y(1);
+xx = x(N+1).y(:); % Only a point
+zz = z(N).evaluate(1); % Does not have a parameter at N+1.
+uu = u(N).y(:); % Same control input as N,
+pp = p;
+dd = ders(n).evaluate(1);
+disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
+end
+
+function [n0, r0, nf, rf] = get_ival_idx(I0, If, T0, Tf, N, tau)
+dT = (Tf-T0)/N;
+
+if I0 == yop.initial_timepoint
+    I0 = T0;
+end
+
+if If == yop.initial_timepoint
+    If = T0;
+end
+
+if I0 == yop.final_timepoint
+    I0 = Tf;
+end
+
+if If == yop.final_timepoint
+    If = Tf;
+end
+
+% First point after I0
+n0 = 1 + floor((I0-T0)/dT);
+if n0 == N+1
+    r0 = 1;
+else
+    t_n0 = dT*(n0-1);
+    tau_I0 = (I0-t_n0)/dT;
+    % Does not use >= because this way, the next point is always picked.
+    r0 = find(tau - tau_I0 > 0, 1); 
+    if isempty(r0)
+        % Beyond the last collocation point, so next point is the next interval
+        r0 = 1;
         n0 = n0+1;
     end
-    
-    if expr.Tf == yop.final_timepoint
-        nf = N+1;
+end
+
+% Last point before If
+nf = 1 + floor((If-T0)/dT);
+t_nf = dT*(nf-1);
+tau_If = (If-t_nf)/dT;
+rf = find(tau - tau_If < 0, 1, 'last');
+if isempty(rf)
+    if nf==1
         rf = 1;
-        
     else
-        [nf, rf] = x.get_prev_index(expr.Tf);
-        tt = t(nf).evaluate(expr.Tf);
-        xx = x(nf).evaluate(expr.Tf);
-        zz = z(nf).evaluate(expr.Tf);
-        uu = u(nf).evaluate(expr.Tf);
-        dd = ders(nf).evaluate(expr.Tf);
-        disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd)];
-    end
-    
-    if rf ~= 1
-        for r=1:(rf*(nf<N+1) + (nf==N+1))
-            tt = t(n0).y(r);
-            xx = x(n0).y(:, r);
-            zz = z(n0).evaluate(tau(r));
-            uu = u(n0).y(:);
-            dd = ders(n0).evaluate(tau(r));
-            disc = [disc, ...
-                expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd)];
-        end
+        rf = length(tau);
         nf = nf-1;
     end
-    
-    for n=n0:nf
-        tt = t(n).y(1);
-        xx = x(n).y(:,1);
-        zz = z(n).evaluate(0);
-        uu = u(n).y(:);
-        pp = p;
-        dd = ders(n).evaluate(0);
-        disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
-        if expr.is_hard
-            for r = 2:length(tau)
-                tt = t(n).y(r);
-                xx = x(n).y(:, r);
-                zz = z(n).y(:, r-1);
-                uu = u(n).y(:);
-                dd = ders(n).evaluate(tau(r));
-                disc = [disc, ...
-                    expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
-            end
-        end
-    end
-    
-else
-    disc = [];
-    for n=1:N
-        tt = t(n).y(1);
-        xx = x(n).y(:,1);
-        zz = z(n).evaluate(0); % Does not have a parameter at tau==0
-        uu = u(n).y(:);
-        pp = p;
-        dd = ders(n).evaluate(0);
-        disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
-        if expr.is_hard
-            for r = 2:length(tau)
-                tt = t(n).y(r);
-                xx = x(n).y(:, r);
-                zz = z(n).y(:, r-1);
-                uu = u(n).y(:);
-                dd = ders(n).evaluate(tau(r));
-                disc = [disc, ...
-                    expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
-            end
-        end
-    end
-    tt = t(N+1).y(1);
-    xx = x(N+1).y(:); % Only a point
-    zz = z(N).evaluate(1); % Does not have a parameter at N+1.
-    uu = u(N).y(:); % Same control input as N, 
-    pp = p;
-    dd = ders(n).evaluate(1);
-    disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
 end
+
 end
 
 function [w_lb, w_ub] = box_bnd(N, d, ocp)

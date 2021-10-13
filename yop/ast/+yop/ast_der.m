@@ -3,10 +3,10 @@ classdef ast_der < yop.ast_expression
         expr
     end
     methods
-        function obj = ast_der(var)
-            obj@yop.ast_expression();
-            obj.expr = var;
-            obj.dim = size(var);
+        function obj = ast_der(expr)
+            obj@yop.ast_expression(is_ival(expr));
+            obj.expr = expr;
+            obj.dim = size(expr);
         end
         
         function [boolv, id] = isa_der(obj)

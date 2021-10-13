@@ -7,7 +7,7 @@ classdef ast_cross < yop.ast_expression
     end
     methods
         function obj = ast_cross(A, B, d)
-            obj@yop.ast_expression();
+            obj@yop.ast_expression(is_ival(A) || is_ival(B));
             obj.nargs = nargin;
             switch nargin
                 case 2

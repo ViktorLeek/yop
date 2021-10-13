@@ -435,10 +435,6 @@ classdef ocp < handle
             for pc = [obj.equality_constraints, obj.inequality_constraints]
                 mx_expr = fw_eval(pc.ast);
                 pc.fn = casadi.Function('fn', args, {mx_expr});
-                [is_ival, T0, Tf] = isa_timeinterval(pc.ast);
-                pc.is_ival = is_ival;
-                pc.T0 = T0;
-                pc.Tf = Tf;
             end
         end
     end
@@ -1113,6 +1109,7 @@ classdef ocp < handle
             tf = yop.final_timepoint();
             isvar = isa_variable(var_cand);
             isder = isa_der(var_cand);
+            isival = is_ival(var_cand) || is_ival(num_cand);
             [istp, tps] = isa_timepoint(var_cand);
             isnum = isa_numeric(num_cand);
             boolv = isvar & ~isder & (~istp|tps==t0|tps==tf) & isnum;

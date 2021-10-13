@@ -6,7 +6,7 @@ classdef ast_timeinterval < yop.ast_expression
     end
     methods
         function obj = ast_timeinterval(t0, tf, expr)
-            obj@yop.ast_expression();
+            obj@yop.ast_expression(true);
             obj.dim = expr.dim;
             
             if isnumeric(t0) 

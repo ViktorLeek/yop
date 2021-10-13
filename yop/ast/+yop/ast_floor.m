@@ -5,7 +5,7 @@ classdef ast_floor < yop.ast_expression
     methods
         function obj = ast_floor(expr)
             % Only accepts floor with single argument input
-            obj@yop.ast_expression();
+            obj@yop.ast_expression(is_ival(expr));
             obj.expr = expr;
             obj.dim = size(expr);
         end

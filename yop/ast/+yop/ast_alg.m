@@ -4,13 +4,10 @@ classdef ast_alg < yop.ast_expression
     end
     methods
         function obj = ast_alg(var)
-            obj@yop.ast_expression();
+            obj@yop.ast_expression(is_ival(expr));
             obj.expr = var;
             obj.dim = size(var);
         end
-        
-        % Overload all illegal operations here!! which should be most!
-        % only allow 0 = alg(expr)!
         
         function value = evaluate(obj)
             value = evaluate(obj.expr);

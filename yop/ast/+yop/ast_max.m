@@ -8,7 +8,7 @@ classdef ast_max < yop.ast_expression
     end
     methods
         function obj = ast_max(A, B, d, flag)
-            obj@yop.ast_expression();
+            obj@yop.ast_expression(is_ival(A) || is_ival(B));
             obj.A = A;
             obj.nargs = nargin;
             switch nargin

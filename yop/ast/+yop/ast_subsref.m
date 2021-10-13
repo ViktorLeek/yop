@@ -15,7 +15,7 @@ classdef ast_subsref < yop.ast_expression
                     s.subs{k} = find(s.subs{k});
                 end
             end
-            obj@yop.ast_expression();
+            obj@yop.ast_expression(is_ival(node));
             obj.node = node;
             obj.s = s;
             obj.dim = size( subsref( ones(size(node)), s ) );

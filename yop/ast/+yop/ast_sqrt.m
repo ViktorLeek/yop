@@ -4,7 +4,7 @@ classdef ast_sqrt < yop.ast_expression
     end
     methods
         function obj = ast_sqrt(expr)
-            obj@yop.ast_expression();
+            obj@yop.ast_expression(is_ival(expr));
             obj.expr = expr;
             obj.dim = size(expr);
         end

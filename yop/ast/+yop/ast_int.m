@@ -4,7 +4,8 @@ classdef ast_int < yop.ast_expression
     end
     methods
         function obj = ast_int(expr)
-            obj@yop.ast_expression();
+            isival = false; % Always finite integrals (for now at least)
+            obj@yop.ast_expression(isival);
             obj.expr = expr;
             obj.dim = size(expr);
         end

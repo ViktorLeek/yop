@@ -5,6 +5,7 @@ classdef ast_repmat < yop.ast_expression
     end
     methods
         function obj = ast_repmat(expr, varargin)
+            obj@yop.ast_expression(is_ival(expr));
             obj.expr = expr;
             obj.args = varargin;
             obj.dim = repmat(ones(size(expr)), varargin{:});

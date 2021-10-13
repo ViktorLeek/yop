@@ -4,7 +4,7 @@ classdef ast_transpose < yop.ast_expression
     end
     methods
         function obj = ast_transpose(expr)
-            obj@yop.ast_expression();
+            obj@yop.ast_expression(is_ival(expr));
             obj.expr = expr;
             obj.dim = size(transpose(ones(size(expr))));
         end
