@@ -26,6 +26,11 @@ classdef ocp_sol < handle
             obj.parameterize_polynomials(t, x, z, u);
         end
         
+        function n = d(obj)
+            % polynomial degree
+            n = length(obj.tau) - 1;
+        end
+        
         function obj = parameterize_polynomials(obj, t, x, z, u)
             ip = @(x,y)yop.interpolating_poly(x, y, obj.t0, obj.tf, obj.N);
             tt = yop.interpolating_poly.empty(obj.N+1, 0);
@@ -54,7 +59,6 @@ classdef ocp_sol < handle
             if nargin == 2
                 mag = 1;
             end
-            
             
             [vars, tps, ints, ders, sn] = yop.ocp.find_special_nodes(expr);
             
@@ -85,7 +89,7 @@ classdef ocp_sol < handle
             if is_transcription_invariant(expr)
                 v = obj.invariant_value(fn, tpv, intv, derv);
             elseif is_ival(expr)
-                
+                v = obj.interval_value(expr, fn, tpv, intv, derv, mag);
             else
                 v = obj.variant_value(fn, tpv, intv, derv, mag);
             end
@@ -132,6 +136,99 @@ classdef ocp_sol < handle
             uu = [uu, obj.u(n).y];
             dd = [dd, ders(n).evaluate(1)];
             v = full(expr(obj.t0,obj.tf,tt,xx,zz,uu,obj.p,tps,ints,dd));
+        end
+        
+        function v = interval_value(obj, expr, fn, tps, ints, ders, mag)
+            [I0, If] = get_ival(expr);
+            I0 = yop.IF(I0==yop.initial_timepoint, obj.t0, I0);
+            I0 = yop.IF(I0==yop.final_timepoint  , obj.tf, I0);
+            If = yop.IF(If==yop.initial_timepoint, obj.t0, If);
+            If = yop.IF(If==yop.final_timepoint  , obj.tf, If);
+            
+            % Evaluate at the beginning of the interval
+            tt = obj.t.value(I0); 
+            xx = obj.x.value(I0);
+            zz = obj.z.value(I0);
+            uu = obj.u.value(I0);
+            dd = ders.value(I0); 
+            
+            % Evaluate all points within the interval
+            [n0, r0, nf, rf] = obj.get_ival_idx(I0, If);
+            for n=n0:min(nf, obj.N)
+                un = obj.u(n).y;
+                for r = yop.IF(n==n0, r0, 1) : yop.IF(n==nf, rf, obj.d)
+                    tt = [tt, obj.t(n).y(r)];
+                    xx = [xx, obj.x(n).y(:, r)];
+                    zz = [zz, obj.z(n).evaluate(obj.tau(r))];
+                    uu = [uu, un];
+                    dd = [dd, ders(n).evaluate(obj.tau(r))];
+                    if n==nf && r==rf
+                        t_nf = obj.dt*(nf-1);
+                        tau_If = (If-t_nf)/obj.dt;
+                        dT = tau_If - obj.tau(r);
+                    else
+                        dT = obj.tau(r+1)-obj.tau(r);
+                    end
+                    for k=1:mag-1 % Magnification
+                        tau_k = obj.tau(r) + k/mag*dT;
+                        tt = [tt, obj.t(n).evaluate(tau_k)];
+                        xx = [xx, obj.x(n).evaluate(tau_k)];
+                        zz = [zz, obj.z(n).evaluate(tau_k)];
+                        uu = [uu, un];
+                        dd = [dd, ders(n).evaluate(tau_k)];
+                    end
+                end
+                % Last collocation point is evaluated here
+                if n ~= nf
+                    tt = [tt, obj.t(n).y(r+1)];
+                    xx = [xx, obj.x(n).y(:,r+1)];
+                    zz = [zz, obj.z(n).y(:,r)];
+                    uu = [uu, obj.u(n).evaluate(obj.tau(r))];
+                    dd = [dd, ders(n).evaluate(obj.tau(r+1))];
+                end
+            end
+            
+            % Evaluate last point of interval
+            tt = [tt, obj.t.value(If)]; 
+            xx = [xx, obj.x.value(If)];
+            zz = [zz, obj.z.value(If)];
+            uu = [uu, obj.u.value(If)];
+            dd = [dd, ders.value(If)]; 
+            
+            v = full(fn(obj.t0,obj.tf,tt,xx,zz,uu,obj.p,tps,ints,dd));
+        end
+        
+        function [n0, r0, nf, rf] = get_ival_idx(obj, I0, If)
+            
+            % First point after I0
+            n0 = 1 + floor((I0-obj.t0)/obj.dt);
+            if n0 == obj.N+1
+                r0 = 1;
+            else
+                t_n0 = obj.dt*(n0-1);
+                tau_I0 = (I0-t_n0)/obj.dt;
+                % Does not use >= in order to always pick the next point
+                r0 = find(obj.tau - tau_I0 > 0, 1);
+                if isempty(r0)
+                    r0 = 1;
+                    n0 = n0+1;
+                end
+            end
+            
+            % Last point before If
+            nf = 1 + floor((If-obj.t0)/obj.dt);
+            t_nf = obj.dt*(nf-1);
+            tau_If = (If-t_nf)/obj.dt;
+            rf = find(obj.tau - tau_If < 0, 1, 'last');
+            if isempty(rf)
+                if nf==1
+                    rf = 1;
+                else
+                    rf = length(obj.tau);
+                    nf = nf-1;
+                end
+            end
+            
         end
         
         function [tps, ints, ders] = comp_sn(obj, sn, n_tp, n_int, n_der)

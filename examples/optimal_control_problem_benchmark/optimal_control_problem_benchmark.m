@@ -79,6 +79,7 @@ sim.stairs(t, u_wg)
 subplot(313); hold on
 sim.plot(t, P_gen)
 
+
 %%
 ocp = yop.ocp('Optimal Control Problem Benchmark');
 ocp.min( 1e3*int(y.cylinder.fuel_massflow) );
@@ -99,7 +100,7 @@ ocp.st( ...
     y.engine.torque >= 0, ...
     hard(y.phi <= y.phi_max) ...
     );
-sol = ocp.solve('intervals', 50, 'guess', sim);
+sol = ocp.solve('intervals', 50, 'degree', 3,'guess', sim);
 
 %%
 figure(1)

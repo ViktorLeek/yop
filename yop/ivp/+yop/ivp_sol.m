@@ -99,6 +99,7 @@ classdef ivp_sol < handle
                 v = obj.invariant_value(fn, tpv, intv, derv);
                 
             elseif is_ival(expr)
+                
             else
                 v = obj.variant_value(fn, tpv, intv, derv, mag);
             end
@@ -106,7 +107,6 @@ classdef ivp_sol < handle
         end
         
         function v = invariant_value(obj, expr, tps, ints, ders)
-            
             v = full(expr(obj.t0, obj.tf, ...
                 obj.t(1).evaluate(0), ...
                 obj.x(1).evaluate(0), ...
@@ -115,11 +115,12 @@ classdef ivp_sol < handle
         end
         
         function v = variant_value(obj, expr, tps, ints, ders, mag)
-            if false %mag == 1
+            if mag == 1
                 tt = mat(obj.t);
                 xx = mat(obj.x);
                 zz = mat(obj.z);
                 dd = mat(ders);
+                dd = yop.IF(isempty(dd), dd, @() [dd, dd(:,end)]);
                 v = full(expr(obj.t0,obj.tf,tt,xx,zz,obj.p,tps,ints,dd));
                 
             else
@@ -153,6 +154,10 @@ classdef ivp_sol < handle
                 dd = [dd, ders(n).evaluate(1)];
                 v = full(expr(obj.t0,obj.tf,tt,xx,zz,obj.p,tps,ints,dd)); 
             end
+        end
+        
+        function v = interval_value(obj, expr, tps, ints, ders, mag)
+            
         end
         
         function [tps, ints, ders] = comp_sn(obj, sn, n_tp, n_int, n_der)

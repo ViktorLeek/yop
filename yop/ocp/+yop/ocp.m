@@ -134,6 +134,7 @@ classdef ocp < handle
                 
                 xx = [];
                 for x = obj.states
+                    xk = [];
                     for k=1:prod(size(x.var))
                         x_guess = guess.value(x.var(k))';
                         if isempty(x_guess)
@@ -147,15 +148,24 @@ classdef ocp < handle
                 xx = xx';
                 xx = xx(:);
                 
-                zz = guess.value(obj.algebraics.vec)';
-                if ~isempty(zz)
-                    zz=interp1(t_guess, zv, tz);
+                zz = [];
+                for z = obj.algebraics
+                    zk = [];
+                    for k=1:prod(size(z.var))
+                        z_guess = guess.value(z.var(k))';
+                        if isempty(z_guess)
+                            zk = ones(length(tz));
+                        else
+                            zk = interp1(t_guess, z_guess, tz);
+                        end
+                    end
                 end
                 zz = zz';
                 zz = zz(:);
                 
                 uu = [];
                 for u = obj.controls
+                    uk = [];
                     for k=1:prod(size(u.var))
                         u_guess = guess.value(u.var(k))';
                         if isempty(u_guess)
@@ -169,8 +179,19 @@ classdef ocp < handle
                 uu = uu';
                 uu = uu(:);
                 
-                pp = guess.value(obj.parameters.vec);
+                pp = [];
+                for p = obj.parameters
+                    pk = [];
+                    for k=1:prod(size(p.var))
+                        pk = guess.value(p.var(k));
+                        if isempty(pk)
+                            pk = ones(prod(size(p.var(k))), 1);    
+                        end
+                    end
+                    pp = [pp, pk(:)];
+                end
                 pp = pp(:);
+                
                 w0 = [guess.t0; guess.tf; xx; zz; uu; pp];
             end
         end
@@ -559,9 +580,9 @@ classdef ocp < handle
         
         function obj = set_box(obj, box)
             [box_t, box_t0, box_tf] = yop.ocp.timed_box(box);
-            obj.parse_box(box_t, 'lb', 'ub');
-            obj.parse_box(box_t0, 'lb0', 'ub0');
-            obj.parse_box(box_tf, 'lbf', 'ubf');
+            obj.parse_box(box_t, 'm_lb', 'm_ub');
+            obj.parse_box(box_t0, 'm_lb0', 'm_ub0');
+            obj.parse_box(box_tf, 'm_lbf', 'm_ubf');
             obj.set_box_bounds(); % Includes processing default values
         end
         
@@ -745,41 +766,43 @@ classdef ocp < handle
             %| Return values:                                             |
             %|   obj - Handle to the ocp.                                 |
             %|____________________________________________________________|
-            obj.set_box_bnd('independent', 'lb', 'ub', ...
+            obj.set_box_bnd('independent', 'm_lb', 'm_ub', ...
                 yop.defaults().independent_lb, ...
                 yop.defaults().independent_ub);
             
-            obj.set_box_bnd('independent_initial', 'lb', 'ub', ...
+            obj.set_box_bnd('independent_initial', 'm_lb', 'm_ub', ...
                 yop.defaults().independent_lb0, ...
                 yop.defaults().independent_ub0);
             
-            obj.set_box_bnd('independent_final', 'lb', 'ub', ...
+            obj.set_box_bnd('independent_final', 'm_lb', 'm_ub', ...
                 yop.defaults().independent_lbf, ...
                 yop.defaults().independent_ubf);
             
-            obj.set_box_bnd('states', 'lb', 'ub', ...
+            obj.set_box_bnd('states', 'm_lb', 'm_ub', ...
                 yop.defaults().state_lb, yop.defaults().state_ub);
             
-            obj.set_box_bnd('states', 'lb0', 'ub0', ...
+            obj.set_box_bnd('states', 'm_lb0', 'm_ub0', ...
                 yop.defaults().state_lb0, yop.defaults().state_ub0);
             
-            obj.set_box_bnd('states', 'lbf', 'ubf', ...
+            obj.set_box_bnd('states', 'm_lbf', 'm_ubf', ...
                 yop.defaults().state_lbf, yop.defaults().state_ubf);
             
-            obj.set_box_bnd('algebraics', 'lb', 'ub', ...
+            obj.set_box_bnd('algebraics', 'm_lb', 'm_ub', ...
                 yop.defaults().algebraic_lb, yop.defaults().algebraic_ub);
             
-            obj.set_box_bnd('controls', 'lb', 'ub', ...
+            obj.set_box_bnd('controls', 'm_lb', 'm_ub', ...
                 yop.defaults().control_lb, yop.defaults().control_ub);
             
-            obj.set_box_bnd('controls', 'lb0', 'ub0', ...
+            obj.set_box_bnd('controls', 'm_lb0', 'm_ub0', ...
                 yop.defaults().control_lb0, yop.defaults().control_ub0);
             
-            obj.set_box_bnd('controls', 'lbf', 'ubf', ...
+            obj.set_box_bnd('controls', 'm_lbf', 'm_ubf', ...
                 yop.defaults().control_lbf, yop.defaults().control_ubf);
             
-            obj.set_box_bnd('parameters', 'lb', 'ub', ...
+            obj.set_box_bnd('parameters', 'm_lb', 'm_ub', ...
                 yop.defaults().parameter_lb, yop.defaults().parameter_ub);
+            
+            obj.variables.set_boxfn();
         end        
     end
     
@@ -789,7 +812,7 @@ classdef ocp < handle
         
         function obj = set_box_bnd(obj, var_field, lb_field, ...
                 ub_field, lb_def, ub_def)
-            %______________________________________________________________
+            %______________________________________________________________!!UPDATE!!_
             %|YOP.OCP/SET_BOX_BND Set bound on a problem variable.        |
             %|                                                            |
             %| Use:                                                       |
@@ -821,22 +844,42 @@ classdef ocp < handle
                 %   3) If that too is unset, then the default value is
                 %      used.
                 
-                ub = v.(ub_field); % The full bound vector
-                not_set = isnan(ub); % The elements not set
+                for k=1:length(v.(ub_field))
+                    if isempty(v.(ub_field){k})
+                        if isempty(v.m_ub{k})
+                            v.(ub_field){k} = ub_def;
+                        else
+                            v.(ub_field){k} = v.m_ub{k};
+                        end
+                    end
+                end
                 
-                bd = v.ub(not_set); % The ub for t = (t0, tf)
-                bd(isnan(bd)) = ub_def; % Default for unsets
+                for k=1:length(v.(lb_field))
+                    if isempty(v.(lb_field){k})
+                        if isempty(v.m_lb{k})
+                            v.(lb_field){k} = lb_def;
+                        else
+                            v.(lb_field){k} = v.m_lb{k};
+                        end
+                    end
+                end
                 
-                ub(not_set) = bd; % Timed bound
-                v.(ub_field) = ub; % Set variable timed bound
-                
-                % Same procedure for lb
-                lb = v.(lb_field);
-                not_set = isnan(lb);
-                bd = v.lb(not_set);
-                bd(isnan(bd)) = lb_def;
-                lb(not_set) = bd;
-                v.(lb_field) = lb;
+                %                 ub = v.(ub_field); % The full bound vector
+                %                 not_set = isnan(ub); % The elements not set
+                %
+                %                 bd = v.m_ub(not_set); % The ub for t = (t0, tf)
+                %                 bd(isnan(bd)) = ub_def; % Default for unsets
+                %
+                %                 ub(not_set) = bd; % Timed bound
+                %                 v.(ub_field) = ub; % Set variable timed bound
+                %
+                %                 % Same procedure for lb
+                %                 lb = v.(lb_field);
+                %                 not_set = isnan(lb);
+                %                 bd = v.m_lb(not_set);
+                %                 bd(isnan(bd)) = lb_def;
+                %                 lb(not_set) = bd;
+                %                 v.(lb_field) = lb;
             end
         end
         
@@ -971,18 +1014,41 @@ classdef ocp < handle
                 re = yop.reaching_elems(box{k}.lhs);
                 bnd = yop.prop_num(box{k}.rhs);
                 var = obj.find_variable(re.var.id);
+                ridx = re.reaching_idx;
+                relm = re.expr_elem;
                 switch class(box{k})
                     case 'yop.ast_eq' % var == bnd
-                        var.(ub)(re.reaching_idx) = ...
-                            yop.get_subexpr(bnd, re.expr_elem);
-                        var.(lb)(re.reaching_idx) = ...
-                            yop.get_subexpr(bnd, re.expr_elem);
+                        for n=1:length(ridx)
+                            if isnumeric(bnd)
+                                bd = yop.get_subexpr(bnd, relm(n));
+                            else
+                                bd = @(t) yop.get_subexpr(bnd(t), relm(n));
+                            end
+                            var.(ub){ridx(n)} = bd;
+                            var.(lb){ridx(n)} = bd;
+                        end
+                        %var.(ub)(re.reaching_idx) = yop.get_subexpr(bnd, re.expr_elem);
+                        %var.(lb)(re.reaching_idx) = yop.get_subexpr(bnd, re.expr_elem);
                     case {'yop.ast_le', 'yop.ast_lt'} % var < bnd
-                        var.(ub)(re.reaching_idx) = ...
-                            yop.get_subexpr(bnd, re.expr_elem);
+                        for n=1:length(ridx)
+                            if isnumeric(bnd)
+                                bd = yop.get_subexpr(bnd, relm(n));
+                            else
+                                bd = @(t) yop.get_subexpr(bnd(t), relm(n));
+                            end
+                            var.(ub){ridx(n)} = bd;
+                        end
+                        %var.(ub)(re.reaching_idx) = yop.get_subexpr(bnd, re.expr_elem);
                     case {'yop.ast_ge', 'yop.ast_gt'} % var > bnd
-                        var.(lb)(re.reaching_idx) = ...
-                            yop.get_subexpr(bnd, re.expr_elem);
+                        for n=1:length(ridx)
+                            if isnumeric(bnd)
+                                bd = yop.get_subexpr(bnd, relm(n));
+                            else
+                                bd = @(t) yop.get_subexpr(bnd(t), relm(n));
+                            end
+                            var.(lb){ridx(n)} = bd;
+                        end
+                        %var.(lb)(re.reaching_idx) = yop.get_subexpr(bnd, re.expr_elem);
                     otherwise
                         error('[Yop] Error: Wrong constraint class.');
                 end
@@ -1088,7 +1154,7 @@ classdef ocp < handle
                 var_num = yop.ocp.isa_box(srf{n}.lhs, srf{n}.rhs);
                 num_var = yop.ocp.isa_box(srf{n}.rhs, srf{n}.lhs);
                 isbox = var_num | num_var;
-                box{end+1} = yop.get_subrel(srf{n}, isbox);
+                box{end+1}  = yop.get_subrel(srf{n},  isbox);
                 nbox{end+1} = yop.get_subrel(srf{n}, ~isbox);
             end
             nbox = nbox(~cellfun('isempty', nbox));
@@ -1135,7 +1201,8 @@ classdef ocp < handle
             isival = is_ival(var_cand) || is_ival(num_cand);
             [istp, tps] = isa_timepoint(var_cand);
             isnum = isa_numeric(num_cand);
-            boolv = isvar & ~isder & (~istp|tps==t0|tps==tf) & isnum;
+            isfnh = isa(num_cand, 'function_handle');
+            boolv = isvar & ~isder & (~istp|tps==t0|tps==tf) & (isnum | isfnh);
         end
         
         function ubox = unique_box(cbox)
@@ -1352,133 +1419,209 @@ classdef ocp < handle
             n = n_elem(obj.derivatives);
         end
                 
-        function bd = t0_ub(obj)
-            bd = obj.independent_initial.ub;
-        end
-        
-        function bd = t0_lb(obj)
-            bd = obj.independent_initial.lb;
-        end
-        
-        function bd = tf_ub(obj)
-            bd = obj.independent_final.ub;
-        end
-        
-        function bd = tf_lb(obj)
-            bd = obj.independent_final.lb;
-        end
-        
-        function bd = x0_ub(obj)
-            bd=[];
-            for k=1:length(obj.states)
-                bd = [bd(:); obj.states(k).ub0(:)];
+        function bd = t0_ub(obj, t)
+            if nargin==1
+                t = 0;
             end
+            bd = obj.independent_initial.ub(t);
         end
         
-        function bd = x0_lb(obj)
-            bd=[];
-            for k=1:length(obj.states)
-                bd = [bd(:); obj.states(k).lb0(:)];
+        function bd = t0_lb(obj, t)
+            if nargin==1
+                t = 0;
             end
+            bd = obj.independent_initial.lb(t);
         end
         
-        function bd = x_ub(obj)
-            bd=[];
-            for k=1:length(obj.states)
-                bd = [bd(:); obj.states(k).ub(:)];
+        function bd = tf_ub(obj, t)
+            if nargin==1
+                t = 0;
             end
+            bd = obj.independent_final.ub(t);
         end
         
-        function bd = x_lb(obj)
-            bd=[];
-            for k=1:length(obj.states)
-                bd = [bd(:); obj.states(k).lb(:)];
+        function bd = tf_lb(obj, t)
+            if nargin==1
+                t = 0;
             end
+            bd = obj.independent_final.lb(t);
         end
         
-        function bd = xf_ub(obj)
-            bd=[];
-            for k=1:length(obj.states)
-                bd = [bd(:); obj.states(k).ubf(:)];
-            end
+        function bd = x0_ub(obj, t)
+            bd = obj.states.ub0(t);
         end
         
-        function bd = xf_lb(obj)
-            bd=[];
-            for k=1:length(obj.states)
-                bd = [bd(:); obj.states(k).lbf(:)];
-            end
+        function bd = x0_lb(obj, t)
+            bd = obj.states.lb0(t);
         end
         
-        function bd = u0_ub(obj)
-            bd=[];
-            for k=1:length(obj.controls)
-                bd = [bd(:); obj.controls(k).ub0(:)];
-            end
+        function bd = x_ub(obj, t)
+            bd = obj.states.ub(t);
         end
         
-        function bd = u0_lb(obj)
-            bd=[];
-            for k=1:length(obj.controls)
-                bd = [bd(:); obj.controls(k).lb0(:)];
-            end
+        function bd = x_lb(obj, t)
+            bd = obj.states.lb(t);
         end
         
-        function bd = u_ub(obj)
-            bd=[];
-            for k=1:length(obj.controls)
-                bd = [bd(:); obj.controls(k).ub(:)];
-            end
+        function bd = xf_ub(obj, t)
+            bd = obj.states.ubf(t);
         end
         
-        function bd = u_lb(obj)
-            bd=[];
-            for k=1:length(obj.controls)
-                bd = [bd(:); obj.controls(k).lb(:)];
-            end
+        function bd = xf_lb(obj, t)
+            bd = obj.states.lbf(t);
         end
         
-        function bd = uf_ub(obj)
-            bd=[];
-            for k=1:length(obj.controls)
-                bd = [bd(:); obj.controls(k).ubf(:)];
-            end
+        function bd = u0_ub(obj, t)
+            bd = obj.controls.ub0(t);
         end
         
-        function bd = uf_lb(obj)
-            bd=[];
-            for k=1:length(obj.controls)
-                bd = [bd(:); obj.controls(k).lbf(:)];
-            end
+        function bd = u0_lb(obj, t)
+            bd = obj.controls.lb0(t);
         end
         
-        function bd = p_ub(obj)
-            bd=[];
-            for k=1:length(obj.parameters)
-                bd = [bd(:); obj.parameters(k).ub(:)];
-            end
+        function bd = u_ub(obj, t)
+            bd = obj.controls.ub(t);
         end
         
-        function bd = p_lb(obj)
-            bd=[];
-            for k=1:length(obj.parameters)
-                bd = [bd(:); obj.parameters(k).lb(:)];
-            end
+        function bd = u_lb(obj, t)
+            bd = obj.controls.lb(t);
         end
         
-        function bd = z_ub(obj)
-            bd=[];
-            for k=1:length(obj.algebraics)
-                bd = [bd(:); obj.algebraics(k).ub(:)];
-            end
+        function bd = uf_ub(obj, t)
+            bd = obj.controls.ubf(t);
         end
         
-        function bd = z_lb(obj)
-            bd=[];
-            for k=1:length(obj.algebraics)
-                bd = [bd(:); obj.algebraics(k).lb(:)];
-            end
+        function bd = uf_lb(obj, t)
+            bd = obj.controls.lbf(t);
         end
+        
+        function bd = p_ub(obj, t)
+            bd = obj.parameters.ub(t);
+        end
+        
+        function bd = p_lb(obj, t)
+            bd = obj.parameters.lb(t);
+        end
+        
+        function bd = z_ub(obj, t)
+            bd = obj.algebraics.ub(t);
+        end
+        
+        function bd = z_lb(obj, t)
+            bd = obj.algebraics.lb(t);
+        end
+        
+        %         function bd = x0_ub(obj)
+        %             bd=[];
+        %             for k=1:length(obj.states)
+        %                 bd = [bd(:); obj.states(k).ub0(:)];
+        %             end
+        %         end
+        %
+        %         function bd = x0_lb(obj)
+        %             bd=[];
+        %             for k=1:length(obj.states)
+        %                 bd = [bd(:); obj.states(k).lb0(:)];
+        %             end
+        %         end
+        %
+        %         function bd = x_ub(obj)
+        %             bd=[];
+        %             for k=1:length(obj.states)
+        %                 bd = [bd(:); obj.states(k).ub(:)];
+        %             end
+        %         end
+        %
+        %         function bd = x_lb(obj)
+        %             bd=[];
+        %             for k=1:length(obj.states)
+        %                 bd = [bd(:); obj.states(k).lb(:)];
+        %             end
+        %         end
+        %
+        %         function bd = xf_ub(obj)
+        %             bd=[];
+        %             for k=1:length(obj.states)
+        %                 bd = [bd(:); obj.states(k).ubf(:)];
+        %             end
+        %         end
+        %
+        %         function bd = xf_lb(obj)
+        %             bd=[];
+        %             for k=1:length(obj.states)
+        %                 bd = [bd(:); obj.states(k).lbf(:)];
+        %             end
+        %         end
+        %
+        %         function bd = u0_ub(obj)
+        %             bd=[];
+        %             for k=1:length(obj.controls)
+        %                 bd = [bd(:); obj.controls(k).ub0(:)];
+        %             end
+        %         end
+        %
+        %         function bd = u0_lb(obj)
+        %             bd=[];
+        %             for k=1:length(obj.controls)
+        %                 bd = [bd(:); obj.controls(k).lb0(:)];
+        %             end
+        %         end
+        %
+        %         function bd = u_ub(obj)
+        %             bd=[];
+        %             for k=1:length(obj.controls)
+        %                 bd = [bd(:); obj.controls(k).ub(:)];
+        %             end
+        %         end
+        %
+        %         function bd = u_lb(obj)
+        %             bd=[];
+        %             for k=1:length(obj.controls)
+        %                 bd = [bd(:); obj.controls(k).lb(:)];
+        %             end
+        %         end
+        %
+        %         function bd = uf_ub(obj)
+        %             bd=[];
+        %             for k=1:length(obj.controls)
+        %                 bd = [bd(:); obj.controls(k).ubf(:)];
+        %             end
+        %         end
+        %
+        %         function bd = uf_lb(obj)
+        %             bd=[];
+        %             for k=1:length(obj.controls)
+        %                 bd = [bd(:); obj.controls(k).lbf(:)];
+        %             end
+        %         end
+        %
+        %         function bd = p_ub(obj)
+        %             bd=[];
+        %             for k=1:length(obj.parameters)
+        %                 bd = [bd(:); obj.parameters(k).ub(:)];
+        %             end
+        %         end
+        %
+        %         function bd = p_lb(obj)
+        %             bd=[];
+        %             for k=1:length(obj.parameters)
+        %                 bd = [bd(:); obj.parameters(k).lb(:)];
+        %             end
+        %         end
+        %
+        %         function bd = z_ub(obj)
+        %             bd=[];
+        %             for k=1:length(obj.algebraics)
+        %                 bd = [bd(:); obj.algebraics(k).ub(:)];
+        %             end
+        %         end
+        %
+        %         function bd = z_lb(obj)
+        %             bd=[];
+        %             for k=1:length(obj.algebraics)
+        %                 bd = [bd(:); obj.algebraics(k).lb(:)];
+        %             end
+        %         end
         
         function [bool, t0, tf] = fixed_horizon(obj)
             %______________________________________________________________

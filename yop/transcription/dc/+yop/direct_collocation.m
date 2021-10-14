@@ -56,7 +56,7 @@ for pc = ocp.inequality_constraints
     h = [h; disc(:)];
 end
 
-[w_lb, w_ub] = box_bnd(N, d, ocp);
+[w_lb, w_ub] = box_bnd(T0, Tf, N, tau, ocp);
 w = vertcat(t0, tf, vec(x), vec(z), vec(u), vec(p));
 t0 = casadi.Function('t0', {w}, {t0});
 tf = casadi.Function('tf', {w}, {tf});
@@ -216,35 +216,6 @@ dd = ders(1).evaluate(0);
 disc = expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd);
 end
 
-function disc = parameterize_ival(expr,N,tau,t0,tf,t,x,z,u,p,tps,ints,ders)
-disc = [];
-
-[I0, If] = get_ival(expr);
-
-% Evaluate at the beginning of the interval
-disc = [disc, expr.fn(t0, tf, t.value(I0), x.value(I0), z.value(I0), ...
-    u.value(I0), p, tps, ints, ders.value(I0))];
-
-% Evaluate all points that are in the interval
-[n0, r0, nf, rf] = get_ival_idx(I0, If, t(1).t0, t(1).tf, N, tau);
-for n=n0:min(nf, N) % N+1 is handled by evaluating at If
-    % Intervals are treated as hard constraints.
-    for r = yop.IF(n==n0, r0, 1) : yop.IF(n==nf, rf, length(tau))
-        tt = t(n).y(r);
-        xx = x(n).y(:, r);
-        zz = z(n).evaluate(tau(r));
-        uu = u(n).y(:);
-        dd = ders(n).evaluate(tau(r));
-        disc = [disc, ...
-            expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd)];
-    end
-end
-
-% Evaluate final point
-disc = [disc, expr.fn(t0, tf, t.value(If), x.value(If), z.value(If), ...
-    u.value(If), p, tps, ints, ders.value(If))];
-end
-
 function disc = parameterize_all(expr,N,tau,t0,tf,t,x,z,u,p,tps,ints,ders)
 disc = [];
 for n=1:N
@@ -276,24 +247,43 @@ dd = ders(n).evaluate(1);
 disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tps, ints, dd)];
 end
 
+function disc = parameterize_ival(expr,N,tau,t0,tf,t,x,z,u,p,tps,ints,ders)
+disc = [];
+
+[I0, If] = get_ival(expr);
+T0 = t(1).t0;
+Tf = t(1).tf;
+I0 = yop.IF(I0==yop.initial_timepoint, T0, I0);
+I0 = yop.IF(I0==yop.final_timepoint  , Tf, I0);
+If = yop.IF(If==yop.initial_timepoint, T0, If);
+If = yop.IF(If==yop.final_timepoint  , Tf, If);
+
+% Evaluate at the beginning of the interval
+disc = [disc, expr.fn(t0, tf, t.value(I0), x.value(I0), z.value(I0), ...
+    u.value(I0), p, tps, ints, ders.value(I0))];
+
+% Evaluate all points within the interval
+[n0, r0, nf, rf] = get_ival_idx(I0, If, t(1).t0, t(1).tf, N, tau);
+for n=n0:min(nf, N) % N+1 is handled by evaluating at If
+    % Intervals are treated as hard constraints.
+    for r = yop.IF(n==n0, r0, 1) : yop.IF(n==nf, rf, length(tau))
+        tt = t(n).y(r);
+        xx = x(n).y(:, r);
+        zz = z(n).evaluate(tau(r));
+        uu = u(n).y(:);
+        dd = ders(n).evaluate(tau(r));
+        disc = [disc, ...
+            expr.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd)];
+    end
+end
+
+% Evaluate final point
+disc = [disc, expr.fn(t0, tf, t.value(If), x.value(If), z.value(If), ...
+    u.value(If), p, tps, ints, ders.value(If))];
+end
+
 function [n0, r0, nf, rf] = get_ival_idx(I0, If, T0, Tf, N, tau)
 dT = (Tf-T0)/N;
-
-if I0 == yop.initial_timepoint
-    I0 = T0;
-end
-
-if If == yop.initial_timepoint
-    If = T0;
-end
-
-if I0 == yop.final_timepoint
-    I0 = Tf;
-end
-
-if If == yop.final_timepoint
-    If = Tf;
-end
 
 % First point after I0
 n0 = 1 + floor((I0-T0)/dT);
@@ -302,10 +292,10 @@ if n0 == N+1
 else
     t_n0 = dT*(n0-1);
     tau_I0 = (I0-t_n0)/dT;
-    % Does not use >= because this way, the next point is always picked.
+    % Does not use >= in order to always pick the next point
     r0 = find(tau - tau_I0 > 0, 1); 
     if isempty(r0)
-        % Beyond the last collocation point, so next point is the next interval
+        % Next point is the next control interval
         r0 = 1;
         n0 = n0+1;
     end
@@ -327,33 +317,87 @@ end
 
 end
 
-function [w_lb, w_ub] = box_bnd(N, d, ocp)
+function [w_lb, w_ub] = box_bnd(t0, tf, N, tau, ocp)
+
+dt = (tf-t0)/N;
+% can be casadi SX/MX, in that case open horizon. If so, it is preferable
+% to use a dummy numeric value as it is a lot faster.
+dt = yop.IF(isnumeric(dt), dt, 1); 
+
+t0_lb = ocp.t0_lb(t0);
+t0_ub = ocp.t0_ub(t0);
+tf_lb = ocp.tf_lb(t0);
+tf_ub = ocp.tf_ub(t0);
+
+x_ub = ocp.x0_ub(t0);
+x_lb = ocp.x0_lb(t0);
+t = yop.IF(isnumeric(t0), t0, 1);
+for n=1:N
+    for r = tau(yop.IF(n==1,2,1):end)
+        t = t + r;
+        x_ub = [x_ub; ocp.x_ub(t)];
+        x_lb = [x_lb; ocp.x_lb(t)];
+    end
+    t = t + dt;
+end
+x_ub = [x_ub; ocp.xf_ub(tf)];
+x_lb = [x_lb; ocp.xf_lb(tf)];
+
+z_ub = [];
+z_lb = [];
+t = yop.IF(isnumeric(t0), t0, 1);
+for n=1:N
+    for r = tau(2:end)
+        t = t + r;
+        z_ub = [z_ub; ocp.z_ub(t)];
+        z_lb = [z_lb; ocp.z_lb(t)];
+    end
+    t = t + dt;
+end
+
+
+u_ub = ocp.u0_ub(t0);
+u_lb = ocp.u0_lb(t0);
+t = yop.IF(isnumeric(t0), t0, 1);
+for n=2:N-1
+    u_ub = [u_ub; ocp.u_ub(t)];
+    u_lb = [u_lb; ocp.u_lb(t)];
+    t = t + dt;
+end
+u_ub = [u_ub; ocp.uf_ub(tf)];
+u_lb = [u_lb; ocp.uf_lb(tf)];
+
+p_lb = ocp.p_lb(t0);
+p_ub = ocp.p_ub(t0);
+
+%%
+
 t0_lb = ocp.t0_lb;
 t0_ub = ocp.t0_ub;
 tf_lb = ocp.tf_lb;
 tf_ub = ocp.tf_ub;
 
-reps = N*(d + 1) + 1;
-x_lb = repmat(ocp.x_lb, reps, 1);
-x_ub = repmat(ocp.x_ub, reps, 1);
-x_lb(1 : ocp.n_x) = ocp.x0_lb;
-x_ub(1 : ocp.n_x) = ocp.x0_ub;
-x_lb(end - ocp.n_x + 1 : end) = ocp.xf_lb;
-x_ub(end - ocp.n_x + 1 : end) = ocp.xf_ub;
+reps = N*length(tau) + 1;
+x_lb = repmat(ocp.x_lb(1), reps, 1);
+x_ub = repmat(ocp.x_ub(1), reps, 1);
+x_lb(1 : ocp.n_x) = ocp.x0_lb(1);
+x_ub(1 : ocp.n_x) = ocp.x0_ub(1);
+x_lb(end - ocp.n_x + 1 : end) = ocp.xf_lb(1);
+x_ub(end - ocp.n_x + 1 : end) = ocp.xf_ub(1);
 
-z_lb = repmat(ocp.z_lb, N*d, 1);
-z_ub = repmat(ocp.z_ub, N*d, 1);
+z_lb = repmat(ocp.z_lb(1), N*(length(tau)-1), 1);
+z_ub = repmat(ocp.z_ub(1), N*(length(tau)-1), 1);
 
-u_lb = repmat(ocp.u_lb, N, 1);
-u_ub = repmat(ocp.u_ub, N, 1);
-u_lb(1 : ocp.n_u) = ocp.u0_lb;
-u_ub(1 : ocp.n_u) = ocp.u0_ub;
-u_lb(end - ocp.n_u + 1 : end) = ocp.uf_lb;
-u_ub(end - ocp.n_u + 1 : end) = ocp.uf_ub;
+u_lb = repmat(ocp.u_lb(1), N, 1);
+u_ub = repmat(ocp.u_ub(1), N, 1);
+u_lb(1 : ocp.n_u) = ocp.u0_lb(1);
+u_ub(1 : ocp.n_u) = ocp.u0_ub(1);
+u_lb(end - ocp.n_u + 1 : end) = ocp.uf_lb(1);
+u_ub(end - ocp.n_u + 1 : end) = ocp.uf_ub(1);
 
-p_lb = ocp.p_lb;
-p_ub = ocp.p_ub;
+p_lb = ocp.p_lb(1);
+p_ub = ocp.p_ub(1);
 
-w_lb = vertcat(t0_lb, tf_lb, x_lb, z_lb, u_lb, p_lb);
 w_ub = vertcat(t0_ub, tf_ub, x_ub, z_ub, u_ub, p_ub);
+w_lb = vertcat(t0_lb, tf_lb, x_lb, z_lb, u_lb, p_lb);
 end

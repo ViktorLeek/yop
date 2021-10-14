@@ -41,6 +41,14 @@ elseif ~isscalar(relation.lhs) && ~isscalar(relation.rhs)
     
 end
 
+if isa(lhs, 'function_handle')
+    lhs = @(t) yop.get_subexpr(lhs(t), idx);
+end
+
+if isa(rhs, 'function_handle')
+    rhs = @(t) yop.get_subexpr(rhs(t), idx);
+end
+
 f = get_constructor(relation);
 sr = f(lhs, rhs);
 end

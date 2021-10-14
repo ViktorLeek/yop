@@ -26,7 +26,8 @@ classdef node < handle
         
         function node = at(expression, timepoint)
             % Alternative syntax for evaluating expression at a timepoint
-            node = yop.ast_timepoint(timepoint, expression);
+            %node = yop.ast_timepoint(timepoint, expression);
+            node=yop.ast_expression.timed_expression(timepoint,expression);
         end
         
         function value = fw_eval(expr)
