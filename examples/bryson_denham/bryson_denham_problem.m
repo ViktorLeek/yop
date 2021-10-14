@@ -122,7 +122,7 @@ tf = yop.timef('tf');
 t  = yop.time('t');
 x  = yop.state('x');     % position
 v  = yop.state('v');     % speed
-a  = yop.control('a');   % acceleration
+a  = yop.control('name', 'a');   % acceleration
 l  = yop.parameter('l'); % maximum position of the cart
 
 ivp = yop.ivp( ...

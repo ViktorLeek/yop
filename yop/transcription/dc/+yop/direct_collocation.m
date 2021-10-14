@@ -333,10 +333,9 @@ x_ub = ocp.x0_ub(t0);
 x_lb = ocp.x0_lb(t0);
 t = yop.IF(isnumeric(t0), t0, 1);
 for n=1:N
-    for r = tau(yop.IF(n==1,2,1):end)
-        t = t + r;
-        x_ub = [x_ub; ocp.x_ub(t)];
-        x_lb = [x_lb; ocp.x_lb(t)];
+    for r = tau(yop.IF(n==1,2,1):end)        
+        x_ub = [x_ub; ocp.x_ub(t+r)];
+        x_lb = [x_lb; ocp.x_lb(t+r)];
     end
     t = t + dt;
 end
@@ -348,9 +347,8 @@ z_lb = [];
 t = yop.IF(isnumeric(t0), t0, 1);
 for n=1:N
     for r = tau(2:end)
-        t = t + r;
-        z_ub = [z_ub; ocp.z_ub(t)];
-        z_lb = [z_lb; ocp.z_lb(t)];
+        z_ub = [z_ub; ocp.z_ub(t+r)];
+        z_lb = [z_lb; ocp.z_lb(t+r)];
     end
     t = t + dt;
 end
@@ -372,31 +370,31 @@ p_ub = ocp.p_ub(t0);
 
 %%
 
-t0_lb = ocp.t0_lb;
-t0_ub = ocp.t0_ub;
-tf_lb = ocp.tf_lb;
-tf_ub = ocp.tf_ub;
-
-reps = N*length(tau) + 1;
-x_lb = repmat(ocp.x_lb(1), reps, 1);
-x_ub = repmat(ocp.x_ub(1), reps, 1);
-x_lb(1 : ocp.n_x) = ocp.x0_lb(1);
-x_ub(1 : ocp.n_x) = ocp.x0_ub(1);
-x_lb(end - ocp.n_x + 1 : end) = ocp.xf_lb(1);
-x_ub(end - ocp.n_x + 1 : end) = ocp.xf_ub(1);
-
-z_lb = repmat(ocp.z_lb(1), N*(length(tau)-1), 1);
-z_ub = repmat(ocp.z_ub(1), N*(length(tau)-1), 1);
-
-u_lb = repmat(ocp.u_lb(1), N, 1);
-u_ub = repmat(ocp.u_ub(1), N, 1);
-u_lb(1 : ocp.n_u) = ocp.u0_lb(1);
-u_ub(1 : ocp.n_u) = ocp.u0_ub(1);
-u_lb(end - ocp.n_u + 1 : end) = ocp.uf_lb(1);
-u_ub(end - ocp.n_u + 1 : end) = ocp.uf_ub(1);
-
-p_lb = ocp.p_lb(1);
-p_ub = ocp.p_ub(1);
+% t0_lb = ocp.t0_lb;
+% t0_ub = ocp.t0_ub;
+% tf_lb = ocp.tf_lb;
+% tf_ub = ocp.tf_ub;
+% 
+% reps = N*length(tau) + 1;
+% x_lb = repmat(ocp.x_lb(1), reps, 1);
+% x_ub = repmat(ocp.x_ub(1), reps, 1);
+% x_lb(1 : ocp.n_x) = ocp.x0_lb(1);
+% x_ub(1 : ocp.n_x) = ocp.x0_ub(1);
+% x_lb(end - ocp.n_x + 1 : end) = ocp.xf_lb(1);
+% x_ub(end - ocp.n_x + 1 : end) = ocp.xf_ub(1);
+% 
+% z_lb = repmat(ocp.z_lb(1), N*(length(tau)-1), 1);
+% z_ub = repmat(ocp.z_ub(1), N*(length(tau)-1), 1);
+% 
+% u_lb = repmat(ocp.u_lb(1), N, 1);
+% u_ub = repmat(ocp.u_ub(1), N, 1);
+% u_lb(1 : ocp.n_u) = ocp.u0_lb(1);
+% u_ub(1 : ocp.n_u) = ocp.u0_ub(1);
+% u_lb(end - ocp.n_u + 1 : end) = ocp.uf_lb(1);
+% u_ub(end - ocp.n_u + 1 : end) = ocp.uf_ub(1);
+% 
+% p_lb = ocp.p_lb(1);
+% p_ub = ocp.p_ub(1);
 
 w_ub = vertcat(t0_ub, tf_ub, x_ub, z_ub, u_ub, p_ub);
 w_lb = vertcat(t0_lb, tf_lb, x_lb, z_lb, u_lb, p_lb);
