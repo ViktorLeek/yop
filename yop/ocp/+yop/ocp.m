@@ -1015,7 +1015,7 @@ classdef ocp < handle
                 bnd = yop.prop_num(box{k}.rhs);
                 var = obj.find_variable(re.var.id);
                 ridx = re.reaching_idx;
-                relm = re.expr_elem;
+                relm = find(re.expr_elem);
                 switch class(box{k})
                     case 'yop.ast_eq' % var == bnd
                         for n=1:length(ridx)
@@ -1202,7 +1202,7 @@ classdef ocp < handle
             [istp, tps] = isa_timepoint(var_cand);
             isnum = isa_numeric(num_cand);
             isfnh = isa(num_cand, 'function_handle');
-            boolv = isvar & ~isder & (~istp|tps==t0|tps==tf) & (isnum | isfnh);
+            boolv = isvar & ~isder & (~istp|tps==t0|tps==tf) & (isnum | isfnh) & ~isival;
         end
         
         function ubox = unique_box(cbox)

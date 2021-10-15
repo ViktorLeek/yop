@@ -10,6 +10,8 @@ classdef ast_variable < yop.ast_expression
     
     properties
         name
+        w  = 1 % Weight
+        os = 0 % offset x_s = (x - os)/w
     end
     
     methods

@@ -1,16 +1,18 @@
-function z = algebraic(name, rows, cols)
-switch nargin
-    case 0
-        z = yop.ast_algebraic('z', 1, 1);
-        
-    case 1
-        z = yop.ast_algebraic(name, 1, 1);
-        
-    case 2
-        z = yop.ast_algebraic(name, rows, 1);
-        
-    case 3
-        z = yop.ast_algebraic(name, rows, cols);
-        
+function z = algebraic(varargin)
+
+ip = inputParser();
+ip.FunctionName = "yop.algebraic";
+ip.addOptional('size', [1, 1]);
+ip.addParameter('name', 'z');
+ip.parse(varargin{:});
+
+sz = ip.Results.size;
+name = ip.Results.name;
+
+if isscalar(sz)
+    sz = [sz, 1];
 end
+
+z = yop.ast_algebraic(name, sz(1), sz(2));
+
 end

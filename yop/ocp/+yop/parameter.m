@@ -1,16 +1,18 @@
-function p = parameter(name, rows, cols)
-switch nargin
-    case 0
-        p = yop.ast_parameter('p', 1, 1);
-        
-    case 1
-        p = yop.ast_parameter(name, 1, 1);
-        
-    case 2
-        p = yop.ast_parameter(name, rows, 1);
-        
-    case 3
-        p = yop.ast_parameter(name, rows, cols);
-        
+function p = parameter(varargin)
+
+ip = inputParser();
+ip.FunctionName = "yop.parameter";
+ip.addOptional('size', [1, 1]);
+ip.addParameter('name', 'p');
+ip.parse(varargin{:});
+
+sz = ip.Results.size;
+name = ip.Results.name;
+
+if isscalar(sz)
+    sz = [sz, 1];
 end
+
+p = yop.ast_parameter(name, sz(1), sz(2));
+
 end

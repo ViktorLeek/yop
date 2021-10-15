@@ -1,16 +1,18 @@
-function x = state(name, rows, cols)
-switch nargin
-    case 0
-        x = yop.ast_state('x', 1, 1);
-        
-    case 1
-        x = yop.ast_state(name, 1, 1);
-        
-    case 2
-        x = yop.ast_state(name, rows, 1);
-        
-    case 3
-        x = yop.ast_state(name, rows, cols);
-        
+function x = state(varargin)
+
+ip = inputParser();
+ip.FunctionName = "yop.state";
+ip.addOptional('size', [1, 1]);
+ip.addParameter('name', 'x');
+ip.parse(varargin{:});
+
+sz = ip.Results.size;
+name = ip.Results.name;
+
+if isscalar(sz)
+    sz = [sz, 1];
 end
+
+x = yop.ast_state(name, sz(1), sz(2));
+
 end

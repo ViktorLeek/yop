@@ -1,8 +1,11 @@
-function t = independent(name)
-switch nargin
-    case 0
-        t = yop.ast_independent('t');
-    case 1
-        t = yop.ast_independent(name);
-end
+function t = independent(varargin)
+
+ip = inputParser();
+ip.FunctionName = "yop.independent";
+ip.addParameter('name', 't');
+ip.parse(varargin{:});
+
+name = ip.Results.name;
+t = yop.ast_independent(name);
+
 end

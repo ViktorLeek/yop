@@ -1,8 +1,3 @@
-function t = time0(name)
-switch nargin
-    case 0
-        t = yop.ast_independent_initial('t0');
-    case 1
-        t = yop.ast_independent_initial(name);
-end
+function t = time0(varargin)
+t = yop.independent0(varargin{:});
 end
