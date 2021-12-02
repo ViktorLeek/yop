@@ -40,7 +40,8 @@ classdef ivp < handle
             dae.alg = alge;
             
             d = 9;
-            N = ceil(obj.tf-obj.t0)*200;
+            %             N = ceil(obj.tf-obj.t0)*200;
+            N = ceil(obj.tf-obj.t0)*1;
             cp = 'legendre';
             [grid, tau] = obj.grid(N, d, cp);
             
@@ -97,9 +98,7 @@ classdef ivp < handle
             for k=1:length(algs)
                 alg_expr = [alg_expr; algs{k}.lhs(:)];
             end
-            % g(t,x,z,p) == 0, should perharps be other way around, but it
-            % does not matter, and it is consistent with canonlization of
-            % OCPs.
+            % g(t,x,z,p) == 0
             obj.alg = yop.ocp_rel(yop.ast_eq(alg_expr, 0));
         end
         
@@ -229,12 +228,12 @@ classdef ivp < handle
                         error('[Yop] Error: Wrong constraint class.');
                 end
                 
-                [bool, tp] = iv{k}.lhs.isa_timepoint();
-                if bool % Should be scalar! otherwise error is good!
-                    if tp ~= t0(obj) && tp ~= yop.initial_timepoint
-                        error(yop.msg.ivp_t0_err);
-                    end
-                end
+%                 [bool, tp] = iv{k}.lhs.isa_timepoint();
+%                 if bool % Should be scalar! otherwise error is good!
+%                    if tp ~= t0(obj) && tp ~= yop.initial_timepoint
+%                        error(yop.msg.ivp_t0_err);
+%                    end
+%                 end
             end
         end
         

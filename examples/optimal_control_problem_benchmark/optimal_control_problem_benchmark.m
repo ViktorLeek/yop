@@ -1,14 +1,14 @@
 %% Optimal Control Problem Benchmark
-t0    = yop.time0('t0');
-tf    = yop.timef('tf');
-t     = yop.time('t');
+t0    = yop.time0();
+tf    = yop.timef();
+t     = yop.time();
 
-w_ice = yop.state('w_ice'); % Engine angular velocity
-p_im  = yop.state('p_im');  % Intake manifold pressure
-p_em  = yop.state('p_em');  % Exhause manifold pressure
-w_tc  = yop.state('w_tc');  % Turbocharger angular velocity
+w_ice = yop.state('name', 'w_ice'); % Engine angular velocity
+p_im  = yop.state('name', 'p_im');  % Intake manifold pressure
+p_em  = yop.state('name', 'p_em');  % Exhause manifold pressure
+w_tc  = yop.state('name', 'w_tc');  % Turbocharger angular velocity
 
-u_f = yop.control('name', 'u_f', 'pw', 'linear');   % Fuel injection per cycle per cylinder
+u_f   = yop.control('name', 'u_f', 'pw', 'linear');   % Fuel injection per cycle per cylinder
 u_wg  = yop.control('name', 'u_wg');  % Wastegate control 0-close, 1-fully open
 P_gen = yop.control('name', 'P_gen', 'pw', 'linear'); % Generator power
 

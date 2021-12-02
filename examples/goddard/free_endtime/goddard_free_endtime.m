@@ -1,14 +1,14 @@
 %% Formulation 1
-[t0, tf, t, x, ~] = yop.ocp_variables('nx', 3, 'nu', 1);
+[t0, tf, t, x, u] = yop.ocp_variables('nx', 3, 'nu', 1);
 
-[~, y] = rocket_model(x, u);
+[dx, y] = rocket_model(x, u);
 rocket = y.rocket;
 
 ocp = yop.ocp('Goddard''s Rocket Problem');
 ocp.max( 1e-5*rocket.height(tf) );
 ocp.st( ...
     t0==0, tf==212, ...
-    der(x) == rocket_model(x, u), ...
+    der(x) == dx, ...
     rocket.height(t0)   == 0    , ...
     rocket.velocity(t0) == 0    , ...
     rocket.mass(t0)     == 215  , ...
@@ -20,7 +20,7 @@ sol = ocp.solve('intervals', 80);
 
 figure(1);
 subplot(411); hold on
-sol.plot(t, x(1));
+sol.plot(t, x(1), 'mag', 5);
 subplot(412); hold on
 sol.plot(t, x(2));
 subplot(413); hold on
@@ -62,13 +62,13 @@ subplot(414); hold on
 sol.plot(t, u, 'mag', 5);
 
 %% Formulation 2
-t0 = yop.time0('t0');
-tf = yop.timef('tf');
-t  = yop.time('t');
-v  = yop.state('v');
-h  = yop.state('h');
-m  = yop.state('m');
-Wf = yop.control('name', 'Wf');
+t0 = yop.time0();
+tf = yop.timef();
+t  = yop.time();
+v  = yop.state();
+h  = yop.state();
+m  = yop.state();
+Wf = yop.control();
 
 x = [v; h; m];
 u = Wf;
@@ -102,15 +102,15 @@ sol.stairs(t, Wf);
 
 %% Formulation 3
 % Time
-t0 = yop.time0('t0');
-tf = yop.timef('tf');
-t  = yop.time('t');
+t0 = yop.t0();
+tf = yop.tf();
+t  = yop.t();
 
-% Rocket model
-h  = yop.state('h');  % Rocket height
-v  = yop.state('v');  % Rocket speed
-m  = yop.state('m');  % Rocket mass
-Wf = yop.control('name', 'Wf');  % Rocket fuel massflow
+% States
+h  = yop.state();  % Rocket height
+v  = yop.state();  % Rocket speed
+m  = yop.state();  % Rocket mass
+Wf = yop.control();  % Rocket fuel massflow
 
 % Rocket parameters
 D0 = 0.01227; beta = 0.145e-3; c = 2060;
@@ -128,10 +128,14 @@ m_min = 68; m_max = 215;
 % Control boundaries
 Wfmin = 0; Wfmax = 9.5;
 
+% dh = der(h);
+% M(2:4) = f(x)
+
 % Optimal control problem
 ocp = yop.ocp();
-ocp.max( h(tf) );
+ocp.max( h );
 ocp.st( ...
+    ... tf == 212, ...
     ... Initial conditions
     h(t0)==0, ...
     v(t0)==0, ...
