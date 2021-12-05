@@ -49,7 +49,7 @@ classdef ivp < handle
             opts.output_t0 = true;
             opts.grid = grid;
             opts.print_stats = false;
-            opts.reltol = 1e-5;
+            opts.reltol = 1e-3;
             
             x0=[];
             for k=1:length(obj.states)
