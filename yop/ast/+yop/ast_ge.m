@@ -32,8 +32,7 @@ classdef ast_ge < yop.ast_relation
         end
         
         function cbox = canonicalize_box(box)
-            isvar = isa_variable(box.lhs);
-            if all(isvar) % var >= num
+            if all(isa_variable(box.lhs)) % var >= num
                 cbox = box;
             else % num >= var
                 cbox = yop.ast_le(box.rhs, box.lhs, box.m_hard);

@@ -1,40 +1,33 @@
-classdef ocp_var < handle
+classdef ocp_independent0 < handle
     properties
-        var
+        ast
         mx
         sym
-        ub0  % initial upper bound
-        lb0  % initial lower bound
         ub   % upper bound
         lb   % lower bound
-        ubf  % final upper bound
-        lbf  % final lower bound
     end
+    
     methods
-        function obj = ocp_var(ast)       
-            obj.var = ast;
+        function obj = ocp_independent0(ast)
+            obj.ast = ast;
             obj.mx = yop.cx(['ocp_', ast.name]);
             obj.sym = sym(ast.name, size(ast));
         end
         
-        function n = n_elem(obj)
-            n = length(obj);
-        end
-        
         function obj = set_value(obj, value)
-            obj.var.m_value = value;
+            obj.ast.m_value = value;
         end
         
         
         function obj = set_sym(obj)
             for o=obj
-                o.var.m_value = o.sym;
+                o.ast.m_value = o.sym;
             end
         end
         
         function obj = set_mx(obj)
             for o=obj
-                o.var.m_value = o.mx;
+                o.ast.m_value = o.mx;
             end
         end
         
@@ -48,9 +41,8 @@ classdef ocp_var < handle
         function vec = vec(obj)
             vec = [];
             for o=obj
-                vec = [vec; o.var];
+                vec = [vec; o.ast];
             end
         end
-        
     end
 end

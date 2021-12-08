@@ -2,7 +2,7 @@ classdef ast_eq < yop.ast_relation
     
     properties
         m_ode = false
-         m_alg = false
+        m_alg = false
     end
     
     properties (Constant)
@@ -110,8 +110,7 @@ classdef ast_eq < yop.ast_relation
         end
         
         function cbox = canonicalize_box(box)
-            isvar = isa_variable(box.lhs);
-            if all(isvar) % var == num
+            if all(isa_variable(box.lhs)) % var == num
                 cbox = box;
             else % num == var
                 fn = get_constructor(box);

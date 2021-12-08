@@ -2,18 +2,14 @@ function varargout = control(varargin)
 
 ip = inputParser();
 ip.FunctionName = "yop.control";
-ip.addOptional('size', [1, 1]);
+ip.addOptional('rows', 1);
 ip.addParameter('name', 'u');
 ip.addParameter('pw', 'constant');
 ip.parse(varargin{:});
 
-sz = ip.Results.size;
+rows = ip.Results.rows;
 name = ip.Results.name;
 pw = ip.Results.pw;
-
-if isscalar(sz)
-    sz = [sz, 1];
-end
 
 switch pw
     case 'constant'
@@ -30,13 +26,29 @@ switch pw
         end
 end
 
-u = yop.ast_control(name, sz(1), sz(2), pw);
-
-varargout = {u};
-du = u.der;
-while ~isempty(du)
-    varargout{end+1} = du;
-    du = du.der;
+if rows == 1
+    u = yop.ast_control(name, pw);
+    varargout = {u};
+    du = u.der;
+    while ~isempty(du)
+        varargout{end+1} = du;
+        du = du.der;
+    end
+else
+   controls = cell(rows, 1+pw); 
+    for k=1:rows
+        u = yop.ast_control([name , '_', num2str(k)], pw);
+        controls{k,1} = u;
+        du = u.der;
+        for n=1:pw
+            controls{k,n+1} = du;
+            du = du.der;
+        end
+    end
+    varargout = cell(1, 1+pw);
+    for k=1:pw+1
+        varargout{k} = vertcat(controls{:,k});
+    end
 end
 
 end

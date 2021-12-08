@@ -101,17 +101,17 @@ for node = ocp.special_nodes
     tmp_tp  = [tps;  zeros(ocp.n_tp  - length(tps), 1)];
     tmp_int = [ints; zeros(ocp.n_int - length(ints), 1)];
     switch node.type
-        case yop.ocp_expr.tp
+        case yop.ocp_expr.tp_type
             tp = parameterize_timepoint(node, t0, tf, t, x, z, ...
                 u, p, tmp_tp, tmp_int, ders, ocp.n_der);
             tps = [tps; tp(:)];
             
-        case yop.ocp_expr.int
+        case yop.ocp_expr.int_type
             int = parameterize_integral(node, N, tau, dt, t0, tf, t, x, ...
                 z, u, p, tmp_tp, tmp_int, ders, ocp.n_der);
             ints = [ints; int(:)];
             
-        case yop.ocp_expr.der
+        case yop.ocp_expr.der_type
             ders = parameterize_derivative(node, N, tau, dt, t0, tf, t, ...
                 x, z, u, p, tmp_tp, tmp_int, ders, ocp.n_der);
             

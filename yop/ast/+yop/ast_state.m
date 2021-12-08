@@ -1,7 +1,7 @@
 classdef ast_state < yop.ast_variable
     methods
-        function obj = ast_state(name, rows, cols)
-            obj@yop.ast_variable(name, rows, cols);
+        function obj = ast_state(name)
+            obj@yop.ast_variable(name);
         end
         
         function boolv = is_transcription_invariant(obj)

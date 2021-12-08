@@ -2,17 +2,21 @@ function z = algebraic(varargin)
 
 ip = inputParser();
 ip.FunctionName = "yop.algebraic";
-ip.addOptional('size', [1, 1]);
+ip.addOptional('rows', 1);
 ip.addParameter('name', 'z');
 ip.parse(varargin{:});
 
-sz = ip.Results.size;
+rows = ip.Results.rows;
 name = ip.Results.name;
 
-if isscalar(sz)
-    sz = [sz, 1];
+if rows == 1
+    z = yop.ast_algebraic(name);
+else
+    % This is complex in order to only create one ast_vertcat node
+    algebraics = cell(rows, 1);
+    for k=1:rows
+        algebraics{k} = yop.ast_algebraic([name , '_', num2str(k)]);
+    end
+    z = vertcat(algebraics{:});
 end
-
-z = yop.ast_algebraic(name, sz(1), sz(2));
-
 end

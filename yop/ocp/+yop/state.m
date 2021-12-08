@@ -2,17 +2,21 @@ function x = state(varargin)
 
 ip = inputParser();
 ip.FunctionName = "yop.state";
-ip.addOptional('size', [1, 1]);
+ip.addOptional('rows', 1);
 ip.addParameter('name', 'x');
 ip.parse(varargin{:});
 
-sz = ip.Results.size;
+rows = ip.Results.rows;
 name = ip.Results.name;
 
-if isscalar(sz)
-    sz = [sz, 1];
+if rows == 1
+    x = yop.ast_state(name);
+else
+    % This is complex in order to only create one ast_vertcat node
+    states = cell(rows, 1);
+    for k=1:rows
+        states{k} = yop.ast_state([name , '_', num2str(k)]);
+    end
+    x = vertcat(states{:});
 end
-
-x = yop.ast_state(name, sz(1), sz(2));
-
 end

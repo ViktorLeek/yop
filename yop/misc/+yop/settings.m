@@ -1,6 +1,7 @@
 classdef settings < handle
     
     properties
+        m_errors = true
         m_warnings = true
         m_cx_type = yop.settings.SX
     end
@@ -30,6 +31,14 @@ classdef settings < handle
                 obj.m_warnings = value;
             end
             bool = obj.m_warnings;
+        end
+        
+        function bool = errors(value)
+            obj = yop.settings();
+            if nargin == 1
+                obj.m_errors = value;
+            end
+            bool = obj.m_errors;
         end
         
         function type = cx_type(value)

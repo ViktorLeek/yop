@@ -8,7 +8,7 @@ function sr = get_subrel(relation, idx)
 %    a scalar and in that case use the entire side in the subrelation.
 %
 %  Parameters:
-%    relation - A relation that meets the specifiction
+%    relation - A relation that returns true for : 
 %               isa(relation, 'yop.ast_relation')
 %    idx      - Indices to extract
 %               Type: logical
