@@ -3,8 +3,8 @@ clear all;
 t0 = yop.time0();
 tf = yop.timef();
 t = yop.time();
-x = yop.state([6, 1]);
-u = yop.control([2, 1], 'pw', 'quadratic');
+x = yop.state(6);
+[u, du, ddu] = yop.control(2, 'pw', 'quadratic');
 p = yop.parameter();
 
 x_max = [+1000; +1000; 1000; 350; +75*pi/180; +0.5*pi];
@@ -23,17 +23,18 @@ ivp = yop.ivp( ...
     der(x) == dx, ...
          p == 0.08, ...
      x(t0) == [0; 0; 0; 220; 0; -1], ...
-         u == [0.3 + 0.5*sin(0.1*t); (-40 + 10*sin(0.55*t))*pi/180]  ... u == [0.3; -1] ...
+         u == [0.3 + 0.5*sin(0.1*t); (-40 + 10*sin(0.55*t))*pi/180]  ... 
     );
 sim = ivp.solve();
 %%
-% sim.plot3(x(1), x(2), x(3))
+sim.plot3(x(1), x(2), x(3))
 % sim.plot(t, 0.3 + 0.5*sin(0.1*t))
 
 %%
-ocp = yop.ocp('Dynamic Soaring Problem');
-% ocp.min( p + ddu(1)^2 + ddu(2)^2 );
-ocp.min( p );
+ocp = yop.ocp2('Dynamic Soaring Problem');
+ocp.min( p + int(ddu(1)^2 + ddu(2)^2) );
+% ocp.min( p + ddu(1)^2 + ddu(2)^2 + du(1) );
+% ocp.min( p );
 ocp.st( ...
     1 <= tf <= 30, ...
     der(x) == dx, ...
@@ -46,7 +47,7 @@ ocp.st( ...
     x(6).at(t0) == x(6).at(tf) + 2*pi, ...
     der(x(6)) <= 0 ...
     );
-sol = ocp.solve('intervals', 50, 'degree', 5, 'guess', sim);
+% sol = ocp.solve('intervals', 50, 'degree', 5, 'guess', sim);
 % sol = ocp.solve('intervals', 100, 'degree', 4, 'guess', sol);
 
 %%
@@ -64,9 +65,9 @@ ocp.st( ...
     x(6).at(t0) == x(6).at(tf) + 2*pi, ...
     der(x(6)) <= 0 ...
     );
-sol = ocp.solve('intervals', 50, 'degree', 4, 'guess', sol);
+sol = ocp.solve('intervals', 50, 'degree', 5, 'guess', sol);
 
 %%
-% sol.plot3(x(1), x(2), x(3))
-% sol.plot(t, u(1))
-sol.plot(t, x(4))
+sol.plot3(x(1), x(2), x(3))
+% sol.plot(t, u(2))
+% sol.plot(t, x(6))
