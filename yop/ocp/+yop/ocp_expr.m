@@ -5,17 +5,12 @@ classdef ocp_expr < handle
         mx
         sym
         fn
-        is_hard
     end
     methods
-        function obj = ocp_expr(expr, aux)
+        function obj = ocp_expr(expr, type)
             obj.ast = expr;
             if nargin == 2
-                if isnumeric(aux)
-                    obj.type = aux;
-                else
-                    obj.is_hard = aux;
-                end
+                obj.type = type;
             end
             sz = size(expr);
             obj.mx = yop.cx('expr', sz(1), sz(2));

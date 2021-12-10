@@ -1,7 +1,13 @@
 classdef ocp_sol < handle
     properties
-        ocp_vars
-        mx_args
+        independent0
+        independentf
+        independent
+        states
+        algebraics
+        controls
+        parameters
+        mx_vars
         t0
         tf
         t
@@ -14,16 +20,22 @@ classdef ocp_sol < handle
         dt
     end
     methods
-        function obj = ocp_sol(ocp_vars,mx_args,t0,tf,t,x,z,u,p,N,d,cp)
-            obj.ocp_vars = ocp_vars;
-            obj.mx_args = mx_args;
-            obj.t0 = t0;
-            obj.tf = tf;
-            obj.p = p;
+        function obj = ocp_sol(t0, tf, t, x, z, u, p, mx_vars, sol, N, d, cp)
+            obj.independent0 = t0;
+            obj.independentf = tf;
+            obj.independent = t;
+            obj.states = x;
+            obj.algebraics = z;
+            obj.controls = u;
+            obj.parameters = p;
+            obj.mx_vars = mx_vars;
+            obj.t0 = sol.t0;
+            obj.tf = sol.tf;
+            obj.p = sol.p;
             obj.N = N;
             obj.tau = full([0, casadi.collocation_points(d, cp)]);
-            obj.dt = (tf-t0)/N;
-            obj.parameterize_polynomials(t, x, z, u);
+            obj.dt = (sol.tf-sol.t0)/N;
+            obj.parameterize_polynomials(sol.t, sol.x, sol.z, sol.u);
         end
         
         function n = d(obj)
@@ -60,7 +72,7 @@ classdef ocp_sol < handle
                 mag = 1;
             end
             
-            [vars, tps, ints, ders, sn] = yop.ocp.find_special_nodes(expr);
+            [vars, tps, ints, ders, sn] = yop.find_special_nodes(expr);
             
             % Ensure that the independent variable always can be plotted by
             % setting its mx value to that of the ocp.
@@ -68,13 +80,18 @@ classdef ocp_sol < handle
                 if isa(vars{k}, 'yop.ast_independent')
                     % Three is the independent variable. Hard coded, but
                     % efficient.
-                    vars{k}.m_value = obj.ocp_vars(3).mx;
+                    vars{k}.m_value = obj.mx_vars{3};
                 end
             end
             
             % Create functions for the special nodes and expression
-            args = {obj.mx_args{:},mx_vec(tps),mx_vec(ints),mx_vec(ders)};
-            set_mx(obj.ocp_vars);
+            args = { ...
+                obj.mx_vars{:}, ...
+                tps.mx_vec(), ...
+                ints.mx_vec(), ...
+                ders.mx_vec() ...
+                };
+            obj.set_mx();
             set_mx([tps, ints, ders]);
             for node = [tps, ints, ders]
                 mx_expr = fw_eval(node.ast.expr);
@@ -337,6 +354,16 @@ classdef ocp_sol < handle
                     args{k} = obj.value(args{k}, round(mag));
                 end
             end
+        end
+        
+        function set_mx(obj)
+            obj.independent0.set_mx();
+            obj.independentf.set_mx();
+            obj.independent.set_mx();
+            obj.states.set_mx();
+            obj.algebraics.set_mx();
+            obj.controls.set_mx();
+            obj.parameters.set_mx();
         end
         
         

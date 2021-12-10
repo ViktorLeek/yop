@@ -122,8 +122,41 @@ classdef ocp < handle
             obj.set_path_con();
             obj.set_hard_path_con();
             obj.set_ival_path_con();
+            obj.set_special_functions();
             
             nlp = yop.direct_collocation2(obj, N, d, cp);
+            
+            nlp_opts = struct;
+            nlp_opts.ipopt.acceptable_tol = 1e-6;
+            solver = casadi.nlpsol('solver', 'ipopt', ...
+                struct('f', nlp.J, 'x', nlp.w, 'g', nlp.g), nlp_opts);
+            nlp_sol = solver( ...
+                ...'x0', w0, ...
+                'lbx', nlp.w_lb, ...
+                'ubx', nlp.w_ub, ...
+                'ubg', nlp.g_ub, ...
+                'lbg', nlp.g_lb ...
+                );
+            
+            w_opt = struct;
+            w_opt.t0 = nlp.t0(nlp_sol.x);
+            w_opt.tf = nlp.tf(nlp_sol.x);
+            w_opt.t = nlp.t(nlp_sol.x);
+            w_opt.x = nlp.x(nlp_sol.x);
+            w_opt.z = nlp.z(nlp_sol.x);
+            w_opt.u = nlp.u(nlp_sol.x);
+            w_opt.p = nlp.p(nlp_sol.x);
+            
+            sol = yop.ocp_sol( ...
+                obj.independent0, ...
+                obj.independentf, ...
+                obj.independent, ...
+                obj.states, ...
+                obj.algebraics, ...
+                obj.controls, ...
+                obj.parameters, ...
+                obj.mx_vars(), ...
+                w_opt, N, d, cp);
         end
         
         function augment_system(obj)
@@ -139,6 +172,19 @@ classdef ocp < handle
                 end
             end
             obj.controls = obj.controls(keep);
+
+            if isempty(obj.independent)
+                obj.add_independent(yop.independent());
+            end
+            
+            if isempty(obj.independent0)
+                obj.add_independent(yop.independent0());
+            end
+            
+            if isempty(obj.independentf)
+                obj.add_independent(yop.independentf());
+            end
+            
         end
         
         function set_box_bounds(obj)
@@ -171,23 +217,21 @@ classdef ocp < handle
             end
             
             % Time
-            if ~isempty(obj.independent)
-                % Enables constraints such as 't > 0, t < 10'
-                if ~isempty(obj.independent.lb)
-                    t_min = obj.independent.lb;
-                    obj.independent0.lb = max(obj.independent0.lb, t_min);
-                    obj.independent0.ub = max(obj.independent0.ub, t_min);
-                    obj.independentf.fb = max(obj.independentf.lb, t_min);
-                    obj.independentf.fb = max(obj.independentf.ub, t_min);
-                end
-                
-                if ~isempty(obj.independent.lb)
-                    t_max = obj.independent.ub;
-                    obj.independent0.lb = min(obj.independent0.lb, t_max);
-                    obj.independent0.ub = min(obj.independent0.ub, t_max);
-                    obj.independentf.fb = min(obj.independentf.lb, t_max);
-                    obj.independentf.fb = min(obj.independentf.ub, t_max);
-                end
+            % Enables constraints such as 't > 0, t < 10'
+            if ~isempty(obj.independent.lb)
+                t_min = obj.independent.lb;
+                obj.independent0.lb = max(obj.independent0.lb, t_min);
+                obj.independent0.ub = max(obj.independent0.ub, t_min);
+                obj.independentf.fb = max(obj.independentf.lb, t_min);
+                obj.independentf.fb = max(obj.independentf.ub, t_min);
+            end
+            
+            if ~isempty(obj.independent.lb)
+                t_max = obj.independent.ub;
+                obj.independent0.lb = min(obj.independent0.lb, t_max);
+                obj.independent0.ub = min(obj.independent0.ub, t_max);
+                obj.independentf.fb = min(obj.independentf.lb, t_max);
+                obj.independentf.fb = min(obj.independentf.ub, t_max);
             end
             
             % State
@@ -306,6 +350,16 @@ classdef ocp < handle
                 casadi.Function('fn', args, {fw_eval(obj.objective.ast)});
         end
         
+        function obj = set_special_functions(obj)
+            args = obj.mx_args();
+            obj.set_mx();
+            obj.snodes.set_mx();
+            for sn = obj.snodes
+                mx_expr = fw_eval(sn.ast.expr);
+                sn.fn = casadi.Function('fn', args, {mx_expr});
+            end
+        end
+        
         function vectorize_dynamics(obj)
             % Vectorize the equation
             n_ode = length(obj.ode_eqs);
@@ -403,7 +457,7 @@ classdef ocp < handle
             obj.set_mx();
             obj.snodes.set_mx();
             
-            info = struct();
+            info = yop.ocp_ival.empty(1,0);
             for k=1:length(obj.ec_ival_eqs)
                 ik = obj.ec_ival_eqs{k};
                 [t0, tf] = get_ival(ik);
@@ -427,6 +481,18 @@ classdef ocp < handle
             end
             
             obj.path_ival = info;
+        end
+        
+        function args = mx_vars(obj)
+            args = { ...
+                mx_vec(obj.independent0), ...
+                mx_vec(obj.independentf), ...
+                mx_vec(obj.independent), ...
+                mx_vec(obj.states), ...
+                mx_vec(obj.algebraics), ...
+                mx_vec(obj.controls), ...
+                mx_vec(obj.parameters) ...
+                };
         end
         
         function args = mx_args(obj)
@@ -933,6 +999,7 @@ classdef ocp < handle
                     bd(end+1) = v.ub0;
                 end
             end
+            bd = bd(:);
         end
         
         function bd = x0_lb(obj, t)
@@ -944,6 +1011,7 @@ classdef ocp < handle
                     bd(end+1) = v.lb0;
                 end
             end
+            bd = bd(:);
         end
         
         function bd = x_ub(obj, t)
@@ -955,6 +1023,7 @@ classdef ocp < handle
                     bd(end+1) = v.ub;
                 end
             end
+            bd = bd(:);
         end
         
         function bd = x_lb(obj, t)
@@ -966,6 +1035,7 @@ classdef ocp < handle
                     bd(end+1) = v.lb;
                 end
             end
+            bd = bd(:);
         end
         
         function bd = xf_ub(obj, t)
@@ -977,6 +1047,7 @@ classdef ocp < handle
                     bd(end+1) = v.ubf;
                 end
             end
+            bd = bd(:);
         end
         
         function bd = xf_lb(obj, t)
@@ -988,6 +1059,7 @@ classdef ocp < handle
                     bd(end+1) = v.lbf;
                 end
             end
+            bd = bd(:);
         end
         
         function bd = u0_ub(obj, t)
@@ -999,6 +1071,7 @@ classdef ocp < handle
                     bd(end+1) = v.ub0;
                 end
             end
+            bd = bd(:);
         end
         
         function bd = u0_lb(obj, t)
@@ -1010,6 +1083,7 @@ classdef ocp < handle
                     bd(end+1) = v.lb0;
                 end
             end
+            bd = bd(:);
         end
         
         function bd = u_ub(obj, t)
@@ -1021,6 +1095,7 @@ classdef ocp < handle
                     bd(end+1) = v.ub;
                 end
             end
+            bd = bd(:);
         end
         
         function bd = u_lb(obj, t)
@@ -1032,6 +1107,7 @@ classdef ocp < handle
                     bd(end+1) = v.lb;
                 end
             end
+            bd = bd(:);
         end
         
         function bd = uf_ub(obj, t)
@@ -1043,17 +1119,19 @@ classdef ocp < handle
                     bd(end+1) = v.ubf;
                 end
             end
+            bd = bd(:);
         end
         
         function bd = uf_lb(obj, t)
             bd = [];
             for v = obj.controls
-                if isa(v.ubl, 'function_handle')
-                    bd(end+1) = v.ubl(t);
+                if isa(v.lbf, 'function_handle')
+                    bd(end+1) = v.lbf(t);
                 else
-                    bd(end+1) = v.ubl;
+                    bd(end+1) = v.lbf;
                 end
             end
+            bd = bd(:);
         end
         
         function bd = p_ub(obj, t)
@@ -1065,6 +1143,7 @@ classdef ocp < handle
                     bd = obj.parameters.ub;
                 end
             end
+            bd = bd(:);
         end
         
         function bd = p_lb(obj, t)
@@ -1076,6 +1155,7 @@ classdef ocp < handle
                     bd = obj.parameters.lb;
                 end
             end
+            bd = bd(:);
         end
         
         function bd = z_ub(obj, t)
@@ -1087,6 +1167,7 @@ classdef ocp < handle
                     bd = obj.algebraics.ub;
                 end
             end
+            bd = bd(:);
         end
         
         function bd = z_lb(obj, t)
@@ -1098,6 +1179,7 @@ classdef ocp < handle
                     bd = obj.algebraics.lb;
                 end
             end
+            bd = bd(:);
         end
         
         function [bool, t0, tf] = fixed_horizon(obj)

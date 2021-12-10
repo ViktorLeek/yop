@@ -418,20 +418,145 @@ classdef ast_expression < yop.node & yop.ast_ool
     methods (Static)
         function ast = timed_expression(texpr, expr)
             
-            if isa(texpr, 'yop.ast_independent_initial') || ...
-                    isa(texpr, 'yop.ast_independent_final')
-                ast = yop.ast_timepoint(texpr, expr);
-                return;
+            ist0 = isa_independent0(texpr); % expr(t0)
+            istf = isa_independentf(texpr); % expr(tf)
+            ist  = isa_independent(texpr);  % expr(t)
+            
+            isrel = isa(texpr, 'yop.ast_relation');
+            ssr = yop.ocp.to_ssr(texpr);
+            n = length(ssr);
+            
+            if isrel && n==1
+                a1_iseq = isa(texpr, 'yop.ast_eq');
+                a1_isle = isa(texpr, 'yop.ast_lt') || isa(texpr, 'yop.ast_le');
+                a1_isge = isa(texpr, 'yop.ast_gt') || isa(texpr, 'yop.ast_ge');
+                a1_lhs_ist = isa_independent(ssr{1}.lhs);
+                a1_rhs_ist = isa_independent(ssr{1}.rhs);
+                a1_lhs_ist0 = isa_independent0(ssr{1}.lhs);
+                a1_rhs_ist0 = isa_independent0(ssr{1}.rhs);
+                a1_lhs_istf = isa_independentf(ssr{1}.lhs);
+                a1_rhs_istf = isa_independentf(ssr{1}.rhs);
+                a1_lhs_isnum = isa_numeric(ssr{1}.lhs);
+                a1_rhs_isnum = isa_numeric(ssr{1}.rhs);
+                
+            elseif isrel && n==2
+                
+                
+            else
+                
             end
             
-            if isa(texpr, 'yop.ast_independent')
-                ast = expr; % Nothing to be done, expr(t) == expr
-                return;
+            % Notice that the comparison to n (which is a value that always
+            % exist here) is done first. Since Matlab applies short 
+            % circuiting none of the other logical expressions are 
+            % evaluated if the first one failes, so it does not matter if
+            % several of the others may not have a definition.
+            if ist0 
+                % expr(t0)
+                ast = yop.ast_timepoint(yop.ast_independent_initial, expr);
+                
+            elseif istf
+                % expr(tf)
+                ast = yop.ast_timepoint(yop.ast_independent_final, expr);
+                
+            elseif ist
+                % expr(t)
+                ast = expr;
+                
+            elseif n==1 && a1_lhs_ist && a1_iseq && a1_rhs_ist0
+                % expr(t == t0)
+                ast = yop.ast_timepoint(yop.ast_independent_initial, expr);
+                
+            elseif n==1 && a1_lhs_ist && a1_iseq && a1_rhs_istf
+                % expr(t == tf)
+                ast = yop.ast_timepoint(yop.ast_independent_final, expr);
+                
+            elseif n==1 && a1_lhs_ist && a1_iseq && a1_rhs_isnum
+                % expr(t == num)
+                ast = yop.ast_timepoint(yop.prop_num(rhs), expr);
+                
+            elseif n==1 && a1_lhs_ist0 && a1_iseq && a1_rhs_ist
+                % expr(t0 == t)
+                ast = yop.ast_timepoint(yop.ast_independent_initial, expr);
+                
+            elseif n==1 && a1_lhs_istf && a1_iseq && a1_rhs_ist
+                % expr(tf == t)
+                ast = yop.ast_timepoint(yop.ast_independent_final, expr);
+                
+            elseif n==1 && a1_lhs_isnum && a1_iseq && a1_rhs_ist
+                % expr(num == t)
+                ast = yop.ast_timepoint(yop.prop_num(lhs), expr);
+                
+            elseif n==1 && a1_lhs_ist && a1_isle && a1_rhs_ist0
+                % expr(t <= t0)
+                ast = yop.ast_timepoint(yop.ast_independent_initial, expr);
+                
+            elseif n==1 && a1_lhs_ist && a1_isle && a1_rhs_istf
+                % expr(t <= tf)
+                ast = expr;
+                
+            elseif n==1 && a1_lhs_ist && a1_isle && a1_rhs_isnum
+                % expr(t <= num)
+                ast = yop.ast_timeinterval( ...
+                    yop.initial_timepoint, ...
+                    yop.prop_num(rhs), ...
+                    expr);
+                
+            elseif n==1 && a1_lhs_ist0 && a1_is_le && a1_rhs_ist
+                % expr(t0 <= t)
+                ast = expr;
+                
+            elseif n==1 && a1_lhs_istf && a1_is_le && a1_rhs_ist
+                % expr(tf <= t)
+                ast = yop.ast_timepoint(yop.ast_independent_final, expr);
+                
+            elseif n==1 && a1_lhs_isnum && a1_is_le && a1_rhs_ist
+                % expr(num <= t)
+                ast = yop.ast_timeinterval( ...
+                    yop.prop_num(rhs), ...
+                    yop.final_timepoint, ...
+                    expr);
+                
+            elseif n==1 && a1_lhs_ist && a1_is_ge && a1_rhs_ist0
+                % expr(t >= t0)
+                ast = expr;
+                
+            elseif n==1 && a1_lhs_ist && a1_is_ge && a1_rhs_istf
+                % expr(t >= tf)
+                ast = yop.ast_timepoint(yop.ast_independent_final, expr);
+                
+            elseif n==1 && a1_lhs_ist && a1_isge && a1_rhs_isnum
+                % expr(t >= num)
+                ast = yop.ast_timeinterval( ...
+                    yop.prop_num(rhs), ...
+                    yop.final_timepoint, ...
+                    expr);
+                
+            elseif n==1 && a1_lhs_ist0 && a1_is_ge && a1_rhs_ist
+                % expr(t0 >= t)
+                ast = yop.ast_timepoint(yop.ast_independent_initial, expr);
+                
+            elseif n==1 && a1_lhs_istf && a1_is_ge && a1_rhs_ist
+                % expr(tf >= t)
+                ast = expr;
+                
+            elseif n==1 && a1_lhs_isnum && a1_is_ge && a1_rhs_ist
+                % expr(num >= t)
+                ast = yop.ast_timeinterval( ...
+                    yop.initial_timepoint, ...
+                    yop.prop_num(rhs), ...
+                    expr);
+                
+            elseif n==1 && a1_lhs_ist && a1_is_le && a1_rhs_istf
+                % expr(t0 <= t <= tf) -> expr(t  <= tf), expr(t0 <= t )
+                % Operator binding and dfs gives the two relations
+                
+                
             end
             
             % Slimy, but filling.
             if isa(texpr, 'yop.ast_relation')
-                srf = yop.ocp.to_srf({texpr});
+                srf = yop.ocp.to_ssr(texpr);
                 switch length(srf)
                     case 1
                         switch class(srf{1})
@@ -439,30 +564,20 @@ classdef ast_expression < yop.node & yop.ast_ool
                                 ast = yop.ast_timepoint(texpr, expr);
                                 
                             case {'yop.ast_lt', 'yop.ast_le'}
-                                if isa(srf{1}.lhs, 'yop.ast_independent')
+                                if isa_independent(srf{1}.lhs)
                                     % t < value
-                                    ast = yop.ast_timeinterval( ...
-                                        yop.initial_timepoint, ...
-                                        srf{1}.rhs, expr);
+                                    ast = yop.ast_timeinterval(yop.initial_timepoint, srf{1}.rhs, expr);
                                     
                                 else % value < t
-                                    ast = yop.ast_timeinterval( ...
-                                        srf{1}.lhs, ...
-                                        yop.final_timepoint,...
-                                        expr);
+                                    ast = yop.ast_timeinterval(srf{1}.lhs,  yop.final_timepoint, expr);
                                 end
                             case {'yop.ast_gt', 'yop.ast_ge'}
-                                if isa(srf{1}.lhs, 'yop.ast_independent')
+                                if isa_independent(srf{1}.lhs)
                                     % t > value
-                                    ast = yop.ast_timeinterval( ...
-                                        srf{1}.rhs, ...
-                                        yop.final_timepoint,...
-                                        expr);
+                                    ast = yop.ast_timeinterval(srf{1}.rhs, yop.final_timepoint, expr);
                                     
                                 else % value > t
-                                    ast = yop.ast_timeinterval( ...
-                                        yop.initial_timepoint, ...
-                                        srf{1}.lhs, expr);
+                                    ast = yop.ast_timeinterval(yop.initial_timepoint, srf{1}.lhs, expr);
                                 end
                         end
                         
@@ -471,8 +586,7 @@ classdef ast_expression < yop.node & yop.ast_ool
                         for k=1:2
                             switch class(srf{k})
                                 case {'yop.ast_lt', 'yop.ast_le'}
-                                    if isa(srf{k}.lhs, ...
-                                            'yop.ast_independent')
+                                    if isa_independent(srf{k}.lhs)
                                         % t < value
                                         tf = srf{k}.rhs;
                                     else % value < t. Should be an elseif to test rhs for independent

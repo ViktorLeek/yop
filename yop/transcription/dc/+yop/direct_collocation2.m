@@ -4,7 +4,8 @@ function nlp = direct_collocation2(ocp, N, d, cp)
 % to be used for a fixed horizon, that is OK.
 [~, T0, Tf] = ocp.fixed_horizon();
 
-args = param_special_nodes(ocp, N, T0, Tf, arguments(N, d, cp));
+args = arguments(ocp, N, d, cp, T0, Tf);
+args = param_special_nodes(ocp, N, T0, Tf, args);
 
 J = ocp.objective.fn(args.t0, args.tf, args.p, args.tps, args.ints);
 
@@ -55,11 +56,8 @@ nlp.w = w;
 nlp.w_ub = w_ub;
 nlp.w_lb = w_lb;
 nlp.g = g;
-nlp.g_ub = zeros(size(g));
-nlp.g_lb = zeros(size(g));
-nlp.h = h;
-nlp.h_ub = zeros(size(h));
-nlp.h_lb = -inf(size(h));
+nlp.g_ub = g_ub;
+nlp.g_lb = g_lb;
 nlp.t0 = @(w) full(t0(w));
 nlp.tf = @(w) full(tf(w));
 nlp.t  = @(w) full(t(w));
@@ -69,7 +67,7 @@ nlp.u  = @(w) full(u(w));
 nlp.p  = @(w) full(p(w));
 end
 
-function args = arguments(N, d, cp)
+function args = arguments(ocp, N, d, cp, T0, Tf)
 
 t0 = yop.cx('t0');
 tf = yop.cx('tf');
@@ -134,8 +132,8 @@ for node = ocp.snodes
     tmp_tp  = [tps;  zeros(ocp.n_tp  - length(tps), 1)];
     tmp_int = [ints; zeros(ocp.n_int - length(ints), 1)];
     
-    args.tp = tmp_tp;
-    args.int = tmp_int;
+    args.tps = tmp_tp;
+    args.ints = tmp_int;
     args.ders = ders;
     
     switch node.type
@@ -165,15 +163,21 @@ tt = args.t.value(tp.timepoint);
 xx = args.x.value(tp.timepoint);
 zz = args.z.value(tp.timepoint);
 uu = args.u.value(tp.timepoint); 
-tp = args.tps;
+pp = args.p;
+tps = args.tps;
 int = args.ints;
 dd = args.ders.value(tp.timepoint);
 dd = [dd;  zeros(n_der  - length(dd), 1)];
-val = tp.fn(t0, tf, tt, xx, zz, uu, p, tp, int, dd);
+val = tp.fn(t0, tf, tt, xx, zz, uu, pp, tps, int, dd);
 end
 
 function I = parameterize_integral(i, N, args, n_der)
 I = 0;
+t0 = args.t0;
+tf = args.tf;
+pp = args.p;
+tp = args.tps;
+int = args.ints;
 for n=1:N
     yval = [];
     for r=1:length(args.tau)
@@ -181,9 +185,6 @@ for n=1:N
         xx = args.x(n).y(:, r);
         zz = args.z(n).evaluate(args.tau(r));
         uu = args.u(n).y;
-        pp = args.p;
-        tp = args.tps;
-        int = args.ints;
         dd = ders(n).evaluate(args.tau(r));
         dd = [dd;  zeros(n_der  - length(dd), 1)];
         val_r = i.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd);
@@ -195,6 +196,11 @@ end
 end
 
 function ders = parameterize_derivative(der, N, args, n_der)
+t0 = args.t0;
+tf = args.tf;
+pp = args.p;
+tp = args.tps;
+int = args.ints;
 for n=1:N
     yval = [];
     for r=1:length(args.tau)
@@ -202,9 +208,6 @@ for n=1:N
         xx = args.x(n).y(:, r);
         zz = args.z(n).evaluate(args.tau(r));
         uu = args.u(n).y;
-        pp = args.p;
-        tp = args.tps;
-        int = args.ints;
         dd = args.ders(n).evaluate(args.tau(r));
         dd = [dd;  zeros(n_der  - length(dd), 1)];
         val_r = der.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd);
@@ -218,6 +221,11 @@ end
 
 function g = discretize_dynamics(ocp, N, args)
 g = []; % Equality constraints from discretization
+t0 = args.t0;
+tf = args.tf;
+pp = args.p;
+tp = args.tps;
+int = args.ints;
 for n=1:N % Dynamics
     dx = args.x(n).differentiate();
     for r=2:length(args.tau)
@@ -226,10 +234,7 @@ for n=1:N % Dynamics
         xx = args.x(n).y(:, r);
         zz = args.z(n).y(:, r-1); % only has d parameters
         uu = args.u(n).y(:);
-        pp = args.p;
-        tp = args.tps;
-        int = args.ints;
-        dd = args.ders(n).evaluate(tau(r));
+        dd = args.ders(n).evaluate(args.tau(r));
         f = ocp.ode.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd);
         a = ocp.alg.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd);
         g = [g; (dxr - args.dt*f); a];
@@ -237,33 +242,38 @@ for n=1:N % Dynamics
 end
 
 for n=1:N % Continuity
-    gn = vars.x(n).evaluate(1) - vars.x(n+1).evaluate(0);
+    gn = args.x(n).evaluate(1) - args.x(n+1).evaluate(0);
     g = [g; gn];
 end
 end
 
 function disc = pointcon(expr, args)
+t0 = args.t0;
+tf = args.tf;
 tt = args.t(1).evaluate(0);
 xx = args.x(1).evaluate(0);
 zz = args.z(1).evaluate(0);
 uu = args.u(1).evaluate(0);
+pp = args.p;
 tp = args.tps;
 int = args.ints;
 dd = args.ders(1).evaluate(0);
-disc = expr.fn(t0, tf, tt, xx, zz, uu, p, tp, int, dd);
+disc = expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd);
 end
 
 function disc = pathcon(expr, N, args)
 disc = [];
+t0 = args.t0;
+tf = args.tf;
+pp = args.p;
+tp = args.tps;
+int = args.ints;
 for n=1:N
     tt = args.t(n).y(1);
     xx = args.x(n).y(:,1);
     zz = args.z(n).evaluate(0); % Does not have a parameter at tau==0
     uu = args.u(n).y(:);
-    pp = args.p;
-    tp = args.tps;
-    int = args.ints;
-    dd = ders(n).evaluate(0);
+    dd = args.ders(n).evaluate(0);
     disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
 end
 tt = args.t(N+1).y;
@@ -273,20 +283,22 @@ uu = args.u(N).y(:); % Same control input as N,
 pp = args.p;
 tp = args.tps;
 int = args.ints;
-dd = ders(n).evaluate(1);
+dd = args.ders(n).evaluate(1);
 disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
 end
 
 function disc = hard_pathcon(expr, N, args)
 disc = [];
+t0 = args.t0;
+tf = args.tf;
+pp = args.p;
+tp = args.tps;
+int = args.ints;
 for n=1:N
     tt = args.t(n).y(1);
     xx = args.x(n).y(:,1);
     zz = args.z(n).evaluate(0); % Does not have a parameter at tau==0
     uu = args.u(n).y(:);
-    pp = args.p;
-    tp = args.tps;
-    int = args.ints;
     dd = args.ders(n).evaluate(0);
     disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
     for r = 2:length(args.tau)
@@ -294,9 +306,7 @@ for n=1:N
         xx = args.x(n).y(:, r);
         zz = args.z(n).y(:, r-1);
         uu = args.u(n).y(:);
-        tp = args.tps;
-        int = args.ints;
-        dd = args.ders(n).evaluate(tau(r));
+        dd = args.ders(n).evaluate(args.tau(r));
         disc = [disc, ...
             expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
     end
@@ -305,9 +315,6 @@ tt = args.t(N+1).y;
 xx = args.x(N+1).y(:); % Only a point
 zz = args.z(N).evaluate(1); % Does not have a parameter at N+1.
 uu = args.u(N).y(:); % Same control input as N,
-pp = args.p;
-tp = args.tps;
-int = args.ints;
 dd = args.ders(n).evaluate(1);
 disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
 end
@@ -324,17 +331,23 @@ I0 = yop.IF(I0 == yop.final_timepoint  , Tf, I0);
 If = yop.IF(If == yop.initial_timepoint, T0, If);
 If = yop.IF(If == yop.final_timepoint  , Tf, If);
 
+t0 = args.t0;
+tf = args.tf;
+pp = args.p;
+tp = args.tps;
+int = args.ints;
+
 % Evaluate at the beginning of the interval
 e0 = expr.fn( ...
-    args.t0, ...
-    args.tf, ...
+    t0, ...
+    tf, ...
     args.t.value(I0), ...
     args.x.value(I0), ...
     args.z.value(I0), ...
     args.u.value(I0), ...
-    args.p, ...
-    args.tps, ...
-    args.ints, ...
+    pp, ...
+    tp, ...
+    int, ...
     args.ders.value(I0) ...
     );
 disc = [disc, e0];
@@ -349,24 +362,22 @@ for n = n0 : min(nf, N) % N+1 is handled by evaluating at If
         xx = args.x(n).y(:, r);
         zz = args.z(n).evaluate(tau(r));
         uu = args.u(n).y(:);
-        tp = args.tps;
-        int = args.ints;
         dd = ders(n).evaluate(tau(r));
-        disc = [disc,expr.fn(t0, tf, tt, xx, zz, uu, p, tp, int, dd)];
+        disc = [disc,expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
     end
 end
 
 % Evaluate final point
 ef = expr.fn( ...
-    args.t0, ...
-    args.tf, ...
+    t0, ...
+    tf, ...
     args.t.value(If), ...
     args.x.value(If), ...
     args.z.value(If), ...
     args.u.value(If), ...
-    args.p, ...
-    args.tps, ...
-    args.ints, ...
+    pp, ...
+    tp, ...
+    int, ...
     ags.ders.value(If));
 disc = [disc, ef];
 end
