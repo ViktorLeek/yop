@@ -66,6 +66,20 @@ classdef ast_subsref < yop.ast_expression
             id = id(idx);
         end
         
+        function [bool, id] = isa_independent0(obj)
+            [bool, id] = isa_independent0(obj.node);
+            idx = get_indices(obj);
+            bool = bool(idx);
+            id = id(idx);
+        end
+        
+        function [bool, id] = isa_independentf(obj)
+            [bool, id] = isa_independentf(obj.node);
+            idx = get_indices(obj);
+            bool = bool(idx);
+            id = id(idx);
+        end
+        
         function [bool, id] = isa_parameter(obj)
             [bool, id] = isa_parameter(obj.node);
             idx = get_indices(obj);

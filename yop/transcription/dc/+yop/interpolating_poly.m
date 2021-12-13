@@ -16,10 +16,10 @@ classdef interpolating_poly < yop.lagrange_polynomial
         
         function v = value(obj, x)
             v = [];
-            if isa(x, 'yop.ast_independent_initial')
+            if x == yop.initial_timepoint
                 v = obj(1).evaluate(0);
                 
-            elseif isa(x, 'yop.ast_independent_final')
+            elseif x == yop.final_timepoint
                 v = obj(end).evaluate(0);
                 
             elseif yop.EQ(rem(x-obj(1).t0, obj.h), 0)

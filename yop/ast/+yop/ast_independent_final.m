@@ -4,7 +4,7 @@ classdef ast_independent_final < yop.ast_variable
             obj@yop.ast_variable(name);
         end
         
-        function [bool, id] = isa_independent(obj)
+        function [bool, id] = isa_independentf(obj)
             bool = true(size(obj));
             id = obj.id*ones(size(obj));
         end

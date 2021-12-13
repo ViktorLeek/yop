@@ -17,7 +17,7 @@ classdef error < handle
             m = '.';
         end
         
-        function timevarying_objective(err_vars)
+        function msg = timevarying_objective(err_vars)
             names = '';
             for k=1:length(err_vars)
                 names = [names, '''', err_vars{k}.name, '''', ', '];
@@ -33,15 +33,12 @@ classdef error < handle
                 'Valid objective functions are '...
                 'functions of timepoints, integrals and parameters', ...
                 yop.error.msg_stop()];
-            
-            yop.errors.report(yop.error(msg));
         end
         
-        function multiple_independent_variables()
+        function msg = multiple_independent_variables()
             msg = [yop.error.msg_start(), ...
                 'Detected multiple independent variables', ...
                 yop.error.msg_stop()];
-            yop.errors.report(yop.error(msg));
         end
         
         function multiple_independent_initial()
@@ -52,37 +49,33 @@ classdef error < handle
             yop.errors.report(yop.error(msg));
         end
         
-        function multiple_independent_final()
+        function msg = multiple_independent_final()
             msg = [yop.error.msg_start(), ...
                 'Detected multiple final values for the ', ...
                 'independent variable', ...
                 yop.error.msg_stop()];
-            yop.errors.report(yop.error(msg));
         end
         
-        function incompatible_constraint_size()
+        function msg = incompatible_constraint_size()
             msg = [yop.error.msg_start(), ...
                 'Incompatible size for constraint lhs and rhs', ...
                 yop.error.msg_stop()];
-            yop.errors.report(yop.error(msg));
         end
         
-        function unknown_constraint()
+        function msg = unknown_constraint()
             msg = [yop.error.msg_start(), ...
                 'Unknown constrain type', ...
                 yop.error.msg_stop()];
-            yop.errors.report(yop.error(msg));
         end
         
-        function failed_to_find_variable(id)
+        function msg = failed_to_find_variable(id)
             msg = [yop.error.msg_start(), ...
                 'Failed to find variable ', ...
                 'with id [', num2str(id), ']', ...
                 yop.error.msg_stop()];
-            yop.errors.report(yop.error(msg));
         end
         
-        function missing_state_derivative(err_vars)
+        function msg = missing_state_derivative(err_vars)
             names = '';
             for k=1:length(err_vars)
                 names = [names, '''', err_vars{k}.name, '''', ', '];
@@ -94,8 +87,12 @@ classdef error < handle
                 'State(s): ', names, ' is(are) not given a ', ...
                 'differential equation' ...
                 yop.error.msg_stop()];
-            
-            yop.errors.report(yop.error(msg));
+        end
+        
+        function msg = failed_to_parse_timed_expression()
+            msg = [yop.error.msg_start(), ...
+                'Failed to parse timepoint or interval', ...
+                yop.error.msg_stop()];
         end
         
     end

@@ -95,6 +95,32 @@ classdef ast_cat < yop.ast_expression
             id = cat(obj.d, tmp_id{:});
         end
         
+        function [bool, id] = isa_independent0(obj)
+            [bool, id] = isa_independent0(obj.args{1});
+            tmp_bool = {bool};
+            tmp_id = {id};
+            for k=2:length(obj.args)
+                [bk, ik] = isa_independent0(obj.args{k});
+                tmp_bool = {tmp_bool{:}, bk};
+                tmp_id = {tmp_id{:}, ik};
+            end      
+            bool = cat(obj.d, tmp_bool{:});
+            id = cat(obj.d, tmp_id{:});
+        end
+        
+        function [bool, id] = isa_independentf(obj)
+            [bool, id] = isa_independentf(obj.args{1});
+            tmp_bool = {bool};
+            tmp_id = {id};
+            for k=2:length(obj.args)
+                [bk, ik] = isa_independentf(obj.args{k});
+                tmp_bool = {tmp_bool{:}, bk};
+                tmp_id = {tmp_id{:}, ik};
+            end      
+            bool = cat(obj.d, tmp_bool{:});
+            id = cat(obj.d, tmp_id{:});
+        end
+        
         function [bool, id] = isa_parameter(obj)
             [bool, id] = isa_parameter(obj.args{1});
             tmp_bool = {bool};

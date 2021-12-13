@@ -1,30 +1,17 @@
 classdef ast_timeinterval < yop.ast_expression
+    
     properties
         t0
         tf
         expr
     end
+    
     methods
         function obj = ast_timeinterval(t0, tf, expr)
             obj@yop.ast_expression(true);
             obj.dim = expr.dim;
-            
-            if isnumeric(t0) 
-                obj.t0 = t0;
-            elseif isa(t0, 'yop.ast_independent_initial')
-                obj.t0 = yop.initial_timepoint;
-            else
-                error(yop.msg.illegal_timepoint);
-            end
-            
-            if isnumeric(tf) 
-                obj.tf = tf;
-            elseif isa(tf, 'yop.ast_independent_final')
-                obj.tf = yop.final_timepoint;
-            else
-                error(yop.msg.illegal_timepoint);
-            end
-            
+            obj.t0 = t0;
+            obj.tf = tf;
             obj.expr = expr;
         end
         
@@ -69,6 +56,14 @@ classdef ast_timeinterval < yop.ast_expression
             [bool, id] = isa_independent(obj.expr);
         end
         
+        function [bool, id] = isa_independent0(obj)
+            [bool, id] = isa_independent0(obj.expr);
+        end
+        
+        function [bool, id] = isa_independentf(obj)
+            [bool, id] = isa_independentf(obj.expr);
+        end
+        
         function [bool, id] = isa_parameter(obj)
             [bool, id] = isa_parameter(obj.expr);
         end
@@ -83,10 +78,14 @@ classdef ast_timeinterval < yop.ast_expression
         
         function draw(obj)
             fprintf(['[', num2str(obj.id), ']:', ...
-                'interval(timepoint, expr)\n']);
+                'interval(t0, tf, expr)\n']);
             
             begin_child(obj);
-            draw(obj.ival);
+            draw(obj.t0);
+            end_child(obj);
+            
+            begin_child(obj);
+            draw(obj.tf);
             end_child(obj);
             
             last_child(obj);

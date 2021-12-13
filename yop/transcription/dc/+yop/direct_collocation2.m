@@ -26,10 +26,11 @@ g_ub = [g_ub; ocp.path_hard.ub];
 g_lb = [g_lb; ocp.path_hard.lb];
 
 for pk = ocp.path_ival
-    g = [g; ival_pathcon(pk, N, args)];
+    gk = ival_pathcon(pk, N, args);
+    g = [g; gk];
+    g_ub = [g_ub; ocp.path_ival.ub*ones(size(gk))];
+    g_lb = [g_lb; ocp.path_ival.lb*ones(size(gk))];
 end
-g_ub = [g_ub; vertcat(ocp.path_ival.ub)];
-g_lb = [g_lb; vertcat(ocp.path_ival.lb)];
 
 [w_lb, w_ub] = box_bnd(T0, Tf, N, args.tau, ocp);
 
@@ -185,13 +186,13 @@ for n=1:N
         xx = args.x(n).y(:, r);
         zz = args.z(n).evaluate(args.tau(r));
         uu = args.u(n).y;
-        dd = ders(n).evaluate(args.tau(r));
+        dd = args.ders(n).evaluate(args.tau(r));
         dd = [dd;  zeros(n_der  - length(dd), 1)];
         val_r = i.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd);
         yval = [yval, val_r(:)];
     end
-    lp = yop.lagrange_polynomial(tau, yval).integrate();
-    I = I + lp.evaluate(1)*dt;
+    lp = yop.lagrange_polynomial(args.tau, yval).integrate();
+    I = I + lp.evaluate(1)*args.dt;
 end
 end
 
@@ -350,7 +351,7 @@ e0 = expr.fn( ...
     int, ...
     args.ders.value(I0) ...
     );
-disc = [disc, e0];
+disc = [disc; e0];
 
 % Evaluate all points within the interval
 [n0, r0, nf, rf] = ...
@@ -360,10 +361,10 @@ for n = n0 : min(nf, N) % N+1 is handled by evaluating at If
     for r = yop.IF(n==n0, r0, 1) : yop.IF(n==nf, rf, length(args.tau))
         tt = args.t(n).y(r);
         xx = args.x(n).y(:, r);
-        zz = args.z(n).evaluate(tau(r));
+        zz = args.z(n).evaluate(args.tau(r));
         uu = args.u(n).y(:);
-        dd = ders(n).evaluate(tau(r));
-        disc = [disc,expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
+        dd = args.ders(n).evaluate(args.tau(r));
+        disc = [disc; expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
     end
 end
 
@@ -378,8 +379,8 @@ ef = expr.fn( ...
     pp, ...
     tp, ...
     int, ...
-    ags.ders.value(If));
-disc = [disc, ef];
+    args.ders.value(If));
+disc = [disc; ef];
 end
 
 function [w_lb, w_ub] = box_bnd(t0, tf, N, tau, ocp)

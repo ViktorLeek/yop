@@ -44,6 +44,24 @@ classdef ast_horzcat < yop.ast_expression
             end       
         end
         
+        function [bool, id] = isa_independent0(obj)
+            [bool, id] = isa_independent0(obj.args{1});
+            for k=2:length(obj.args)
+                [bk, ik] = isa_independent0(obj.args{k});
+                bool = [bool, bk];
+                id = [id, ik];
+            end       
+        end
+        
+        function [bool, id] = isa_independentf(obj)
+            [bool, id] = isa_independentf(obj.args{1});
+            for k=2:length(obj.args)
+                [bk, ik] = isa_independentf(obj.args{k});
+                bool = [bool, bk];
+                id = [id, ik];
+            end       
+        end
+        
         function [bool, id] = isa_parameter(obj)
             [bool, id] = isa_parameter(obj.args{1});
             for k=2:length(obj.args)

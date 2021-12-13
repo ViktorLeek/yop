@@ -45,6 +45,18 @@ classdef ast_transpose < yop.ast_expression
             id = transpose(id);
         end
         
+        function [bool, id] = isa_independent0(obj)
+            [bool, id] = isa_independent0(obj.expr);
+            bool = transpose(bool);
+            id = transpose(id);
+        end
+        
+        function [bool, id] = isa_independentf(obj)
+            [bool, id] = isa_independentf(obj.expr);
+            bool = transpose(bool);
+            id = transpose(id);
+        end
+        
         function [bool, id] = isa_parameter(obj)
             [bool, id] = isa_parameter(obj.expr);
             bool = transpose(bool);

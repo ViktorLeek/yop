@@ -7,62 +7,7 @@ classdef ast_timepoint < yop.ast_expression
         function obj = ast_timepoint(tp, expr)
             obj@yop.ast_expression(false);
             obj.dim = expr.dim;
-            
-            switch class(tp)
-                case 'yop.ast_eq'
-                    if isa(tp.lhs, 'yop.ast_independent') && ...
-                            isnumeric(tp.rhs)
-                        % t == 2
-                        if isinf(tp.rhs)
-                            error(['[Yop] Error: inf is not a '...
-                                'valid timepoint']);
-                        end
-                        timepoint = tp.rhs;
-                        
-                    elseif isnumeric(tp.lhs) && ...
-                            isa(tp.rhs, 'yop.ast_independent')
-                        % 2 == t
-                        if isinf(tp.lhs)
-                            error(['[Yop] Error: inf is not a '...
-                                'valid timepoint']);
-                        end
-                        timepoint = tp.lhs;
-                        
-                    elseif isa(tp.lhs, 'yop.ast_independent') && ...
-                            (isa(tp.rhs, 'yop.ast_independent_initial')...
-                            || isa(tp.rhs, 'yop.ast_independent_final'))
-                         % t == t0 || t == tf
-                         timepoint = tp.rhs;
-                         
-                    elseif (isa(tp.lhs, 'yop.ast_independent_initial')...
-                           || isa(tp.lhs, 'yop.ast_independent_final'))...
-                            && isa(tp.rhs, 'yop.ast_independent')
-                        % t0 == t || tf == t
-                        timepoint = tp.lhs;
-                        
-                    else
-                        m='[yop] Error: Illegal relation for a timepoint';
-                        error(m);
-                        
-                    end
-                    
-                case {'yop.ast_independent_initial', ...
-                      'yop.ast_independent_final'}
-                  timepoint = tp;
-                  
-                case 'yop.ast_independent'
-                  error(['[yop] Error: Do not specify the independent', ...
-                      ' variable as a timepoint. It represents the '...
-                      'evolution of time, not a timepoint'])
-                  
-                otherwise
-                    error('[yop] Error: Illegal relation for a timepoint');
-            end
-            
-            % Here it could be implemented to test if the timepoint is
-            % inside a possible interval of expr.
-            
-            obj.timepoint = timepoint;
+            obj.timepoint = tp;
             obj.expr = expr;
         end
         
@@ -78,17 +23,7 @@ classdef ast_timepoint < yop.ast_expression
         
         function [bool, tp] = isa_timepoint(obj)
             bool = true(size(obj.expr));
-            switch class(obj.timepoint)    
-                case 'yop.ast_independent_initial'
-                    tp = yop.initial_timepoint(size(obj.expr));
-                    
-                case 'yop.ast_independent_final'
-                    tp = yop.final_timepoint(size(obj.expr));
-                    
-                otherwise
-                    % numeric types
-                    tp = obj.timepoint*ones(size(obj.expr));
-            end
+            tp = obj.timepoint*ones(size(obj.expr));
         end
         
         function value = evaluate(obj)            
@@ -119,6 +54,14 @@ classdef ast_timepoint < yop.ast_expression
         
         function [bool, id] = isa_independent(obj)
             [bool, id] = isa_independent(obj.expr);
+        end
+        
+        function [bool, id] = isa_independent0(obj)
+            [bool, id] = isa_independent0(obj.expr);
+        end
+        
+        function [bool, id] = isa_independentf(obj)
+            [bool, id] = isa_independentf(obj.expr);
         end
         
         function [bool, id] = isa_parameter(obj)

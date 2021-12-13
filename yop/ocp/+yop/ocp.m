@@ -40,7 +40,7 @@ classdef ocp < handle
     
     properties %(Hidden) % internal properties
         snodes % Topological sort of special nodes
-        tps % Timepoints
+        tps  % Timepoints
         ints % Integrals
         ders % Derivativtes (time varying value)
         visited = [] % special nodes that has been visited - speedup
@@ -131,7 +131,7 @@ classdef ocp < handle
             solver = casadi.nlpsol('solver', 'ipopt', ...
                 struct('f', nlp.J, 'x', nlp.w, 'g', nlp.g), nlp_opts);
             nlp_sol = solver( ...
-                ...'x0', w0, ...
+                'x0', ones(size(nlp.w)), ...
                 'lbx', nlp.w_lb, ...
                 'ubx', nlp.w_ub, ...
                 'ubg', nlp.g_ub, ...
@@ -160,29 +160,42 @@ classdef ocp < handle
         end
         
         function augment_system(obj)
-            % Promote controls that are not piecewise constants to states
+            
+            % Augment system based on control parametrization
+            % Step 1: Account for all control inputs
+            for uk=obj.controls
+                du = uk.ast.der;
+                while ~isempty(du)
+                    obj.add_unique_control(du);
+                    du = du.der;
+                end
+            end
+            
+            % Step 2: Promote integrated controls to states and add
+            %         augmenting equations
             keep = [];
             for k=1:length(obj.controls)
                 uk = obj.controls(k);
-                if uk.ast.deg > 0
+                if ~isempty(uk.ast.der)
                     obj.states(end+1) = uk;
-                    obj.ode_eq{end+1} = der(uk.ast) == uk.ast.der;
+                    obj.ode_eqs{end+1} = ode(der(uk.ast)==uk.ast.der);
                 else
                     keep(end+1) = k;
                 end
             end
             obj.controls = obj.controls(keep);
 
+            % Fill in blanks
             if isempty(obj.independent)
                 obj.add_independent(yop.independent());
             end
             
             if isempty(obj.independent0)
-                obj.add_independent(yop.independent0());
+                obj.add_independent0(yop.independent0());
             end
             
             if isempty(obj.independentf)
-                obj.add_independent(yop.independentf());
+                obj.add_independentf(yop.independentf());
             end
             
         end
@@ -327,8 +340,7 @@ classdef ocp < handle
                 end
                 
                 if ~isempty(err_nodes)
-                    yop.error.timevarying_objective(err_nodes);
-                    error(yop.errors.get());
+                    error(yop.error.timevarying_objective(err_nodes));
                 end
             end
             
@@ -381,7 +393,7 @@ classdef ocp < handle
                 for id = set_diff(ode_ids, x_ids)
                     state_ast{end+1} = obj.find_variable(id);
                 end
-                yop.error.missing_state_derivative(state_ast);
+                error(yop.error.missing_state_derivative(state_ast));
             end
             
             % Change order of equations so that state vector and ode
@@ -768,7 +780,7 @@ classdef ocp < handle
                 
             else
                 % error
-                yop.error.unknown_constraint();
+                error(yop.error.unknown_constraint());
                 
             end
         end
@@ -810,7 +822,7 @@ classdef ocp < handle
                 end
             end
             
-            yop.error.failed_to_find_variable(id);
+            error(yop.error.failed_to_find_variable(id));
         end
         
         function remove_state_der(obj, id)
@@ -859,7 +871,8 @@ classdef ocp < handle
                     tp_int{end+1} = tn;
                     
                 elseif isa(tn, 'yop.ast_int')
-                    obj.snodes(end+1) = yop.ocp_expr(tn, yop.ocp_expr.int);
+                    sn = yop.ocp_expr(tn, yop.ocp_expr.int);
+                    obj.snodes(end+1) = sn;
                     obj.ints(end+1) = sn;
                     tp_int{end+1} = tn;
                     
@@ -902,7 +915,7 @@ classdef ocp < handle
             if isempty(obj.independent0)
                 obj.independent0 = yop.ocp_independent0(t);
             else
-                yop.error.multiple_independent_initial();
+                error(yop.error.multiple_independent_initial());
             end
         end
         
@@ -910,7 +923,7 @@ classdef ocp < handle
             if isempty(obj.independentf)
                 obj.independentf = yop.ocp_independentf(t);
             else
-                yop.error.multiple_independent_final();
+                error(yop.error.multiple_independent_final());
             end
         end
         
@@ -924,6 +937,15 @@ classdef ocp < handle
         
         function obj = add_control(obj, u)
             obj.controls(end+1) = yop.ocp_state_control(u);
+        end
+        
+        function obj = add_unique_control(obj, u)
+            for uk = obj.controls
+                if uk.ast.id == u.id
+                    return;
+                end
+            end
+            obj.add_control(u);
         end
         
         function obj = add_parameter(obj, p)
@@ -1222,7 +1244,7 @@ classdef ocp < handle
                         ssr{end+1} = rel(sr.lhs(n), sr.rhs(n));
                     end
                 else
-                    yop.error.incompatible_constraint_size();
+                    error(yop.error.incompatible_constraint_size());
                 end
             end
         end

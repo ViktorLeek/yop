@@ -6,12 +6,11 @@
 ocp = yop.ocp('Goddard''s Rocket Problem');
 ocp.max( y.rocket.height(tf) );
 ocp.st( ...
-    t0==0, tf==212, ...
+    t0==0, ...
     der(x) == dx, ...
     y.rocket.height(t0)   == 0    , ...
     y.rocket.velocity(t0) == 0    , ...
     y.rocket.mass(t0)     == 215  , ...
-    y.rocket.velocity(t<50) <= 500, ...
     68 <= y.rocket.mass <= 215 , ...
     0 <= y.rocket.fuel_mass_flow <= 9.5 ...
     );
@@ -26,30 +25,30 @@ sol.plot(t, x(2));
 subplot(413); hold on
 sol.plot(t, x(3));
 subplot(414); hold on
-sol.plot(t, u);
+sol.stairs(t, u);
 
 % sol.save('Goddard.mat');
 % sol = yop.load('Goddard', t, t0, tf, x, u, p);
 
 %% Formulation 1 - variation 1: PWX control, integration of velocity
-[t0, tf, t, x] = yop.ocp_variables('nx', 3);
-u = yop.control('pw', 'quadratic'); % <-- Option for control parametrization
+t  = yop.time;
+t0 = yop.time0;
+x  = yop.state(3);
+u  = yop.control('pw', 'quadratic'); % <-- Option for control parametrization
 
 [~, y] = rocket_model(x, u);
 rocket = y.rocket;
 
 ocp = yop.ocp('Goddard''s Rocket Problem');
 ocp.max( int(rocket.velocity) );
-ocp.st( ...
-    der(x) == rocket_model(x, u), ...
-    rocket.height(t0)   == 0    , ...
-    rocket.velocity(t0) == 0    , ...
-    rocket.mass(t0)     == 215  , ...
-    68 <= rocket.mass <= 215 , ...
-    0 <= rocket.fuel_mass_flow <= 9.5 ...
-    );
+ocp.st( der(x) == rocket_model(x, u) );
+ocp.st( rocket.height(t0)   == 0 );
+ocp.st( rocket.velocity(t0) == 0 );
+ocp.st( rocket.mass(t0) == 215 );
+ocp.st( 68 <= rocket.mass <= 215 );
+ocp.st(  0 <= rocket.fuel_mass_flow <= 9.5 );
 
-sol = ocp.solve('intervals', 80);
+sol = ocp.solve('intervals', 50);
 
 figure(1);
 subplot(411); hold on
@@ -73,20 +72,19 @@ Wf = yop.control();
 x = [v; h; m];
 u = Wf;
 
-m_max = 215;
-m_min = 68;
-Wf_max = 9.5;
+x_max = [inf; inf; 215];
+x_min = [  0;   0;  68];
+u_max = 9.5;
+u_min = 0.0;
+
+x0 = [0; 0; x_max(3)];
 
 ocp = yop.ocp('Goddard''s Rocket Problem');
 ocp.max( h(tf) );
-ocp.st( ...
-    der(x) == rocket_model(x, u), ...    
-    v(t0) == 0, ...
-    h(t0) == 0, ...
-    m(t0) == m_max, ...
-    m_min <= m <= m_max, ...
-    0 <= Wf <= Wf_max ...
-    );
+ocp.st( der(x) == rocket_model(x, u) );
+ocp.st(  x(t0) == x0 );
+ocp.st( x_min <= x <= x_max );
+ocp.st( u_min <= u <= u_max );
 
 sol = ocp.solve('intervals', 50);
 
