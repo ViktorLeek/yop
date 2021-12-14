@@ -17,17 +17,17 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
             obj.rhs = rhs;
         end
         
-        function obj = set_pred(obj)
-            add_pred(obj.lhs, obj);
-            add_pred(obj.rhs, obj);
-        end
-        
         function obj = hard(obj)
             obj.m_hard = true;
         end
         
         function bool = is_hard(obj)
             bool = obj.m_hard;
+        end
+        
+        function boolv = is_transcription_invariant(obj)
+            boolv = is_transcription_invariant(obj.lhs) & ...
+                is_transcription_invariant(obj.rhs);
         end
         
         function sz = size(obj, varargin)

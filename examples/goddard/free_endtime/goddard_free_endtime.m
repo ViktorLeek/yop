@@ -42,7 +42,7 @@ rocket = y.rocket;
 ocp = yop.ocp('Goddard''s Rocket Problem');
 ocp.max( int(rocket.velocity) );
 ocp.st( der(x) == rocket_model(x, u) );
-ocp.st( rocket.height(t0)   == 0 );
+ocp.st( rocket.height(t0) == 0 );
 ocp.st( rocket.velocity(t0) == 0 );
 ocp.st( rocket.mass(t0) == 215 );
 ocp.st( 68 <= rocket.mass <= 215 );
@@ -100,17 +100,17 @@ sol.stairs(t, Wf);
 
 %% Formulation 3
 % Time
-t0 = yop.t0();
-tf = yop.tf();
-t  = yop.t();
+t0 = yop.time0();
+tf = yop.timef();
+t  = yop.time();
 
 % States
-h  = yop.state();  % Rocket height
-v  = yop.state();  % Rocket speed
-m  = yop.state();  % Rocket mass
-Wf = yop.control();  % Rocket fuel massflow
+h  = yop.state('name', 'h');  % Rocket height
+v  = yop.state('name', 'v');  % Rocket speed
+m  = yop.state('name', 'm');  % Rocket mass
+Wf = yop.control('name', 'W_f');  % Rocket fuel massflow
 
-% Rocket parameters
+% Parameters
 D0 = 0.01227; beta = 0.145e-3; c = 2060;
 
 % Constants
@@ -126,32 +126,22 @@ m_min = 68; m_max = 215;
 % Control boundaries
 Wfmin = 0; Wfmax = 9.5;
 
-% dh = der(h);
-% M(2:4) = f(x)
-
 % Optimal control problem
 ocp = yop.ocp();
-ocp.max( h );
-ocp.st( ...
-    ... tf == 212, ...
-    ... Initial conditions
-    h(t0)==0, ...
-    v(t0)==0, ...
-    m(t0)==m_max, ...
-    ... Rocket model
-    der(v) == (Wf*c-F_D)/m-g , ...
-    der(h) == v              , ...
-    der(m) == -Wf            , ...
-    ... Box constraints
-    m_min <= m  <= m_max, ...
-    Wfmin <= Wf <= Wfmax ...
-    );
+ocp.max( h(tf) );
+ocp.st( h(t0)==0, v(t0)==0, m(t0)==m_max );
+ocp.st( der(v) == (Wf*c-F_D)/m-g );
+ocp.st( der(h) == v );
+ocp.st( der(m) == -Wf );
+ocp.st( m_min <= m  <= m_max );
+ocp.st( Wfmin <= Wf <= Wfmax );
 
 sol = ocp.solve('intervals', 50);
 
 figure(1);
 subplot(411); hold on
 sol.plot(t, v);
+sol.plot(t, der(h), '--');
 subplot(412); hold on
 sol.plot(t, h);
 subplot(413); hold on

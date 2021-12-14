@@ -428,7 +428,7 @@ classdef ocp < handle
         function set_path_con(obj)            
             obj.set_mx();
             obj.snodes.set_mx();
-            pc_vec = vertcat(obj.ec_eqs{:}, obj.ec_eqs{:});
+            pc_vec = vertcat(obj.ec_eqs{:}, obj.iec_eqs{:});
             fn = casadi.Function('eq', obj.mx_args(), {fw_eval(pc_vec)});
             
             n_eq  = length(obj.ec_eqs);
@@ -441,7 +441,7 @@ classdef ocp < handle
         function set_hard_path_con(obj)
             obj.set_mx();
             obj.snodes.set_mx();
-            pc_vec = vertcat(obj.ec_hard_eqs{:}, obj.ec_hard_eqs{:});
+            pc_vec = vertcat(obj.ec_hard_eqs{:}, obj.iec_hard_eqs{:});
             fn = casadi.Function('eq', obj.mx_args(), {fw_eval(pc_vec)});
             
             n_eq  = length(obj.ec_hard_eqs);
@@ -454,7 +454,7 @@ classdef ocp < handle
         function set_point_con(obj)
             obj.set_mx();
             obj.snodes.set_mx();
-            pc_vec = vertcat(obj.ec_point_eqs{:}, obj.ec_point_eqs{:});
+            pc_vec = vertcat(obj.ec_point_eqs{:}, obj.iec_point_eqs{:});
             fn = casadi.Function('eq', obj.mx_args(), {fw_eval(pc_vec)});
             
             n_eq = length(obj.ec_point_eqs);

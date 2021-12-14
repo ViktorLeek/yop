@@ -17,19 +17,28 @@ g = [g; pointcon(ocp.point, args)];
 g_ub = [g_ub; ocp.point.ub];
 g_lb = [g_lb; ocp.point.lb];
 
-g = [g; pathcon(ocp.path, N, args)];
-g_ub = [g_ub; ocp.path.ub];
-g_lb = [g_lb; ocp.path.lb];
 
-g = [g; hard_pathcon(ocp.path_hard, N, args)];
-g_ub = [g_ub; ocp.path_hard.ub];
-g_lb = [g_lb; ocp.path_hard.lb];
+gp = pathcon(ocp.path, N, args);
+g = [g; gp];
+if ~isequal(size(gp), [0,0])
+    g_ub = [g_ub; ocp.path.ub*ones(size(gp))];
+    g_lb = [g_lb; ocp.path.lb*ones(size(gp))];
+end
+
+gph = hard_pathcon(ocp.path_hard, N, args);
+g = [g; gph];
+if ~isequal(size(gph), [0,0])
+    g_ub = [g_ub; ocp.path.ub*ones(size(gph))];
+    g_lb = [g_lb; ocp.path.lb*ones(size(gph))];
+end
 
 for pk = ocp.path_ival
     gk = ival_pathcon(pk, N, args);
     g = [g; gk];
-    g_ub = [g_ub; ocp.path_ival.ub*ones(size(gk))];
-    g_lb = [g_lb; ocp.path_ival.lb*ones(size(gk))];
+    if ~isequal(size(gk), [0,0])
+        g_ub = [g_ub; ocp.path_ival.ub*ones(size(gk))];
+        g_lb = [g_lb; ocp.path_ival.lb*ones(size(gk))];
+    end
 end
 
 [w_lb, w_ub] = box_bnd(T0, Tf, N, args.tau, ocp);
@@ -275,7 +284,7 @@ for n=1:N
     zz = args.z(n).evaluate(0); % Does not have a parameter at tau==0
     uu = args.u(n).y(:);
     dd = args.ders(n).evaluate(0);
-    disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
+    disc = [disc; expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
 end
 tt = args.t(N+1).y;
 xx = args.x(N+1).y(:); % Only a point
@@ -285,7 +294,7 @@ pp = args.p;
 tp = args.tps;
 int = args.ints;
 dd = args.ders(n).evaluate(1);
-disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
+disc = [disc; expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
 end
 
 function disc = hard_pathcon(expr, N, args)
@@ -301,14 +310,14 @@ for n=1:N
     zz = args.z(n).evaluate(0); % Does not have a parameter at tau==0
     uu = args.u(n).y(:);
     dd = args.ders(n).evaluate(0);
-    disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
+    disc = [disc; expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
     for r = 2:length(args.tau)
         tt = args.t(n).y(r);
         xx = args.x(n).y(:, r);
         zz = args.z(n).y(:, r-1);
         uu = args.u(n).y(:);
         dd = args.ders(n).evaluate(args.tau(r));
-        disc = [disc, ...
+        disc = [disc; ...
             expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
     end
 end
@@ -317,7 +326,7 @@ xx = args.x(N+1).y(:); % Only a point
 zz = args.z(N).evaluate(1); % Does not have a parameter at N+1.
 uu = args.u(N).y(:); % Same control input as N,
 dd = args.ders(n).evaluate(1);
-disc = [disc, expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
+disc = [disc; expr.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd)];
 end
 
 function disc = ival_pathcon(expr, N, args)
