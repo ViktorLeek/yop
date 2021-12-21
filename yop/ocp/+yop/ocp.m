@@ -38,7 +38,7 @@ classdef ocp < handle
         
     end
     
-    properties %(Hidden) % internal properties
+    properties (Hidden) % internal properties
         snodes % Topological sort of special nodes
         tps  % Timepoints
         ints % Integrals
@@ -69,13 +69,13 @@ classdef ocp < handle
             obj.ints = yop.ocp_expr.empty(1,0);
             obj.ders = yop.ocp_expr.empty(1,0);
             
-            obj.independent = yop.ocp_independent.empty(1,0);
-            obj.independent0 = yop.ocp_independent0.empty(1,0);
-            obj.independentf = yop.ocp_independentf.empty(1,0);
-            obj.states = yop.ocp_state_control.empty(1,0);
-            obj.algebraics = yop.ocp_algebraic.empty(1,0);
-            obj.controls = yop.ocp_state_control.empty(1,0);
-            obj.parameters = yop.ocp_parameter.empty(1,0);
+            %             obj.independent = yop.ocp_independent.empty(1,0);
+            %             obj.independent0 = yop.ocp_independent0.empty(1,0);
+            %             obj.independentf = yop.ocp_independentf.empty(1,0);
+            %             obj.states = yop.ocp_state_control.empty(1,0);
+            %             obj.algebraics = yop.ocp_algebraic.empty(1,0);
+            %             obj.controls = yop.ocp_state_control.empty(1,0);
+            %             obj.parameters = yop.ocp_parameter.empty(1,0);
             
         end
         
@@ -124,7 +124,7 @@ classdef ocp < handle
             obj.set_ival_path_con();
             obj.set_special_functions();
             
-            nlp = yop.direct_collocation2(obj, N, d, cp);
+            nlp = yop.direct_collocation(obj, N, d, cp);
             
             nlp_opts = struct;
             nlp_opts.ipopt.acceptable_tol = 1e-6;
@@ -382,7 +382,7 @@ classdef ocp < handle
                 tmp_rhs{k} = obj.ode_eqs{k}.rhs;
             end
             ode_lhs = vertcat(tmp_lhs{:});
-            ode_rhs = vertcat(tmp_rhs{:});
+            %ode_rhs = vertcat(tmp_rhs{:});
             
             % Test if all states are bound to an ode
             [~, ode_ids] = isa_state(ode_lhs);
@@ -390,7 +390,7 @@ classdef ocp < handle
             x_ids = obj.get_state_ids();
             if ~isequal(x_ids, ode_ids)
                 state_ast = {};
-                for id = set_diff(ode_ids, x_ids)
+                for id = setdiff(ode_ids, x_ids)
                     state_ast{end+1} = obj.find_variable(id);
                 end
                 error(yop.error.missing_state_derivative(state_ast));
@@ -399,7 +399,7 @@ classdef ocp < handle
             % Change order of equations so that state vector and ode
             % equation order match
             obj.ode.lhs = ode_lhs(idx);
-            obj.ode.rhs = ode_rhs(idx);
+            obj.ode.rhs = vertcat(tmp_rhs{idx}); %ode_rhs(idx);
             
             % Algebraic equation
             nz = length(obj.alg_eqs);
@@ -549,7 +549,7 @@ classdef ocp < handle
         
         function parse_constraint(obj, c)
             obj.find_special_nodes(c);
-            ssr = yop.ocp.to_ssr(c);
+            ssr = yop.to_ssr(c);
             for k=1:length(ssr)
                 obj.classify_constraint(ssr{k});
             end
@@ -579,7 +579,7 @@ classdef ocp < handle
             
             rhs_num = isa_numeric(rhs);
             is_ival_rhs = is_ival(rhs);
-            isa_der_rhs = isa_der(rhs);
+            [isa_der_rhs, der_id_rhs] = isa_der(rhs);
             [isa_var_rhs, id_rhs] = isa_variable(rhs);
             isa_fnh_rhs = isa(ssr.rhs, 'function_handle');
             isa_state_rhs = isa_state(rhs);
@@ -603,6 +603,7 @@ classdef ocp < handle
                 % expr == der(x)
                 c = get_constructor(ssr);
                 obj.ode_eqs{end+1} = c(ssr.rhs, ssr.lhs);
+                obj.remove_state_der(der_id_rhs);
                 
             elseif is_alg(ssr) && isa_eq
                 % alg(expr1 == expr2)
@@ -1217,36 +1218,5 @@ classdef ocp < handle
             tf = tf_lb;
         end
         
-    end
-    
-    methods (Static)
-        function ssr = to_ssr(constraint)
-            % To scalar single relation form
-            relations = get_relations(constraint);
-            K = length(relations);
-            ssr = {};
-            for k=1:K
-                rk = relations{k};
-                rel = get_constructor(rk);
-                sr = rel(rmost(rk.lhs), lmost(rk.rhs));
-                numel_lhs = prod(size(sr.lhs));
-                numel_rhs = prod(size(sr.rhs));
-                if numel_lhs > 1 && numel_rhs == 1
-                    for n=1:numel_lhs
-                        ssr{end+1} = rel(sr.lhs(n), sr.rhs);
-                    end
-                elseif numel_lhs==1 && numel_rhs > 1
-                    for n=1:numel_rhs
-                        ssr{end+1} = rel(sr.lhs, sr.rhs(n));
-                    end
-                elseif numel_lhs == numel_rhs
-                    for n=1:numel_lhs
-                        ssr{end+1} = rel(sr.lhs(n), sr.rhs(n));
-                    end
-                else
-                    error(yop.error.incompatible_constraint_size());
-                end
-            end
-        end
     end
 end

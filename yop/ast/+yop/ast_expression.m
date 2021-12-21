@@ -423,7 +423,7 @@ classdef ast_expression < yop.node & yop.ast_ool
             ist  = isa_independent(texpr);  % expr(t)
             
             isrel = isa(texpr, 'yop.ast_relation');
-            ssr = yop.ocp.to_ssr(texpr);
+            ssr = yop.to_ssr(texpr);
             n = length(ssr);
             
             if isrel && n==1
@@ -460,8 +460,6 @@ classdef ast_expression < yop.node & yop.ast_ool
                 a2_lhs_is_t0 = isa_independent0(lhs2);
                 a2_lhs_is_tf = isa_independentf(lhs2);
                 a2_lhs_is_num = isa_numeric(lhs2);
-                
-            else
                 
             end
             

@@ -31,6 +31,12 @@ classdef defaults
         rk4_steps = 4;
     end
     
+    properties (Constant) % IVP
+        algebraic_guess = 1;
+        ivp_solver = 'idas';
+        ivp_sol_points = 100;
+    end
+    
     properties (Constant)
         independent_num = 0;
     end

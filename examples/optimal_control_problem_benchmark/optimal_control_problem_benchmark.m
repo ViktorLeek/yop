@@ -40,25 +40,22 @@ P_dem = P_peak/(1 + exp(-s*(t-T0)));
 K=10; 
 Ti=0.5; 
 Tt=1;
-I = yop.state(); % PI - integral state
+I = yop.state('name', 'I'); % PI - integral state
 e = wd - w_ice;
 u_pi = K*e + I;
 es = u_f - u_pi; % Non-zero when control is limited
 
-% Simulation problem
-ivp = yop.ivp( ...
-    t0==0, tf==1.4, ...
-    ... Controlled system
-    x(t0) == x0, ... 
-    der(x)== dx, ...
-    u_f   == smoke_limiter(u_pi, y.u_f_max, u_min(1), u_max(1)), ...
-    u_wg  == 0, ...
-    P_gen == P_dem, ...
-    ... Engine speed controller
-    der(I) == K/Ti*e + es/Tt, ...
-    I(t0)  == 0 ...
-    );
-sim = ivp.solve();
+sim = yop.simulation();
+sim.add( t0==0, tf==1.4 );
+sim.add( der(x)== dx );
+sim.add( x(t0) == x0 );
+sim.add( u_f == smoke_limiter(u_pi, y.u_f_max, u_min(1), u_max(1)) );
+sim.add( u_wg == 0 );
+sim.add( P_gen == P_dem );
+sim.add( der(I) == K/Ti*e + es/Tt );
+sim.add( I(t0)  == 0 );
+res = sim.solve('solver', 'ode15s'); 
+
 %%
 figure(1)
 subplot(411); hold on

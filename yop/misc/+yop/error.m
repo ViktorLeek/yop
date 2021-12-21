@@ -1,13 +1,4 @@
 classdef error < handle
-    properties
-        msg
-    end
-    methods
-        function obj = error(msg)
-            obj.msg = msg;
-        end
-    end
-    
     methods (Static)
         function m = msg_start()
             m = '[Yop] ';
@@ -94,6 +85,51 @@ classdef error < handle
                 'Failed to parse timepoint or interval', ...
                 yop.error.msg_stop()];
         end
+        
+        function msg = failed_to_parse_ivp_eq()
+            msg = [yop.error.msg_start(), ...
+                'Failed to parse simulation equation', ...
+                yop.error.msg_stop()];
+        end
+        
+        function msg = initial_value_missing(var)
+            msg = [yop.error.msg_start(), ...
+                'No initial value for variable ' var.ast.name, ...
+                'was given', yop.error.msg_stop()];
+        end
+        
+        function msg = final_value_missing(var)
+            msg = [yop.error.msg_start(), ...
+                'No final value for variable ' var.ast.name, ...
+                'was given', yop.error.msg_stop()];
+        end
+        
+        function msg = start_of_integration_missing()
+            msg = [yop.error.msg_start(), ...
+                'Start of integration (t0) not specified', ...
+                yop.error.msg_stop()];
+        end
+        
+        function msg = end_of_integration_missing()
+            msg = [yop.error.msg_start(), ...
+                'End of integration (tf) not specified', ...
+                yop.error.msg_stop()];
+        end
+        
+        function msg = ivp_solver_not_recognized()
+            msg = [yop.error.msg_start(), ...
+                'IVP (simulation) solver not recognized', ...
+                yop.error.msg_stop()];
+        end
+        
+        function msg = ode_solver_for_dae_problem(solver)
+            msg = [yop.error.msg_start(), ...
+                'The problem cannot be solved using ', solver, ...
+                ' because it is a DAE and ', solver, ' only hanldes ODEs', ...
+                yop.error.msg_stop()];
+        end
+        
+        
         
     end
 end

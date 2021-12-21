@@ -66,7 +66,7 @@ classdef ivp < handle
                 p = [p(:); obj.parameters(k).lb(:)];
             end
             
-            F = casadi.integrator('F', 'idas', dae, opts);
+            F = casadi.integrator('F', 'idas', dae, opts); 
             res = F('x0', x0, 'p', p);
             
             sol = yop.ivp_sol( ...
