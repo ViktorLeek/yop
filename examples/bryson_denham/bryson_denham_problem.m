@@ -26,11 +26,9 @@ subplot(313); hold on
 sol.plot(t, a);
 
 %% State vector, minimum value and traveled distance
-t0 = yop.time0();
-tf = yop.timef();
-t  = yop.time();
-x  = yop.state(2); % [position, speed]
-u  = yop.control('pw', 'quadratic'); % acceleration
+yopvar t t0 tf x1 x2
+x = [x1; x2];
+u = yop.control('pw', 'quadratic'); % acceleration
 
 J = 1/2 * int(u^2);
 ocp = yop.ocp('Bryson-Denham Problem');
@@ -55,34 +53,28 @@ subplot(212); hold on
 sol.plot(t, u);
 
 %% Guaranteed box constraints for boundary conditions
-t0 = yop.time0();
-tf = yop.timef();
-t  = yop.time();
-x  = yop.state();     % position
-v  = yop.state();     % speed
-a  = yop.control();   % acceleration
-
+yopvar t0 tf t x1 x2 u
 ocp = yop.ocp('Bryson-Denham Problem');
-ocp.min( 1/2 * int(a^2) );
+ocp.min( 1/2 * int(u^2) );
 ocp.st( ...
     t0==0, tf==1, ...
-    der(x) == v, ...
-    der(v) == a, ...
-    x(t0) == 0, ...
-    v(t0) == 1, ...
-    x(tf) == 0, ...
-    v(tf) == -1, ...
-    x <= 1/9 ...
+    der(x1) == x2, ...
+    der(x2) == u, ...
+    x1(t0) == 0, ...
+    x1(tf) == 0, ...
+    x2(t0) == 1, ...
+    x2(tf) == -1, ...
+    x1 <= 1/9 ...
     );
 
 sol = ocp.solve('intervals', 15, 'degree', 2);
 figure(1);
 subplot(311); hold on
-sol.plot(t, x, 'mag', 5);
+sol.plot(t, x1, 'mag', 5);
 subplot(312); hold on
-sol.plot(t, v);
+sol.plot(t, x2);
 subplot(313); hold on
-sol.stairs(t, a);
+sol.stairs(t, u);
 
 %% Compact representation
 [t0, tf, t, x, u] = yop.ocp_variables('nx', 2, 'nu', 1);
