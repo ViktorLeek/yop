@@ -40,64 +40,130 @@ classdef simulation < handle
             end
         end
         
-        function res = solve(obj, varargin)
+        function sol = solve(obj, varargin)
             ip = inputParser();
             ip.FunctionName = "yop.simulation/solve";
             ip.addParameter('solver', yop.defaults.ivp_solver);
             ip.addParameter('opts', []);
+            ip.addParameter('points', []);
+            ip.addParameter('reltol', []);
+            ip.addParameter('abstol', []);
             ip.parse(varargin{:});
-            usr = ip.Results;
+            solver = ip.Results.solver;
+            opts = yop.simulation.parse_options(...
+                ip.Results.opts, ...
+                ip.Results.points, ...
+                ip.Results.reltol, ...
+                ip.Results.abstol ...
+                );
             
             obj.augment_system();
             obj.vectorize_dynamics();
             
-            switch usr.solver
-                case 'idas'
-                    dae = struct( ...
-                        't', obj.independent.mx_vec(), ...
-                        'x', obj.states.mx_vec(), ...
-                        'z', obj.algebraics.mx_vec(), ...
-                        'p', obj.parameters.mx_vec(), ...
-                        'ode', fw_eval(obj.ode.rhs), ...
-                        'alg', fw_eval(obj.alg.rhs) ...
-                        );
-                    
-                    if isempty(usr.opts)
-                        opts = struct( ...
-                            'output_t0', true, ...
-                            'grid', linspace(obj.t0, obj.tf, yop.defaults.ivp_sol_points), ...
-                            'print_stats', false ...
-                            );
-                    else
-                        opts = usr.opts;
-                    end
-                    
-                    F = casadi.integrator('F', 'idas', dae, opts);
-                    res = F('x0', obj.x0, 'z0', obj.z0, 'p', obj.p0);
-                    
-                case 'cvodes'
-                    if obj.is_dae()
-                       error(yop.error.ode_solver_for_dae_problem());
-                    end
-                    
-%                     dae = @(t,x) full([obj.)
-                case 'collocation'
-                case 'rk'
-                case {'ode45', 'ode23', 'ode113', 'ode78', 'ode89'}
-                case {'ode15s', 'ode23s', 'ode23t', 'ode23tb', 'ode15i'}
-                    
-                    mx_fun = obj.ode_fn();
-                    odefun = @(t,x) full(mx_fun(t,x,obj.p0));
-                    options = odeset('Mass', obj.mass_matrix);
-                    res = ode15s(odefun, ...
-                        [obj.t0, obj.tf], ...
-                        [obj.x0, obj.z0]', ...
-                        options);
-                    
+            switch solver
+                case {'idas', 'cvodes', 'collocation', 'rk'}
+                    sol = obj.solve_casadi(solver, opts);
+                case 'ode45'
+                    sol = obj.solve_matlab(@ode45, opts);
+                case 'ode23'
+                    sol = obj.solve_matlab(@ode23, opts);
+                case 'ode113'
+                    sol = obj.solve_matlab(@ode113, opts);
+                case 'ode78'
+                    sol = obj.solve_matlab(@ode78, opts);
+                case 'ode89'
+                    sol = obj.solve_matlab(@ode89, opts);
+                case 'ode15s'
+                    sol = obj.solve_matlab(@ode15s, opts);
+                case 'ode23s'
+                    sol = obj.solve_matlab(@ode23s, opts);
+                case 'ode23t'
+                    sol = obj.solve_matlab(@ode23tb, opts);
+                case 'ode23tb'
+                    sol = obj.solve_matlab(@ode23tb, opts);
+                case 'ode15i'
+                    sol = obj.solve_matlab(@ode15i, opts);
                 otherwise
                     error(yop.error.ivp_solver_not_recognized());
             end
             
+        end
+        
+        function opts = opts_casadi(obj, opts)
+            
+            % Unless explicitly added as false, yop overrides this default
+            % idas option and adds the initial value to the results, which
+            % is consistent with the Matlab solvers.
+            if ~isfield(opts, 'output_t0')
+                opts.output_t0 = true;
+            end
+            
+            if ~isfield(opts, 'print_stats')
+                opts.print_stats = false;
+            end
+            
+            if ~isfield(opts, 'grid') && ~isfield(opts, 'points')
+                opts.grid = linspace(obj.t0, obj.tf, 50);
+            end
+            
+            if ~isfield(opts, 'grid') && isfield(opts, 'points')
+                tmp = opts.points;
+                opts = rmfield(opts, 'points');
+                opts.grid = linspace(obj.t0, obj.tf, tmp);
+            end
+        end
+        
+        function sol = solve_casadi(obj, solver, opts)
+            obj.variables.set_mx();
+            dae = struct( ...
+                't', obj.independent.mx, ...
+                'x', obj.states.mx_vec(), ...
+                'z', obj.algebraics.mx_vec(), ...
+                'p', obj.parameters.mx_vec(), ...
+                'ode', fw_eval(obj.ode.rhs), ...
+                'alg', fw_eval(obj.alg.rhs) ...
+                );
+            
+            opts = obj.opts_casadi(opts);
+            F = casadi.integrator('F', solver, dae, opts);
+            res = F('x0', obj.x0, 'z0', obj.z0, 'p', obj.p0);
+            sol = yop.ivp_sol(obj.variables(), obj.mx_args_sol(), ... 
+                opts.grid, full(res.xf), full(res.zf), obj.p0);
+        end
+        
+        function sol = solve_matlab(obj, solver, opts)
+            opts = yop.simulation.opts_matlab(opts);
+            opts.Mass = obj.mass_matrix();
+            res = solver(obj.ode_matlab(), ...
+                [obj.t0, obj.tf], ...
+                [obj.x0, obj.z0]', ...
+                opts);
+            t_sol = res.x;
+            x_sol = res.y(1:obj.n_x,:);
+            z_sol = res.y(obj.n_x+1:obj.n_x+obj.n_z, :);
+            p_sol = obj.p0;
+            sol = yop.ivp_sol(obj.variables(), obj.mx_args_sol(), ...
+                t_sol, x_sol, z_sol, p_sol);
+        end
+        
+        function fnh = ode_matlab(obj)
+            obj.variables.set_mx();
+            expr = [fw_eval(obj.ode.rhs); fw_eval(obj.alg.rhs)];
+            rhs = casadi.Function('ode', obj.args_matlab(), {expr});
+            fnh = @(t,x) full(rhs(t, x, obj.p0));
+        end
+        
+        function args = args_matlab(obj)
+            args = { ...
+                mx_vec(obj.independent), ...
+                [mx_vec(obj.states); mx_vec(obj.algebraics)], ...
+                mx_vec(obj.parameters) ...
+                };
+        end
+        
+        function M = mass_matrix(obj)
+            M = diag([ones(1,length(obj.states)), ...
+                zeros(1,length(obj.algebraics))]);
         end
         
         function parse_eq(obj, eq)
@@ -350,26 +416,22 @@ classdef simulation < handle
         
         function args = mx_args(obj)
             args = { ...                
-                mx_vec(obj.independent), ...
+                obj.independent.mx, ...
                 mx_vec(obj.states), ...
                 mx_vec(obj.algebraics), ...
                 mx_vec(obj.parameters) ...
                 };
         end
         
-        function args = ode_args(obj)
-            args = { ...
-                mx_vec(obj.independent), ...
-                [mx_vec(obj.states); mx_vec(obj.algebraics)], ...
+        function args = mx_args_sol(obj)
+            args = { ...                
+                obj.independent0.mx, ...
+                obj.independentf.mx, ...
+                obj.independent.mx, ...
+                mx_vec(obj.states), ...
+                mx_vec(obj.algebraics), ...
                 mx_vec(obj.parameters) ...
                 };
-        end
-        
-        function rhs = ode_fn(obj)
-            args = obj.ode_args();
-            obj.variables.set_mx();
-            expr = [fw_eval(obj.ode.rhs); fw_eval(obj.alg.rhs)];
-            rhs = casadi.Function('ode', args, {expr});
         end
         
         function augment_system(obj)
@@ -446,18 +508,44 @@ classdef simulation < handle
             n = length(obj.algebraics);
         end 
         
-        function bool = is_ode(obj)
-            bool = ~isempty(obj.ode) && isempty(obj.alg);
+        function bool = isa_ode(obj)
+            bool = ~isempty(obj.ode) && isempty(obj.alg) && ...
+                obj.n_x > 0 && obj.n_z == 0;
         end
         
-        function bool = is_dae(obj)
-            bool = ~isempty(obj.ode) && ~isempty(obj.alg);
+        function bool = isa_dae(obj)
+            bool = ~isempty(obj.ode) && ~isempty(obj.alg) && ...
+                obj.n_x > 0 && obj.n_z > 0;
         end
         
-        function M = mass_matrix(obj)
-            M = diag([ones(1,length(obj.states)), ...
-                zeros(1,length(obj.algebraics))]);
+    end
+    
+    methods (Static)
+        function opts = parse_options(opts, points, reltol, abstol)
+            if ~isempty(points)
+                opts.points = points;
+            end
+            
+            if ~isempty(reltol)
+                opts.reltol = reltol;
+            end
+            
+            if ~isempty(abstol)
+                opts.abstol = abstol;
+            end
         end
         
+        function mopts = opts_matlab(opts)
+            mopts = odeset();
+            
+            if isfield(opts, 'reltol')
+                mopts.RelTol = opts.reltol;
+            end
+            
+            if isfield(opts, 'abstol')
+                mopts.AbsTol = opts.abstol;
+            end
+                
+        end
     end
 end

@@ -133,10 +133,6 @@ classdef ast_subsref < yop.ast_expression
             bool = is_differential(obj.node);
         end
         
-        function bool = is_algebraic(obj)
-            bool = is_algebraic(obj.node);
-        end
-        
         function draw(obj)
             fprintf('subsref(node, s)\n');
             

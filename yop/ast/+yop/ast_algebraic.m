@@ -4,8 +4,9 @@ classdef ast_algebraic < yop.ast_variable
             obj@yop.ast_variable(name);
         end
         
-        function bool = is_algebraic(obj)
+        function [bool, id] = isa_algebraic(obj)
             bool = true;
+            id = obj.id;
         end
         
         function boolv = is_transcription_invariant(obj)

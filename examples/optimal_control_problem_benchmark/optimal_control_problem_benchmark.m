@@ -8,8 +8,8 @@ p_im  = yop.state('name', 'p_im');  % Intake manifold pressure
 p_em  = yop.state('name', 'p_em');  % Exhause manifold pressure
 w_tc  = yop.state('name', 'w_tc');  % Turbocharger angular velocity
 
-u_f   = yop.control('name', 'u_f', 'pw', 'linear');   % Fuel injection per cycle per cylinder
-u_wg  = yop.control('name', 'u_wg');  % Wastegate control 0-close, 1-fully open
+u_f   = yop.control('name', 'u_f', 'pw', 'linear'); % Fuel injection per cycle per cylinder
+u_wg  = yop.control('name', 'u_wg'); % Wastegate control 0-close, 1-fully open
 P_gen = yop.control('name', 'P_gen', 'pw', 'linear'); % Generator power
 
 %             [rad/s]       [Pa]      [Pa]   [rad/s]
@@ -54,7 +54,8 @@ sim.add( u_wg == 0 );
 sim.add( P_gen == P_dem );
 sim.add( der(I) == K/Ti*e + es/Tt );
 sim.add( I(t0)  == 0 );
-res = sim.solve('solver', 'ode15s'); 
+% res = sim.solve('solver', 'ode15s'); 
+res = sim.solve('solver', 'idas', 'opts', struct('points', 100));
 
 %%
 figure(1)

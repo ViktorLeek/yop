@@ -13,72 +13,46 @@ classdef ivp_sol < handle
         
         function obj = ivp_sol(ivp_vars, mx_args, t, x, z, p)
             obj.ivp_vars = ivp_vars;
-            obj.mx_args = mx_args; % {t0, tf, t, x, z, p}
+            obj.mx_args = mx_args;
             
             % Numerical solution
             obj.t = t;
             obj.x = x;
-            obj.x = z;
+            obj.z = z;
             obj.p = p;
         end
         
         
         function v = value(obj, expr)
             
-            vars = yop.ocp.find_special_nodes(expr);
-            
-            tmp_id = 0;
+            vars = yop.ivp_sol.find_variables(expr);
             for k=1:length(vars)
                 if isa(vars{k}, 'yop.ast_independent')
-                    vars{k}.m_value = obj.mx_vars{3};
-                    tmp_id = vars{k}.id;
+                    vars{k}.m_value = obj.mx_args{3};
                 end
             end
             
-            known_vars = false;
-            IDs = [obj.ivp_vars.IDs, tmp_id];
-            for k=1:length(vars)
-                known_vars = known_vars || any(vars{k}.id == IDs);
-            end
-            
-            if ~known_vars
-                v = [];
-                return
-            end     
-            
-            
             obj.ivp_vars.set_mx();
             fn = casadi.Function('fn', obj.mx_args, {fw_eval(expr)});
-            v = obj.variant_value(fn, tpv, intv, derv, mag);
+            
+            if is_transcription_invariant(expr)
+                v = obj.invariant_value(fn);
+            else
+                v = obj.variant_value(fn);
+            end
             
         end
         
         function v = invariant_value(obj, expr)
-            % Måste hantera tomma variabler (e.g. z)
-            v = full(expr( ...
-                obj.t0, ...
-                obj.tf, ...
-                obj.t(1), ...
-                obj.x(:,1), ...
-                obj.z(:,1), ...
-                obj.p() ...
-                ));
+            v = full(expr(obj.t(1), obj.t(end), obj.t(1), ...
+                obj.x(:,1), obj.z(:,1), obj.p));
         end
         
         function v = variant_value(obj, expr)
-            % MÅste göra värdena till matriser
-            v = full(expr( ...
-                obj.t0.mx(), ...
-                obj.tf.mx(), ...
-                obj.t.mat(), ...
-                obj.x.mat(), ...
-                obj.z.mat(), ...
-                obj.p.mat() ...
-                ));
+            v = full(expr(obj.t(1),obj.t(end),obj.t,obj.x,obj.z,obj.p));
         end
         
         function args = filter(obj, args)
-            % Get values
             for k=1:length(args)
                 if isa(args{k}, 'yop.node')
                     args{k} = obj.value(args{k});
@@ -679,4 +653,20 @@ classdef ivp_sol < handle
             end
         end
     end
+    
+    methods (Static)
+        function vars = find_variables(expression)
+            % Find and add all special nodes of the expression
+            [tsort, N] = topological_sort(expression);
+            
+            % Find special nodes, maintain topological order
+            vars = {};
+            for n=1:N                
+                if isa(tsort{n}, 'yop.ast_variable')
+                    vars{end+1} = tsort{n};
+                end
+            end
+        end
+    end
+    
 end
