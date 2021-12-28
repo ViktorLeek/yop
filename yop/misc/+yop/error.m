@@ -177,5 +177,17 @@ classdef error < handle
                 '  ''-parameter''', ' or ', '''-param''', newline];
         end
         
+        function msg = independent_scaled()
+            msg = [yop.error.msg_start(), ...
+                'Not possible to scale the independent variable. '...
+                'Consider scaling t0 or tf instead', yop.error.msg_stop()];
+        end
+        
+        function msg = independent_offset()
+            msg = [yop.error.msg_start(), ...
+                'Not possible to offset the independent variable. '...
+                'Consider offsetting t0 or tf instead', yop.error.msg_stop()];
+        end
+        
     end
 end

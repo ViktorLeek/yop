@@ -1,8 +1,8 @@
 %% Original formulation
-yop_time t t0 tf 
-yop_state x v % position, speed
-yop_ctrl a    % acceleration
-yop_param l   % maximum cart position
+yopvar -time t -time0 t0 -timef tf 
+yopvar -state x v % position, speed
+yopvar -ctrl a    % acceleration
+yopvar -param l   % maximum cart position
 
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( 1/2 * int(a^2) );
@@ -24,7 +24,7 @@ sol.plot(t, a);
 
 %% State vector, minimum value and traveled distance
 %   Piecewise quadratic control input (deg == 2)
-yopvar t t0 tf x1 x2 u deg 2
+yopvar -time t -time0 t0 -timef tf -state x1 x2 -ctrl u -deg 2
 
 x = [x1; x2];
 J = 1/2 * int(u^2);
@@ -50,7 +50,7 @@ subplot(212); hold on
 sol.plot(t, u);
 
 %% Guaranteed box constraints for boundary conditions
-yopvar t0 tf t x1 x2 u
+yopvar -time0 t0 -timef tf -time t -state x1 x2 -control u
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( 1/2 * int(u^2) );
 ocp.st( ...

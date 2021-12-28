@@ -5,7 +5,6 @@ ip.FunctionName = "yop.independent";
 ip.addParameter('name', 't');
 ip.parse(varargin{:});
 
-name = ip.Results.name;
-t = yop.ast_independent(name);
+t = yop.ast_independent(ip.Results.name);
 
 end

@@ -15,7 +15,7 @@ else
     % This is complex in order to only create one ast_vertcat node
     states = cell(rows, 1);
     for k=1:rows
-        states{k} = yop.ast_state([name , '_', num2str(k)]);
+        states{k} = yop.ast_state([name , '_', num2str(k)], 1, 0);
     end
     x = vertcat(states{:});
 end

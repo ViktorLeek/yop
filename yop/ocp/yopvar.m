@@ -15,11 +15,6 @@ w_flag = {'-weight', '-w', '-W'};
 os_flag = {'-offset', '-os', '-OS'};
 deg_flag = {'-deg'};
 
-times={}; t0={}   ; tf={}   ; states={}  ; algs={}  ; ctrls={}  ; params={}  ;
-t_w=[]  ; t0_w=[] ; tf_w=[] ; state_w=[] ; alg_w=[] ; ctrl_w=[] ; param_w=[] ;
-t_os=[] ; t0_os=[]; tf_os=[]; state_os=[]; alg_os=[]; ctrl_os=[]; param_os=[];
-ctrl_deg = [];
-
 k=1;
 while k <= length(varargin)
     
@@ -42,6 +37,7 @@ while k <= length(varargin)
             
         case alg_flag
             step();
+            algebraic();
             
         case ctrl_flag
             step();
@@ -49,6 +45,7 @@ while k <= length(varargin)
             
         case param_flag
             step();
+            parameter();
             
         otherwise
             error(yop.error.cannot_parse_yopvar());
@@ -65,102 +62,28 @@ end
     end
 
     function time()
+        vars={};
         while k <= length(varargin)
             switch varargin{k}
                 case w_flag
-                    step();
-                    t_w = char2num(varargin{k});
-                    step();
+                    error(yop.error.independent_scaled());
                     
                 case os_flag
-                    step();
-                    t_os = char2num(varargin{k});
-                    step();
+                    error(yop.error.independent_offset());
                     
                 case var_flag
-                    return;
+                    break;
                     
                 otherwise
-                    times{end+1} = varargin{k};
+                    vars{end+1} = varargin{k};
                     step();
             end
         end
+        add_time(vars);
     end
 
     function time0()
-        while k <= length(varargin)
-            switch varargin{k}
-                case w_flag
-                    step();
-                    t0_w = char2num(varargin{k});
-                    step();
-                    
-                case os_flag
-                    step();
-                    t0_os = char2num(varargin{k});
-                    step();
-                    
-                case var_flag
-                    return;
-                    
-                otherwise
-                    t0{end+1} = varargin{k};
-                    step();
-            end
-        end
-    end
-
-    function timef()
-        while k <= length(varargin)
-            switch varargin{k}
-                case w_flag
-                    step();
-                    tf_w = char2num(varargin{k});
-                    step();
-                    
-                case os_flag
-                    step();
-                    tf_os = char2num(varargin{k});
-                    step();
-                    
-                case var_flag
-                    return;
-                    
-                otherwise
-                    tf{end+1} = varargin{k};
-                    step();
-            end
-        end
-    end
-
-    function state()
-        while k <= length(varargin)
-            switch varargin{k}
-                case w_flag
-                    step();
-                    state_w = [state_w; char2num(varargin{k})];
-                    step();
-                    
-                case os_flag
-                    step();
-                    state_os = [state_os; char2num(varargin{k})];
-                    step();
-                    
-                case var_flag
-                    return;
-                    
-                case deg_flag
-                    
-                    
-                otherwise
-                    states{end+1} = varargin{k};
-                    step();
-            end
-        end
-    end
-
-    function control()
-        vars={}; w=1; os=0; deg=0;
+        vars={}; w=1; os=0;
         while k <= length(varargin)
             switch varargin{k}
                 case w_flag
@@ -176,9 +99,109 @@ end
                 case var_flag
                     break;
                     
+                otherwise
+                    vars{end+1} = varargin{k};
+                    step();
+            end
+        end
+        add_time0(vars, w, os);
+    end
+
+    function timef()
+        vars={}; w=1; os=0;
+        while k <= length(varargin)
+            switch varargin{k}
+                case w_flag
+                    step();
+                    w = char2num(varargin{k});
+                    step();
+                    
+                case os_flag
+                    step();
+                    os = char2num(varargin{k});
+                    step();
+                    
+                case var_flag
+                    break;
+                    
+                otherwise
+                    vars{end+1} = varargin{k};
+                    step();
+            end
+        end
+        add_timef(vars, w, os);
+    end
+
+    function state()
+        vars={}; w=1; os=0;
+        while k <= length(varargin)
+            switch varargin{k}
+                case w_flag
+                    step();
+                    w = char2num(varargin{k});
+                    step();
+                    
+                case os_flag
+                    step();
+                    os = char2num(varargin{k});
+                    step();
+                    
+                case var_flag
+                    break;
+                    
+                otherwise
+                    vars{end+1} = varargin{k};
+                    step();
+            end
+        end
+        add_state(vars, w, os);
+    end
+
+    function algebraic()
+        vars={}; w=1; os=0;
+        while k <= length(varargin)
+            switch varargin{k}
+                case w_flag
+                    step();
+                    w = char2num(varargin{k});
+                    step();
+                    
+                case os_flag
+                    step();
+                    os = char2num(varargin{k});
+                    step();
+                    
+                case var_flag
+                    break;
+                    
+                otherwise
+                    vars{end+1} = varargin{k};
+                    step();
+            end
+        end
+        add_algebraic(vars, w, os);
+    end
+
+    function control()
+        vars={}; w=1; os=0; deg=0;
+        while k <= length(varargin)
+            switch varargin{k}
+                case w_flag
+                    step();
+                    w = str2num(varargin{k});
+                    step();
+                    
+                case os_flag
+                    step();
+                    os = str2num(varargin{k});
+                    step();
+                    
+                case var_flag
+                    break;
+                    
                 case deg_flag
                     step();
-                    deg = char2num(varargin{k});
+                    deg = str2num(varargin{k});
                     step();
                     
                 otherwise
@@ -189,28 +212,129 @@ end
         add_control(vars, w, os, deg);
     end
 
-    function str = add_control(vars, w, os, deg)
+    function parameter()
+        vars={}; w=1; os=0;
+        while k <= length(varargin)
+            switch varargin{k}
+                case w_flag
+                    step();
+                    w = char2num(varargin{k});
+                    step();
+                    
+                case os_flag
+                    step();
+                    os = char2num(varargin{k});
+                    step();
+                    
+                case var_flag
+                    break;
+                    
+                otherwise
+                    vars{end+1} = varargin{k};
+                    step();
+            end
+        end
+        add_parameter(vars, w, os);
+    end
+
+    function add_time(vars)
         N = length(vars);
-        deg = ones(N, 1) .* deg;
-        w   = ones(N, 1) .* w;
-        os  = ones(N, 1) .* os;
+        for n=1:N
+            decl{end+1} = time_string(vars{n});
+        end
+    end
+
+    function add_time0(vars, w, os)
+        N = length(vars);
+        w   = ones(N, 1) .* w(:);
+        os  = ones(N, 1) .* os(:);
+        for n=1:N
+            decl{end+1} = time0_string(vars{n}, w(n), os(n));
+        end
+    end
+
+    function add_timef(vars, w, os)
+        N = length(vars);
+        w   = ones(N, 1) .* w(:);
+        os  = ones(N, 1) .* os(:);
+        for n=1:N
+            decl{end+1} = timef_string(vars{n}, w(n), os(n));
+        end
+    end
+
+    function add_state(vars, w, os)
+        N = length(vars);
+        w   = ones(N, 1) .* w(:);
+        os  = ones(N, 1) .* os(:);
+        for n=1:N
+            decl{end+1} = state_string(vars{n}, w(n), os(n));
+        end
+    end
+
+    function add_algebraic(vars, w, os)
+        N = length(vars);
+        w   = ones(N, 1) .* w(:);
+        os  = ones(N, 1) .* os(:);
+        for n=1:N
+            decl{end+1} = algebraic_string(vars{n}, w(n), os(n));
+        end
+    end
+
+    function add_control(vars, w, os, deg)
+        N = length(vars);
+        w   = ones(N, 1) .* w(:);
+        os  = ones(N, 1) .* os(:);
+        deg = ones(N, 1) .* deg(:);
         for n=1:N            
             decl{end+1} = ctrl_string(vars{n}, w(n), os(n), deg(n));
         end
+    end
+
+    function add_parameter(vars, w, os)
+        N = length(vars);
+        w   = ones(N, 1) .* w(:);
+        os  = ones(N, 1) .* os(:);
+        for n=1:N
+            decl{end+1} = parameter_string(vars{n}, w(n), os(n));
+        end
+    end
+
+    function str = time_string(name)
+        str = [name, ' = yop.ast_independent(''', name, ''');'];
+    end
+
+    function str = time0_string(name, w, os)
+        str = [name, ' = yop.ast_independent_initial(''', name, ''',', num2str(w), ',', num2str(os), ');'];
+    end
+
+    function str = timef_string(name, w, os)
+        str = [name, ' = yop.ast_independent_final(''', name, ''',', num2str(w), ',', num2str(os), ');'];
+    end
+
+    function str = state_string(name, w, os)
+        str = [name, ' = yop.ast_state(''', name, ''',', num2str(w), ',', num2str(os), ');'];
+    end
+
+    function str = algebraic_string(name, w, os)
+        str = [name, ' = yop.ast_algebraic(''', name, ''',', num2str(w), ',', num2str(os), ');'];
     end
 
     function str = ctrl_string(name, w, os, deg)
         str = [name, ' = yop.ast_control(''', name, ''',', num2str(w), ',', num2str(os), ',', num2str(deg), ');'];
     end
 
-    function num = char2num(txt)
-        filt = replace(txt, ...
-            {'[', ']', ', ', ' ,', ','}, ...
-            { '',  '',  ' ',  ' ', ' '} ...
-            );
-        tmp = textscan(filt, '%f', 'delimiter', ' ');
-        num = tmp{1};
+    function str = parameter_string(name, w, os)
+        str = [name, ' = yop.ast_parameter(''', name, ''',', num2str(w), ',', num2str(os), ');'];
     end
+
+%     function num = char2num(txt)
+%         filt = replace(txt, ...
+%             {'[', ']', ', ', ' ,', ','}, ...
+%             { '',  '',  ' ',  ' ', ' '} ...
+%             );
+%         tmp = textscan(filt, '%f', 'delimiter', ' ');
+%         num = tmp{1};
+%     end
 
 %%
 % deg = 0;
