@@ -1,4 +1,4 @@
-function yop_parameter(varargin)
+function yop_param(varargin)
 for k=1:length(varargin)
     name = varargin{k};
     evalin('caller', ...

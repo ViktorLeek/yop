@@ -1,4 +1,4 @@
-[t0, tf, t, x, u] = yop.ocp_variables('nx', 1, 'nu', 1);
+yopvar t t0 tf x u
 
 ocp = yop.ocp('Isopermetric Constraint');
 ocp.min( int(x) );

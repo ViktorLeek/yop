@@ -1,11 +1,8 @@
 %% Original formulation
-t0 = yop.time0();
-tf = yop.timef();
-t  = yop.time();
-x  = yop.state();   % position
-v  = yop.state();   % speed
-a  = yop.control(); % acceleration
-l  = yop.parameter(); % maximum cart position
+yop_time t t0 tf 
+yop_state x v % position, speed
+yop_ctrl a    % acceleration
+yop_param l   % maximum cart position
 
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( 1/2 * int(a^2) );
@@ -26,10 +23,10 @@ subplot(313); hold on
 sol.plot(t, a);
 
 %% State vector, minimum value and traveled distance
-yopvar t t0 tf x1 x2
-x = [x1; x2];
-u = yop.control('pw', 'quadratic'); % acceleration
+%   Piecewise quadratic control input (deg == 2)
+yopvar t t0 tf x1 x2 u deg 2
 
+x = [x1; x2];
 J = 1/2 * int(u^2);
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( J );
@@ -77,7 +74,7 @@ subplot(313); hold on
 sol.stairs(t, u);
 
 %% Compact representation
-[t0, tf, t, x, u] = yop.ocp_variables('nx', 2, 'nu', 1);
+[t0, tf, t, x, u] = yop.vars('nx', 2, 'nu', 1);
 ocp = yop.ocp().min( 1/2 * int(u^2) );
 ocp.st(   t0==0, tf==1    );
 ocp.st( der(x) == [x(2); u]  );
@@ -126,15 +123,12 @@ subplot(313); hold on
 sol.stairs(t, a, 'mag', 5);
 
 %% Simulation
-t0 = yop.time0();
-tf = yop.timef();
-t  = yop.time();
-x  = yop.state();     % position
-v  = yop.state();     % speed
-a  = yop.control();   % acceleration
-l  = yop.parameter(); % maximum position of the cart
+yop_time t t0 tf 
+yop_state x v % position, speed
+yop_ctrl a    % acceleration
+yop_param l   % maximum cart position
 
-ivp = yop.ivp( ...
+ivp = yop.simulation( ...
     t0==0, tf==1, ...
     x(t0) == 0  , ...
     v(t0) == 1  , ...

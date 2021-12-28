@@ -1,5 +1,5 @@
 %% Formulation 1
-[t0, tf, t, x, u] = yop.ocp_variables('nx', 3, 'nu', 1);
+[t0, tf, t, x, u] = yop.vars('nx', 3, 'nu', 1);
 
 [dx, y] = rocket_model(x, u);
 
@@ -30,11 +30,9 @@ sol.stairs(t, u);
 % sol.save('Goddard.mat');
 % sol = yop.load('Goddard', t, t0, tf, x, u, p);
 
-%% Formulation 1 - variation 1: PWX control, integration of velocity
-t  = yop.time;
-t0 = yop.time0;
-x  = yop.state(3);
-u  = yop.control('pw', 'quadratic'); % <-- Option for control parametrization
+%% Formulation 1 - variation 1: PW quadratic control, integration of velocity
+yopvar t t0 x1 x2 x3 u deg 2
+x = [x1; x2; x3];
 
 [~, y] = rocket_model(x, u);
 rocket = y.rocket;
@@ -51,33 +49,27 @@ ocp.st(  0 <= rocket.fuel_mass_flow <= 9.5 );
 sol = ocp.solve('intervals', 50);
 
 figure(1);
-subplot(411); hold on
-sol.plot(t, x(1), 'mag', 5);
-subplot(412); hold on
-sol.plot(t, x(2), 'mag', 5);
-subplot(413); hold on
-sol.plot(t, x(3), 'mag', 5);
-subplot(414); hold on
+subplot(411);
+sol.plot(t, x(1));
+subplot(412);
+sol.plot(t, x(2));
+subplot(413);
+sol.plot(t, x(3));
+subplot(414);
 sol.plot(t, u, 'mag', 5);
 
 %% Formulation 2
-t0 = yop.time0();
-tf = yop.timef();
-t  = yop.time();
-v  = yop.state();
-h  = yop.state();
-m  = yop.state();
-Wf = yop.control();
+yop_time t t0 tf
+yop_state v h m
+yop_control u
 
 x = [v; h; m];
-u = Wf;
-
 x_max = [inf; inf; 215];
 x_min = [  0;   0;  68];
+x0 = [0; 0; x_max(3)];
+
 u_max = 9.5;
 u_min = 0.0;
-
-x0 = [0; 0; x_max(3)];
 
 ocp = yop.ocp('Goddard''s Rocket Problem');
 ocp.max( h(tf) );
@@ -89,26 +81,19 @@ ocp.st( u_min <= u <= u_max );
 sol = ocp.solve('intervals', 50);
 
 figure(1);
-subplot(411); hold on
-sol.plot(t, v, 'mag', 2);
-subplot(412); hold on
+subplot(411);
+sol.plot(t, v);
+subplot(412);
 sol.plot(t, h);
-subplot(413); hold on
+subplot(413);
 sol.plot(t, m);
-subplot(414); hold on
-sol.stairs(t, Wf);
+subplot(414);
+sol.stairs(t, u);
 
 %% Formulation 3
-% Time
-t0 = yop.time0();
-tf = yop.timef();
-t  = yop.time();
-
-% States
-h  = yop.state('name', 'h');  % Rocket height
-v  = yop.state('name', 'v');  % Rocket speed
-m  = yop.state('name', 'm');  % Rocket mass
-Wf = yop.control('name', 'W_f');  % Rocket fuel massflow
+yop_time t t0 tf
+yop_state h v m
+yop_ctrl Wf
 
 % Parameters
 D0 = 0.01227; beta = 0.145e-3; c = 2060;
@@ -139,14 +124,14 @@ ocp.st( Wfmin <= Wf <= Wfmax );
 sol = ocp.solve('intervals', 50);
 
 figure(1);
-subplot(411); hold on
-sol.plot(t, v);
-sol.plot(t, der(h), '--');
-subplot(412); hold on
+subplot(411);
+sol.plot(t, v); hold on
+sol.plot(t, der(h), '--'); % Test that v == der(h)
+subplot(412);
 sol.plot(t, h);
-subplot(413); hold on
+subplot(413);
 sol.plot(t, m);
-subplot(414); hold on
+subplot(414);
 sol.stairs(t, Wf);
 
 

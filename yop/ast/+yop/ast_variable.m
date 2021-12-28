@@ -16,9 +16,11 @@ classdef ast_variable < yop.ast_expression
     
     methods
         
-        function obj = ast_variable(name)    
+        function obj = ast_variable(name, w, os)    
             obj@yop.ast_expression();
             obj.name = name;
+            obj.w = w;
+            obj.os = os;
         end
         
         function [bool, id] = isa_variable(obj)

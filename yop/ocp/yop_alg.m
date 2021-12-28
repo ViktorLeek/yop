@@ -1,4 +1,4 @@
-function yop_algebraic(varargin)
+function yop_alg(varargin)
 for k=1:length(varargin)
     name = varargin{k};
     evalin('caller', ...

@@ -1,7 +1,12 @@
 %% Optimal Control Problem Benchmark
+yopvar -t t -t0 t0 -tf tf 
+yopvar -state w_ice p_im p_em w_tc -weight [1e3, 1e5, 1e5, 1e3] -os 0
+yopvar -ctrl u_f w_wg P_gen -deg [1,0,1] -weight [1, 1, 1e5] -os 0
+
 yop_time t t0 tf
 yop_state w_ice p_im p_em w_tc % ice speed, im/em pressure, turbo speed
-yop_ctrl u_f u_wg P_gen deg [1,0,1] % fuel inj., wg area, generator pwr
+yop_ctrl u_f u_wg P_gen -deg [1,0,1] % fuel inj., wg area, generator pwr
+
 
 % States       [rad/s]       [Pa]      [Pa]   [rad/s]
 x =     [        w_ice;     p_im;     p_em;     w_tc];
@@ -36,37 +41,36 @@ e = wd - w_ice;
 u_pi = K*e + I;
 es = u_f - u_pi; % Non-zero when control is limited
 
-sim = yop.simulation();
-sim.add( t0==0, tf==1.4 );
+sim = yop.simulation(t0==0, tf==1.4);
 sim.add( der(x) == dx );
 sim.add(  x(t0) == x0 );
 sim.add( u_f == smoke_limiter(u_pi, y.u_f_max, u_min(1), u_max(1)) );
 sim.add( u_wg == 0 );
 sim.add( P_gen == P_dem );
-sim.add( der(I) == K/Ti*e + es/Tt );
+sim.add( der(I) == K/Ti*e + es/Tt ); % PID controller dynamics
 sim.add( I(t0)  == 0 );
 % res = sim.solve('solver', 'ode15s'); 
-res = sim.solve('solver', 'idas', 'opts', struct('points', 100));
+res = sim.solve('solver', 'idas', 'points', 100);
 
 %%
 figure(1)
 subplot(411); hold on
-sim.plot(t, rad2rpm(w_ice))
+res.plot(t, rad2rpm(w_ice))
 subplot(412); hold on
-sim.plot(t, p_im)
+res.plot(t, p_im)
 subplot(413); hold on
-sim.plot(t, p_em)
+res.plot(t, p_em)
 subplot(414); hold on
-sim.plot(t, w_tc)
+res.plot(t, w_tc)
 
 figure(2)
 subplot(311); hold on
-sim.plot(t, u_f)
-sim.plot(t, y.u_f_max, '--', 'LineWidth', 2);
+res.plot(t, u_f)
+res.plot(t, y.u_f_max, '--', 'LineWidth', 2);
 subplot(312); hold on
-sim.stairs(t, u_wg)
+res.stairs(t, u_wg)
 subplot(313); hold on
-sim.plot(t, P_gen)
+res.plot(t, P_gen)
 
 
 %%

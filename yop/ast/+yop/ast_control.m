@@ -4,11 +4,11 @@ classdef ast_control < yop.ast_variable
         der
     end
     methods
-        function obj = ast_control(name, deg)
-            obj@yop.ast_variable(name);
+        function obj = ast_control(name, w, os, deg)
+            obj@yop.ast_variable(name, w, os);
             obj.deg = deg;
             if deg > 0
-                obj.der = yop.ast_control(['D', obj.name], deg-1);
+                obj.der = yop.ast_control(['D', obj.name], 1, 0, deg-1);
             end
         end
         

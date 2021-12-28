@@ -1,4 +1,4 @@
-function yop_control(varargin)
+function yop_ctrl(varargin)
 
 deg = 0;
 n_var = 0;
@@ -21,6 +21,6 @@ deg = ones(n_var, 1).*deg;
 for k=1:n_var
     name = varargin{k};
     evalin('caller', ...
-        [name ' = yop.ast_control(''', name, ''',' num2str(deg(k)), ');']);
+        [name ' = yop.ast_control(''' name, ''',' num2str(deg(k)), ');']);
 end
 end

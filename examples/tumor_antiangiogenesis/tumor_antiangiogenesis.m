@@ -1,17 +1,11 @@
-clear; 
-
-t0 = yop.time0();
-tf = yop.timef();
-t  = yop.time();
-p  = yop.state();
-q  = yop.state();
-u  = yop.control();
+yopvar t t0 tf u
+yop_state p q
 
 zeta = 0.084; % per day
-b = 5.85; % per day
-d = 0.00873; % per mm^2 per day
-G = 0.15; % per mg of dose per day
-mu = 0.02;  % per day
+b = 5.85;     % per day
+d = 0.00873;  % per mm^2 per day
+G = 0.15;     % per mg of dose per day
+mu = 0.02;    % per day
 a = 75; 
 A = 15;
 

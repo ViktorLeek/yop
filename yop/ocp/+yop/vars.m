@@ -1,6 +1,6 @@
-function varargout = ocp_variables(varargin)
+function varargout = vars(varargin)
 ip = inputParser();
-ip.FunctionName = "yop.ocp_variables";
+ip.FunctionName = "yop.vars";
 ip.addParameter('nx', []);
 ip.addParameter('nz', []);
 ip.addParameter('nu', []);
