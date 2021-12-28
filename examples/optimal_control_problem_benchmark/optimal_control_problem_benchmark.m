@@ -1,25 +1,16 @@
 %% Optimal Control Problem Benchmark
-t0    = yop.time0();
-tf    = yop.timef();
-t     = yop.time();
+yop_time t t0 tf
+yop_state w_ice p_im p_em w_tc % ice speed, im/em pressure, turbo speed
+yop_ctrl u_f u_wg P_gen deg [1,0,1] % fuel inj., wg area, generator pwr
 
-w_ice = yop.state('name', 'w_ice'); % Engine angular velocity
-p_im  = yop.state('name', 'p_im');  % Intake manifold pressure
-p_em  = yop.state('name', 'p_em');  % Exhause manifold pressure
-w_tc  = yop.state('name', 'w_tc');  % Turbocharger angular velocity
+% States       [rad/s]       [Pa]      [Pa]   [rad/s]
+x =     [        w_ice;     p_im;     p_em;     w_tc];
+x0    = [rpm2rad( 800); 1.0143e5; 1.0975e5; 2.0502e3]; 
+x_min = [rpm2rad( 800);    8.1e4;    9.1e4;      500]; 
+x_max = [rpm2rad(2500);    3.5e5;    4.0e5;     15e3]; 
 
-u_f   = yop.control('name', 'u_f', 'pw', 'linear'); % Fuel injection per cycle per cylinder
-u_wg  = yop.control('name', 'u_wg'); % Wastegate control 0-close, 1-fully open
-P_gen = yop.control('name', 'P_gen', 'pw', 'linear'); % Generator power
-
-%             [rad/s]       [Pa]      [Pa]   [rad/s]
-x =     [        w_ice;     p_im;     p_em;     w_tc]; % State vector
-x0    = [rpm2rad( 800); 1.0143e5; 1.0975e5; 2.0502e3];
-x_min = [rpm2rad( 800);    8.1e4;    9.1e4;      500];
-x_max = [rpm2rad(2500);    3.5e5;    4.0e5;     15e3];
-
-%        [mg/cyc/cyl]  Effective area [-]      [W]
-u =     [        u_f;                u_wg;   P_gen]; % Control vector
+% Control [mg/cyc/cyl]  Effective area [-]      [W]
+u =     [        u_f;                u_wg;   P_gen];
 u_min = [          0;                   0;       0];
 u_max = [        150;                   1;   100e3];
 
@@ -47,8 +38,8 @@ es = u_f - u_pi; % Non-zero when control is limited
 
 sim = yop.simulation();
 sim.add( t0==0, tf==1.4 );
-sim.add( der(x)== dx );
-sim.add( x(t0) == x0 );
+sim.add( der(x) == dx );
+sim.add(  x(t0) == x0 );
 sim.add( u_f == smoke_limiter(u_pi, y.u_f_max, u_min(1), u_max(1)) );
 sim.add( u_wg == 0 );
 sim.add( P_gen == P_dem );
