@@ -1,8 +1,8 @@
 %% Original formulation
-yopvar -time t -time0 t0 -timef tf 
-yopvar -state x v % position, speed
-yopvar -ctrl a    % acceleration
-yopvar -param l   % maximum cart position
+yopvar time: t time0: t0 timef: tf 
+yopvar states: x v % position, speed
+yopvar ctrls: a    % acceleration
+yopvar params: l   % maximum cart position
 
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( 1/2 * int(a^2) );
@@ -24,7 +24,9 @@ sol.plot(t, a);
 
 %% State vector, minimum value and traveled distance
 %   Piecewise quadratic control input (deg == 2)
-yopvar -time t -time0 t0 -timef tf -state x1 x2 -ctrl u -deg 2
+yopvar time: t time0: t0 timef: tf 
+yopvar states: x1 x2 
+yopvar ctrls: u deg: 2 % picewise quadratic control input
 
 x = [x1; x2];
 J = 1/2 * int(u^2);
@@ -50,7 +52,7 @@ subplot(212); hold on
 sol.plot(t, u);
 
 %% Guaranteed box constraints for boundary conditions
-yopvar -time0 t0 -timef tf -time t -state x1 x2 -control u
+yopvar time0: t0 timef: tf time: t states: x1 x2 controls: u
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( 1/2 * int(u^2) );
 ocp.st( ...
@@ -87,18 +89,12 @@ sol.plot(t, x);
 sol.stairs(t, u);
 
 %% Minreal
-[t0, tf, t, x, u] = yop.ocp_variables('nx', 2, 'nu', 1);
+[t0, tf, t, x, u] = yop.vars('nx', 2, 'nu', 1);
 yop.ocp().min(1/2*int(u^2)).st(tf==1, der(x)==[x(2);u], x(t0)==[0; 1], ...
     x(tf)==[0;-1], x(1)<=1/9).solve().plot(t, [x;u]);
 
 %% Trade-off between control effort and traveled distance
-t0 = yop.time0();
-tf = yop.timef();
-t  = yop.time();
-x  = yop.state(); % position
-v  = yop.state(); % speed
-a  = yop.control(); % acceleration
-l  = yop.parameter(); % maximum position of the cart
+yopvar time: t time0: t0 timef: tf states: x v ctrls: a params: l
 
 beta = 30; % trade-off factor
 
@@ -123,10 +119,8 @@ subplot(313); hold on
 sol.stairs(t, a, 'mag', 5);
 
 %% Simulation
-yop_time t t0 tf 
-yop_state x v % position, speed
-yop_ctrl a    % acceleration
-yop_param l   % maximum cart position
+yopvar time: t time0: t0 timef: tf 
+yopvar states: x v controls: a parameters: l
 
 ivp = yop.simulation( ...
     t0==0, tf==1, ...

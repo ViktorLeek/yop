@@ -1,3 +1,3 @@
 function t = timef(varargin)
-t = yop.independentf(varargin{:}, 1, 0);
+t = yop.independentf(varargin{:});
 end

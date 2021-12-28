@@ -16,15 +16,11 @@ offset = ones(rows,1) .* ip.Results.offset(:);
 if rows == 1
     z = yop.ast_algebraic(name, weight, offset);
 else
-    % This is complex in order to only create one ast_vertcat node
     algebraics = cell(rows, 1);
     for k=1:rows
-        algebraics{k} = yop.ast_algebraic( ...
-            [name , '_', num2str(k)], ...
-            weight(k), ...
-            offset(k) ...
-            );
+        algebraics{k} = yop.ast_algebraic([name , '_', num2str(k)], ...
+            weight(k), offset(k));
     end
-    z = vertcat(algebraics{:});
+    z = vertcat(algebraics{:}); % single ast node
 end
 end

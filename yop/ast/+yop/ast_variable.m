@@ -10,17 +10,17 @@ classdef ast_variable < yop.ast_expression
     
     properties
         name
-        w  = 1 % Weight
-        os = 0 % offset x_s = (x - os)/w
+        weight = 1 % Scaling: x_s = (x - os)/w
+        offset = 0 
     end
     
     methods
         
-        function obj = ast_variable(name, w, os)    
+        function obj = ast_variable(name, weight, offset)
             obj@yop.ast_expression();
             obj.name = name;
-            obj.w = w;
-            obj.os = os;
+            obj.weight = weight;
+            obj.offset = offset;
         end
         
         function [bool, id] = isa_variable(obj)

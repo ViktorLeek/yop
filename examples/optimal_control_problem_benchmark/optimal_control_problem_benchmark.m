@@ -1,12 +1,7 @@
 %% Optimal Control Problem Benchmark
-yopvar -t t -t0 t0 -tf tf 
-yopvar -state w_ice p_im p_em w_tc -weight [1e3, 1e5, 1e5, 1e3] -os 0
-yopvar -ctrl u_f w_wg P_gen -deg [1,0,1] -weight [1, 1, 1e5] -os 0
-
-yop_time t t0 tf
-yop_state w_ice p_im p_em w_tc % ice speed, im/em pressure, turbo speed
-yop_ctrl u_f u_wg P_gen -deg [1,0,1] % fuel inj., wg area, generator pwr
-
+yopvar time: t time0: t0 timef: tf
+yopvar states: w_ice p_im p_em w_tc scaling: [1e3, 1e5, 1e5, 1e3]
+yopvar controls: u_f u_wg P_gen deg: [1,0,1] scaling: [1, 1, 1e5]
 
 % States       [rad/s]       [Pa]      [Pa]   [rad/s]
 x =     [        w_ice;     p_im;     p_em;     w_tc];
@@ -23,23 +18,24 @@ u_max = [        150;                   1;   100e3];
 [dx, y] = genset_model(x, u);
 
 %% Initial guess
+yopvar -state I % PID integral state
+
 % Desired engine speed
 wd = rpm2rad(1500);
+
+% PI Engine Speed Controller - with back calculation anti-windup
+K  = 10.0; 
+Ti =  0.5; 
+Tt =  1.0;
+e = wd - w_ice;
+u_pi = K*e + I;
+es = u_f - u_pi; % Non-zero when control is limited
 
 % Power outtake based on logistic function
 P_peak = 100e3; 
 T0 = 0.33; 
 s = 90;
 P_dem = P_peak/(1 + exp(-s*(t-T0)));
-
-% PI Engine Speed Controller - with back calculation anti-windup
-K=10; 
-Ti=0.5; 
-Tt=1;
-I = yop.state('name', 'I'); % PI - integral state
-e = wd - w_ice;
-u_pi = K*e + I;
-es = u_f - u_pi; % Non-zero when control is limited
 
 sim = yop.simulation(t0==0, tf==1.4);
 sim.add( der(x) == dx );
@@ -49,10 +45,10 @@ sim.add( u_wg == 0 );
 sim.add( P_gen == P_dem );
 sim.add( der(I) == K/Ti*e + es/Tt ); % PID controller dynamics
 sim.add( I(t0)  == 0 );
-% res = sim.solve('solver', 'ode15s'); 
-res = sim.solve('solver', 'idas', 'points', 100);
+res = sim.solve('solver', 'ode15s'); 
+% res = sim.solve('solver', 'idas', 'points', 100);
 
-%%
+%% Plot simulation results
 figure(1)
 subplot(411); hold on
 res.plot(t, rad2rpm(w_ice))
@@ -75,24 +71,23 @@ res.plot(t, P_gen)
 
 %%
 ocp = yop.ocp('Optimal Control Problem Benchmark');
-ocp.min( 1e3*int(y.cylinder.fuel_massflow) );
-ocp.st( ...
+ocp.min( 1e3*int(y.cylinder.fuel_massflow) ) ...
     ... Problem horizon
-    t0==0, tf<=1.4, ...
+    .st( t0==0, tf<=1.4 ) ...
     ... Differential constraint
-    der(x) == dx, ...
-    x(t0)  == x0, ...
-    ... Terminal conditions
-    P_gen(tf)  == 100e3, ... [W]
-    int(P_gen) >= 100e3, ... [J]
-    dx(tf)     == 0    , ... stationarity
-    ... Box constraints
-    x_min <= x <= x_max, ...
-    u_min <= u <= u_max, ...
+    .st( der(x) == dx ) ...
+    .st(  x(t0) == x0 ) ...
+    ... Box contraints
+    .st( x_min <= x <= x_max ) ...
+    .st( u_min <= u <= u_max ) ...
     ... Path constraints
-    y.engine.torque >= 0, ...
-    hard(y.phi <= y.phi_max) ...
-    );
+    .st( y.engine.torque >= 0 ) ...
+    .st( hard(y.phi <= y.phi_max) ) ... Hard constraint
+    ... Terminal conditions
+    .st(  P_gen(tf) == 100e3 ) ... [W]
+    .st( int(P_gen) >= 100e3 ) ... [J]
+    .st(     dx(tf) == 0 );      % Stationarity
+    
 sol = ocp.solve('intervals', 50, 'degree', 3,'guess', sim);
 
 %%

@@ -773,7 +773,7 @@ classdef ocp < handle
                 
             elseif (isa_le || isa_ge) && hard
                 % Hard inequality constraint
-                obj.iec_invar_eqs{end+1} = canonicalize(ssr).lhs;
+                obj.iec_hard_eqs{end+1} = canonicalize(ssr).lhs;
                 
             elseif isa_le || isa_ge
                 % Inequality constraint

@@ -31,7 +31,7 @@ sol.stairs(t, u);
 % sol = yop.load('Goddard', t, t0, tf, x, u, p);
 
 %% Formulation 1 - variation 1: PW quadratic control, integration of velocity
-yopvar t t0 x1 x2 x3 u deg 2
+yopvar time: t time0: t0 states: x1 x2 x3 ctrls: u deg: 2
 x = [x1; x2; x3];
 
 [~, y] = rocket_model(x, u);
@@ -49,19 +49,19 @@ ocp.st(  0 <= rocket.fuel_mass_flow <= 9.5 );
 sol = ocp.solve('intervals', 50);
 
 figure(1);
-subplot(411);
+subplot(411); hold on
 sol.plot(t, x(1));
-subplot(412);
+subplot(412); hold on
 sol.plot(t, x(2));
-subplot(413);
+subplot(413); hold on
 sol.plot(t, x(3));
-subplot(414);
+subplot(414); hold on
 sol.plot(t, u, 'mag', 5);
 
 %% Formulation 2
-yop_time t t0 tf
-yop_state v h m
-yop_control u
+yopvar time: t time0: t0 timef: tf
+yopvar states: v h m
+yopvar controls: u
 
 x = [v; h; m];
 x_max = [inf; inf; 215];
@@ -81,19 +81,19 @@ ocp.st( u_min <= u <= u_max );
 sol = ocp.solve('intervals', 50);
 
 figure(1);
-subplot(411);
+subplot(411); hold on
 sol.plot(t, v);
-subplot(412);
+subplot(412); hold on
 sol.plot(t, h);
-subplot(413);
+subplot(413); hold on
 sol.plot(t, m);
-subplot(414);
+subplot(414); hold on
 sol.stairs(t, u);
 
 %% Formulation 3
-yop_time t t0 tf
-yop_state h v m
-yop_ctrl Wf
+yopvar time: t time0: t0 timef: tf
+yopvar states: v h m
+yopvar ctrls: Wf
 
 % Parameters
 D0 = 0.01227; beta = 0.145e-3; c = 2060;
@@ -124,14 +124,14 @@ ocp.st( Wfmin <= Wf <= Wfmax );
 sol = ocp.solve('intervals', 50);
 
 figure(1);
-subplot(411);
-sol.plot(t, v); hold on
+subplot(411); hold on
+sol.plot(t, v);
 sol.plot(t, der(h), '--'); % Test that v == der(h)
-subplot(412);
+subplot(412); hold on
 sol.plot(t, h);
-subplot(413);
+subplot(413); hold on
 sol.plot(t, m);
-subplot(414);
+subplot(414); hold on
 sol.stairs(t, Wf);
 
 

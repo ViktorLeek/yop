@@ -1,19 +1,19 @@
 function yopvar(varargin)
 decl = {};
-t_flag     = {'-independent', '-time' , '-t'};
-t0_flag    = {'-independent_initial', '-independent0', '-time0', '-t0'};
-tf_flag    = {'-independent_final', '-independentf', '-timef', '-tf'};
-state_flag = {'-state'};
-alg_flag   = {'-algebraic', '-alg'};
-ctrl_flag  = {'-control'  , '-ctrl'};
-param_flag = {'-parameter', '-param'};
+t_flag     = {'-independent', '-time' , '-t', 'time:'};
+t0_flag    = {'-independent_initial', '-independent0', '-time0', '-t0', 'time0:'};
+tf_flag    = {'-independent_final', '-independentf', '-timef', '-tf', 'timef:'};
+state_flag = {'-state', 'states:'};
+alg_flag   = {'-algebraic', '-alg', 'algs:', 'algebraics:'};
+ctrl_flag  = {'-control'  , '-ctrl', 'ctrls:', 'controls:'};
+param_flag = {'-parameter', '-param', 'params:', 'parameters:'};
 
 var_flag = [t_flag(:)', t0_flag(:)', tf_flag(:)', state_flag(:)', ...
     alg_flag(:)', ctrl_flag(:)', param_flag(:)'];
 
-w_flag = {'-weight', '-w', '-W'};
-os_flag = {'-offset', '-os', '-OS'};
-deg_flag = {'-deg'};
+w_flag = {'-weight', '-w', '-W', 'weight:', 'w:', 'W:', 'weights:', 'scaling:'};
+os_flag = {'-offset', '-os', '-OS', 'offset:', 'os:', 'OS:', 'offsets:'};
+deg_flag = {'-deg', 'deg:'};
 
 k=1;
 while k <= length(varargin)
@@ -88,12 +88,12 @@ end
             switch varargin{k}
                 case w_flag
                     step();
-                    w = char2num(varargin{k});
+                    w = str2num(varargin{k});
                     step();
                     
                 case os_flag
                     step();
-                    os = char2num(varargin{k});
+                    os = str2num(varargin{k});
                     step();
                     
                 case var_flag
@@ -113,12 +113,12 @@ end
             switch varargin{k}
                 case w_flag
                     step();
-                    w = char2num(varargin{k});
+                    w = str2num(varargin{k});
                     step();
                     
                 case os_flag
                     step();
-                    os = char2num(varargin{k});
+                    os = str2num(varargin{k});
                     step();
                     
                 case var_flag
@@ -138,12 +138,12 @@ end
             switch varargin{k}
                 case w_flag
                     step();
-                    w = char2num(varargin{k});
+                    w = str2num(varargin{k});
                     step();
                     
                 case os_flag
                     step();
-                    os = char2num(varargin{k});
+                    os = str2num(varargin{k});
                     step();
                     
                 case var_flag
@@ -163,12 +163,12 @@ end
             switch varargin{k}
                 case w_flag
                     step();
-                    w = char2num(varargin{k});
+                    w = str2num(varargin{k});
                     step();
                     
                 case os_flag
                     step();
-                    os = char2num(varargin{k});
+                    os = str2num(varargin{k});
                     step();
                     
                 case var_flag
@@ -218,12 +218,12 @@ end
             switch varargin{k}
                 case w_flag
                     step();
-                    w = char2num(varargin{k});
+                    w = str2num(varargin{k});
                     step();
                     
                 case os_flag
                     step();
-                    os = char2num(varargin{k});
+                    os = str2num(varargin{k});
                     step();
                     
                 case var_flag
