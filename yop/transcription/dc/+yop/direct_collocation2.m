@@ -1,21 +1,21 @@
-function nlp = direct_collocation(ocp, N, d, cp)
+function nlp = direct_collocation2(ocp, N, d, cp)
 
 % If horizon is not fixed, T0 and Tf are nonsense. But since they are only
 % to be used for a fixed horizon, that is OK.
-[~, T0, Tf] = ocp.fixed_horizon();
+% [~, T0, Tf] = ocp.fixed_horizon();
 
-args = arguments(ocp, N, d, cp, T0, Tf);
-args = param_special_nodes(ocp, N, T0, Tf, args);
+T0=[]; Tf=[]; t=[]; t0=[]; tf=[]; dt=[]; tau=[]; tps=[]; ints=[]; ders=[];
+g=[]; g_ub=[]; g_lb=[];
+t = yop.interpolating_poly.empty(N+1, 0);
+x = yop.interpolating_poly.empty(N+1, 0);
+z = yop.interpolating_poly.empty(N  , 0);
+u = yop.interpolating_poly.empty(N  , 0);
 
-J = ocp.objective.fn(args.t0, args.tf, args.p, args.tps, args.ints);
-
-g = discretize_dynamics(ocp, N, args);
-g_ub = zeros(size(g));
-g_lb = zeros(size(g));
-
-g = [g; pointcon(ocp.point, args)];
-g_ub = [g_ub; ocp.point.ub];
-g_lb = [g_lb; ocp.point.lb];
+init_variables();
+init_collocation();
+special_nodes();
+discretize_dynamics();
+pointcons();
 
 
 gp = pathcon(ocp.path, N, args);
@@ -61,7 +61,7 @@ u  = casadi.Function('u' , {w}, {args.u.mat()});
 p  = casadi.Function('p' , {w}, {args.p});
 
 nlp = struct;
-nlp.J = J;
+nlp.J = ocp.objective.fn(t0, tf, p, tps, ints);
 nlp.w = w;
 nlp.w_ub = w_ub;
 nlp.w_lb = w_lb;
@@ -75,20 +75,168 @@ nlp.x  = @(w) full(x(w));
 nlp.z  = @(w) full(z(w));
 nlp.u  = @(w) full(u(w));
 nlp.p  = @(w) full(p(w));
+
+    function init_variables()
+        [T0, Tf] = ocp.fixed_horizon();
+        t0 = yop.cx('t0');
+        tf = yop.cx('tf');
+        p  = yop.cx('p');
+        init_time();
+        init_state();
+        init_algebraic();
+        init_control();
+    end
+
+    function init_time()
+        t_n = t0;
+        for n=1:N
+            t(n) = yop.interpolating_poly(tau, t_n + tau*dt, T0, Tf, N);
+            t_n = t_n + dt;
+        end
+        t(N+1) = yop.interpolating_poly(0, tf, T0, Tf, N);
+    end
+    
+    function init_state()
+        for n=1:N
+            x_n = yop.cx(['x_' num2str(n)], ocp.n_x, d+1);
+            x(n) = yop.interpolating_poly(tau, x_n, T0, Tf, N);
+        end
+        x_n = yop.cx(['x_' num2str(N+1)], ocp.n_x);
+        x(N+1) = yop.interpolating_poly(0, x_n, T0, Tf, N);
+    end
+
+    function init_algebraic()
+        for n=1:N
+            z_n = yop.cx(['z_' num2str(n)], ocp.n_z, d);
+            z(n) = yop.interpolating_poly(tau(2:end), z_n, T0, Tf, N);
+        end
+    end
+
+    function init_control()
+        u = yop.interpolating_poly.empty(N, 0);
+        for n=1:N
+            u_n = yop.cx(['u_' num2str(n)], ocp.n_u);
+            u(n) = yop.interpolating_poly(0, u_n, T0, Tf, N);
+        end
+    end
+
+    function init_collocation()
+        dt = (tf - t0)/N;
+        tau = full([0, casadi.collocation_points(d, cp)]);
+    end
+
+    function init_derivatives()
+        ders = yop.interpolating_poly.empty(N, 0);
+        for n=1:N
+            ders(n) = yop.interpolating_poly(tau, [], T0, Tf, N);
+        end
+    end
+
+    function special_nodes()
+        init_derivatives();
+        for node = ocp.snodes
+            tp_tmp  = [tps;  zeros(ocp.n_tp  - length(tps), 1)];
+            int_tmp = [ints; zeros(ocp.n_int - length(ints), 1)];
+ 
+            switch node.type
+                case yop.ocp_expr.tp
+                    tp = parameterize_timepoint(node, tp_tmp, int_tmp);
+                    tps = [tps; tp(:)];
+                    
+                case yop.ocp_expr.int
+                    int = parameterize_integral(node, tp_tmp, int_tmp);
+                    ints = [ints; int(:)];
+                    
+                case yop.ocp_expr.der
+                    parameterize_derivative(node, tp_tmp, int_tmp);
+            end
+        end
+    end
+
+    function val = parameterize_timepoint(tp, tp_tmp, int_tmp)
+        tt = t.value(tp.timepoint);
+        xx = x.value(tp.timepoint);
+        zz = z.value(tp.timepoint);
+        uu = u.value(tp.timepoint);
+        dd = pad(ders.value(tp.timepoint));
+        val = tp.fn(t0, tf, tt, xx, zz, uu, p, tp_tmp, int_tmp, dd);
+    end
+
+    function I = parameterize_integral(i, tp_tmp, int_tmp)
+        I = 0;
+        for n=1:N
+            yval = [];
+            for r=tau
+                tt = t(n).eval(r);
+                xx = x(n).eval(r);
+                zz = z(n).eval(r);
+                uu = u(n).eval(r);
+                dd = pad(ders(n).eval(r));
+                val_r = i.fn(t0, tf, tt, xx, zz, uu, p, tp_tmp, int_tmp, dd);
+                yval = [yval, val_r(:)];
+            end
+            lp = yop.lagrange_polynomial(tau, yval).integrate();
+            I = I + lp.evaluate(1)*dt;
+        end
+    end
+
+    function d = parameterize_derivative(der, tp_tmp, int_tmp)
+        for n=1:N
+            yval = [];
+            for r=tau
+                tt = t(n).eval(r);
+                xx = x(n).eval(r);
+                zz = z(n).eval(r);
+                uu = u(n).eval(r);
+                dd = pad(ders(n).eval(r));
+                val_r = der.fn(t0, tf, tt, xx, zz, uu, p, tp_tmp, int_tmp, dd);
+                yval = [yval, val_r(:)];
+            end
+            lp = yop.lagrange_polynomial(tau, yval);
+            yn = lp.differentiate().evaluate(tau)/dt;
+            ders(n).y = [ders(n).y; yn];
+        end
+    end
+
+    function dd = pad(d)
+        dd = [d;  zeros(ocp.n_der  - length(d), 1)];
+    end
+
+    function discretize_dynamics()
+        for n=1:N % Dynamics
+            dx = x(n).differentiate();
+            for r=tau
+                tt = t(n).eval(r);
+                xx = x(n).eval(r);
+                zz = z(n).eval(r);
+                uu = u(n).eval(r);
+                dd = ders(n).eval(r);
+                f = ocp.ode.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd);
+                a = ocp.alg.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd);
+                g = [g; (dx.evaluate(r) - dt*f); a];
+            end
+        end
+        
+        for n=1:N % Continuity
+            g = [g; x(n).eval(1) - x(n+1).eval(0)];
+        end
+        
+        g_ub = zeros(size(g));
+        g_lb = zeros(size(g));
+    end
+
+    function pointcons()
+        tt = t(1).eval(0);
+        xx = x(1).eval(0);
+        zz = z(1).eval(0);
+        uu = u(1).eval(0);
+        dd = ders(1).eval(0);
+        g = [g; ocp.point.fn(t0, tf, tt, xx, zz, uu, p, tps, ints, dd)];
+        g_ub = [g_ub; ocp.point.ub];
+        g_lb = [g_lb; ocp.point.lb];
+    end
+    
 end
-
-% function w0 = initial_guess(ocp, guess, nw)
-% 
-% if isempty(guess)
-%     w0 = ones(nw, 1);
-%     return;
-% end
-% 
-% 
-% 
-% end
-
-% function [tx
 
 function args = arguments(ocp, N, d, cp, T0, Tf)
 
@@ -140,135 +288,6 @@ args.tau = tau;
 
 end
 
-
-function args = param_special_nodes(ocp, N, T0, Tf, args)
-    % (ocp, N, tau, dt, t0, tf, t, x, z, u, p, T0, Tf)
-
-tps = [];
-ints = [];
-ders = yop.interpolating_poly.empty(N, 0);
-for n=1:N
-    ders(n) = yop.interpolating_poly(args.tau, [], T0, Tf, N);
-end
-
-for node = ocp.snodes
-    tmp_tp  = [tps;  zeros(ocp.n_tp  - length(tps), 1)];
-    tmp_int = [ints; zeros(ocp.n_int - length(ints), 1)];
-    
-    args.tps = tmp_tp;
-    args.ints = tmp_int;
-    args.ders = ders;
-    
-    switch node.type
-        case yop.ocp_expr.tp
-            tp = parameterize_timepoint(node, args, ocp.n_der);
-            tps = [tps; tp(:)];
-            
-        case yop.ocp_expr.int
-            int = parameterize_integral(node, N, args, ocp.n_der);
-            ints = [ints; int(:)];
-            
-        case yop.ocp_expr.der
-            ders = parameterize_derivative(node, N, args, ocp.n_der);
-    end
-end
-
-args.tps = tps;
-args.ints = ints;
-args.ders = ders;
-
-end
-
-function val = parameterize_timepoint(tp, args, n_der)
-t0 = args.t0;
-tf = args.tf;
-tt = args.t.value(tp.timepoint);
-xx = args.x.value(tp.timepoint);
-zz = args.z.value(tp.timepoint);
-uu = args.u.value(tp.timepoint); 
-pp = args.p;
-tps = args.tps;
-int = args.ints;
-dd = args.ders.value(tp.timepoint);
-dd = [dd;  zeros(n_der  - length(dd), 1)];
-val = tp.fn(t0, tf, tt, xx, zz, uu, pp, tps, int, dd);
-end
-
-function I = parameterize_integral(i, N, args, n_der)
-I = 0;
-t0 = args.t0;
-tf = args.tf;
-pp = args.p;
-tp = args.tps;
-int = args.ints;
-for n=1:N
-    yval = [];
-    for r=1:length(args.tau)
-        tt = args.t(n).y(r);
-        xx = args.x(n).y(:, r);
-        zz = args.z(n).evaluate(args.tau(r));
-        uu = args.u(n).y;
-        dd = args.ders(n).evaluate(args.tau(r));
-        dd = [dd;  zeros(n_der  - length(dd), 1)];
-        val_r = i.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd);
-        yval = [yval, val_r(:)];
-    end
-    lp = yop.lagrange_polynomial(args.tau, yval).integrate();
-    I = I + lp.evaluate(1)*args.dt;
-end
-end
-
-function ders = parameterize_derivative(der, N, args, n_der)
-t0 = args.t0;
-tf = args.tf;
-pp = args.p;
-tp = args.tps;
-int = args.ints;
-for n=1:N
-    yval = [];
-    for r=1:length(args.tau)
-        tt = args.t(n).y(r);
-        xx = args.x(n).y(:, r);
-        zz = args.z(n).evaluate(args.tau(r));
-        uu = args.u(n).y;
-        dd = args.ders(n).evaluate(args.tau(r));
-        dd = [dd;  zeros(n_der  - length(dd), 1)];
-        val_r = der.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd);
-        yval = [yval, val_r(:)];
-    end
-    lp = yop.lagrange_polynomial(args.tau, yval);
-    yn = lp.differentiate().evaluate(args.tau)/args.dt;
-    ders(n).y = [ders(n).y; yn];
-end
-end
-
-function g = discretize_dynamics(ocp, N, args)
-g = []; % Equality constraints from discretization
-t0 = args.t0;
-tf = args.tf;
-pp = args.p;
-tp = args.tps;
-int = args.ints;
-for n=1:N % Dynamics
-    dx = args.x(n).differentiate();
-    for r=2:length(args.tau)
-        dxr = dx.evaluate(args.tau(r));
-        tt = args.t(n).y(r);
-        xx = args.x(n).y(:, r);
-        zz = args.z(n).y(:, r-1); % only has d parameters
-        uu = args.u(n).y(:);
-        dd = args.ders(n).evaluate(args.tau(r));
-        f = ocp.ode.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd);
-        a = ocp.alg.fn(t0, tf, tt, xx, zz, uu, pp, tp, int, dd);
-        g = [g; (dxr - args.dt*f); a];
-    end
-end
-
-for n=1:N % Continuity
-    gn = args.x(n).evaluate(1) - args.x(n+1).evaluate(0);
-    g = [g; gn];
-end
-end
 
 function disc = pointcon(expr, args)
 t0 = args.t0;

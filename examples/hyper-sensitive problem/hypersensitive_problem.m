@@ -1,5 +1,5 @@
 % Hypersensitive problem from GPOPS-II
-yopvar time: t time0: t0 timef: tf states: x ctrls: u
+yopvar times: t t0 tf states: x ctrls: u
 
 ocp = yop.ocp('Hyper-senstive problem');
 ocp.min( 0.5*int(x^2 + u^2) );

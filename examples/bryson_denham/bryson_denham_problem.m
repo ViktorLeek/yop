@@ -1,5 +1,5 @@
 %% Original formulation
-yopvar time: t time0: t0 timef: tf 
+yopvar times: t t0 tf % Positional arguments
 yopvar states: x v % position, speed
 yopvar ctrls: a    % acceleration
 yopvar params: l   % maximum cart position
@@ -24,11 +24,10 @@ sol.plot(t, a);
 
 %% State vector, minimum value and traveled distance
 %   Piecewise quadratic control input (deg == 2)
-yopvar time: t time0: t0 timef: tf 
-yopvar states: x1 x2 
+yopvar times: t t0 tf 
+yopvar states: x size: [2,1]
 yopvar ctrls: u deg: 2 % picewise quadratic control input
 
-x = [x1; x2];
 J = 1/2 * int(u^2);
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( J );
@@ -52,26 +51,23 @@ subplot(212); hold on
 sol.plot(t, u);
 
 %% Guaranteed box constraints for boundary conditions
-yopvar time0: t0 timef: tf time: t states: x1 x2 controls: u
+yopvar times: t t0 tf states: x size: [2,1] controls: u
+
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( 1/2 * int(u^2) );
-ocp.st( ...
-    t0==0, tf==1, ...
-    der(x1) == x2, ...
-    der(x2) == u, ...
-    x1(t0) == 0, ...
-    x1(tf) == 0, ...
-    x2(t0) == 1, ...
-    x2(tf) == -1, ...
-    x1 <= 1/9 ...
+ocp.st( tf==1, ...
+    der(x) == [x(2); u], ...
+     x(t0) == [0; 1], ...
+     x(tf) == [0; -1], ...
+     x(1)  <= 1/9 ...
     );
 
 sol = ocp.solve('intervals', 15, 'degree', 2);
 figure(1);
 subplot(311); hold on
-sol.plot(t, x1, 'mag', 5);
+sol.plot(t, x(1), 'mag', 5);
 subplot(312); hold on
-sol.plot(t, x2);
+sol.plot(t, x(2));
 subplot(313); hold on
 sol.stairs(t, u);
 
@@ -94,7 +90,7 @@ yop.ocp().min(1/2*int(u^2)).st(tf==1, der(x)==[x(2);u], x(t0)==[0; 1], ...
     x(tf)==[0;-1], x(1)<=1/9).solve().plot(t, [x;u]);
 
 %% Trade-off between control effort and traveled distance
-yopvar time: t time0: t0 timef: tf states: x v ctrls: a params: l
+yopvar times: t t0 tf states: x v ctrls: a params: l
 
 beta = 30; % trade-off factor
 
@@ -119,8 +115,10 @@ subplot(313); hold on
 sol.stairs(t, a, 'mag', 5);
 
 %% Simulation
-yopvar time: t time0: t0 timef: tf 
-yopvar states: x v controls: a parameters: l
+yopvar times: t t0 tf 
+yopvar states: x v 
+yopvar controls: a 
+yopvar parameters: l
 
 ivp = yop.simulation( ...
     t0==0, tf==1, ...

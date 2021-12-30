@@ -2,28 +2,25 @@ function varargout = control(varargin)
 
 ip = inputParser();
 ip.FunctionName = "yop.control";
-ip.addOptional('rows', 1);
+ip.addOptional('size', [1, 1]);
 ip.addParameter('name', 'u');
 ip.addParameter('weight', 1);
 ip.addParameter('offset', 0);
 ip.addParameter('deg', 0);
 ip.parse(varargin{:});
 
-rows = ip.Results.rows;
+sz = ip.Results.size;
+nu = prod(sz);
 name = ip.Results.name;
-weight = ones(rows,1) .* ip.Results.weight(:);
-offset = ones(rows,1) .* ip.Results.offset(:);
-deg = ones(rows,1) .* ip.Results.deg;
-
-if rows <= 0
-    error(yop.error.variable_too_few_dimensions());
-end
+weight = ones(nu,1) .* ip.Results.weight(:);
+offset = ones(nu,1) .* ip.Results.offset(:);
+deg = ip.Results.deg;
 
 if any(deg < 0)
     error(yop.error.invalid_control_degree());
 end
 
-if rows == 1
+if isequal(sz, [1, 1])
     u = yop.ast_control(name, weight, offset, deg);
     varargout = {u};
     du = u.der;
@@ -33,8 +30,8 @@ if rows == 1
     end
 else
    controls = {}; 
-    for k=1:rows
-        u = yop.ast_control([name , '_', num2str(k)], weight(k), offset(k), deg(k));
+    for k=1:nu
+        u = yop.ast_control([name , '_', num2str(k)], weight(k), offset(k), deg);
         controls{k,1} = u;
         du = u.der;
         for n=1:deg
@@ -44,7 +41,7 @@ else
     end
     varargout = cell(1, 1+deg);
     for k=1:deg+1
-        varargout{k} = vertcat(controls{:,k});
+        varargout{k} = reshape(vertcat(controls{:,k}), sz);
     end
 end
 

@@ -1,5 +1,4 @@
-yopvar t t0 tf u
-yop_state p q
+yopvar times: t t0 tf states: p q controls: u
 
 zeta = 0.084; % per day
 b = 5.85;     % per day

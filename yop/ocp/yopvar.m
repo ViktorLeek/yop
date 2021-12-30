@@ -1,19 +1,21 @@
 function yopvar(varargin)
 decl = {};
 t_flag     = {'-independent', '-time' , '-t', 'time:'};
-t0_flag    = {'-independent_initial', '-independent0', '-time0', '-t0', 'time0:'};
-tf_flag    = {'-independent_final', '-independentf', '-timef', '-tf', 'timef:'};
+t0_flag    = {'-independent_initial', '-independent0', '-time0', '-t0', 'time0:', 'time_0:'};
+tf_flag    = {'-independent_final', '-independentf', '-timef', '-tf', 'timef:', 'time_f:'};
+ts_flag    = {'times:'};
 state_flag = {'-state', 'states:'};
 alg_flag   = {'-algebraic', '-alg', 'algs:', 'algebraics:'};
 ctrl_flag  = {'-control'  , '-ctrl', 'ctrls:', 'controls:'};
 param_flag = {'-parameter', '-param', 'params:', 'parameters:'};
+size_flag  = {'size:', 'sz:'};
 
 var_flag = [t_flag(:)', t0_flag(:)', tf_flag(:)', state_flag(:)', ...
     alg_flag(:)', ctrl_flag(:)', param_flag(:)'];
 
 w_flag = {'-weight', '-w', '-W', 'weight:', 'w:', 'W:', 'weights:', 'scaling:'};
 os_flag = {'-offset', '-os', '-OS', 'offset:', 'os:', 'OS:', 'offsets:'};
-deg_flag = {'-deg', 'deg:'};
+deg_flag = {'-deg', 'deg:', 'degree:'};
 
 k=1;
 while k <= length(varargin)
@@ -30,6 +32,10 @@ while k <= length(varargin)
         case tf_flag
             step();
             timef();
+            
+        case ts_flag
+            step();
+            times();
             
         case state_flag
             step();
@@ -50,7 +56,7 @@ while k <= length(varargin)
         otherwise
             error(yop.error.cannot_parse_yopvar());
     end
-
+    
 end
 
 for r=1:length(decl)
@@ -58,7 +64,7 @@ for r=1:length(decl)
 end
 
     function step()
-        k = k+1;
+        k=k+1;
     end
 
     function time()
@@ -132,7 +138,7 @@ end
         add_timef(vars, w, os);
     end
 
-    function state()
+    function times()
         vars={}; w=1; os=0;
         while k <= length(varargin)
             switch varargin{k}
@@ -154,7 +160,37 @@ end
                     step();
             end
         end
-        add_state(vars, w, os);
+        add_times(vars, w, os);
+    end
+
+    function state()
+        vars={}; size=[1,1]; w=1; os=0;
+        while k <= length(varargin)
+            switch varargin{k}
+                case size_flag
+                    step();
+                    size = str2num(varargin{k});
+                    step();
+                
+                case w_flag
+                    step();
+                    w = str2num(varargin{k});
+                    step();
+                    
+                case os_flag
+                    step();
+                    os = str2num(varargin{k});
+                    step();
+                    
+                case var_flag
+                    break;
+                    
+                otherwise
+                    vars{end+1} = varargin{k};
+                    step();
+            end
+        end
+        add_state(vars, size, w, os);
     end
 
     function algebraic()
@@ -262,13 +298,44 @@ end
         end
     end
 
-    function add_state(vars, w, os)
+    function add_times(vars, w, os)
+        N = length(vars);
+        w   = ones(N-1, 1) .* w(:);
+        os  = ones(N-1, 1) .* os(:);
+        
+        if N >= 1
+            decl{end+1} = time_string(vars{1});
+        end
+        
+        if N >= 2
+            decl{end+1} = time0_string(vars{2}, w(1), os(1));
+        end
+        
+        if N >= 3
+            decl{end+1} = timef_string(vars{3}, w(2), os(2));
+        end
+        
+    end
+
+    function add_state(vars, sz, w, os)
+        if isequal(sz, [1, 1])
+            add_state_scalar(vars, w, os);
+        else
+            add_state_matrix(vars, sz, w, os);
+        end
+    end
+
+    function add_state_scalar(vars, w, os)
         N = length(vars);
         w   = ones(N, 1) .* w(:);
         os  = ones(N, 1) .* os(:);
         for n=1:N
-            decl{end+1} = state_string(vars{n}, w(n), os(n));
+            decl{end+1} = state_string_scalar(vars{n}, w(n), os(n));
         end
+    end
+
+    function add_state_matrix(vars, sz, w, os)
+        decl{end+1} = state_string_matrix(vars{1}, w(:)', os(:)', sz);
     end
 
     function add_algebraic(vars, w, os)
@@ -285,7 +352,7 @@ end
         w   = ones(N, 1) .* w(:);
         os  = ones(N, 1) .* os(:);
         deg = ones(N, 1) .* deg(:);
-        for n=1:N            
+        for n=1:N
             decl{end+1} = ctrl_string(vars{n}, w(n), os(n), deg(n));
         end
     end
@@ -299,104 +366,36 @@ end
         end
     end
 
-    function str = time_string(name)
-        str = [name, ' = yop.ast_independent(''', name, ''');'];
-    end
+end
 
-    function str = time0_string(name, w, os)
-        str = [name, ' = yop.ast_independent_initial(''', name, ''',', num2str(w), ',', num2str(os), ');'];
-    end
+function str = time_string(name)
+str = [name, ' = yop.ast_independent(''', name, ''');'];
+end
 
-    function str = timef_string(name, w, os)
-        str = [name, ' = yop.ast_independent_final(''', name, ''',', num2str(w), ',', num2str(os), ');'];
-    end
+function str = time0_string(name, w, os)
+str = [name, ' = yop.ast_independent_initial(''', name, ''',', num2str(w), ',', num2str(os), ');'];
+end
 
-    function str = state_string(name, w, os)
-        str = [name, ' = yop.ast_state(''', name, ''',', num2str(w), ',', num2str(os), ');'];
-    end
+function str = timef_string(name, w, os)
+str = [name, ' = yop.ast_independent_final(''', name, ''',', num2str(w), ',', num2str(os), ');'];
+end
 
-    function str = algebraic_string(name, w, os)
-        str = [name, ' = yop.ast_algebraic(''', name, ''',', num2str(w), ',', num2str(os), ');'];
-    end
+function str = state_string_scalar(name, w, os)
+str = [name, ' = yop.ast_state(''', name, ''',', num2str(w), ',', num2str(os) ');'];
+end
 
-    function str = ctrl_string(name, w, os, deg)
-        str = [name, ' = yop.ast_control(''', name, ''',', num2str(w), ',', num2str(os), ',', num2str(deg), ');'];
-    end
+function str = state_string_matrix(name, w, os, sz)
+str = [name ' = yop.state([' num2str(sz) '],''name'',''' name ''',''scaling'',[' num2str(w), '],''offset'',[', num2str(os) ']);'];
+end
 
-    function str = parameter_string(name, w, os)
-        str = [name, ' = yop.ast_parameter(''', name, ''',', num2str(w), ',', num2str(os), ');'];
-    end
+function str = algebraic_string(name, w, os)
+str = [name, ' = yop.ast_algebraic(''', name, ''',', num2str(w), ',', num2str(os), ');'];
+end
 
-%     function num = char2num(txt)
-%         filt = replace(txt, ...
-%             {'[', ']', ', ', ' ,', ','}, ...
-%             { '',  '',  ' ',  ' ', ' '} ...
-%             );
-%         tmp = textscan(filt, '%f', 'delimiter', ' ');
-%         num = tmp{1};
-%     end
+function str = ctrl_string(name, w, os, deg)
+str = [name, ' = yop.ast_control(''', name, ''',', num2str(w), ',', num2str(os), ',', num2str(deg), ');'];
+end
 
-%%
-% deg = 0;
-% vars = {};
-% k = 1;
-% n_ctrl = 0;
-% while  k <= length(varargin)
-%     input = varargin{k};
-%     if strcmp(input, 'deg')
-%         filt = replace(varargin{k+1}, ...
-%             {'[', ']', ', ', ' ,', ','}, ...
-%             { '',  '',  ' ',  ' ', ' '} ...
-%             );
-%         tmp = textscan(filt, '%f', 'delimiter', ' ');
-%         deg = tmp{1};
-%         k = k+1;
-%         
-%     else
-%         vars{end+1} = input;
-%     end 
-%     if input(1)=='u'
-%         n_ctrl = n_ctrl + 1;
-%     end
-%     k = k + 1;
-% end
-% deg = ones(n_ctrl, 1).*deg;
-% 
-% cnt = 1;
-% for k=1:length(vars)
-%     name = vars{k};
-%     if strcmp(name, 't')
-%         evalin('caller', ...
-%         [name ' = yop.ast_independent(''', name, ''');']);
-%     
-%     elseif strcmp(name, 't0')
-%         evalin('caller', ...
-%         [name ' = yop.ast_independent_initial(''', name, ''');']);
-%     
-%     elseif strcmp(name, 'tf')
-%         evalin('caller', ...
-%         [name ' = yop.ast_independent_final(''', name, ''');']);
-%     
-%     elseif name(1)=='x'
-%         evalin('caller', ...
-%         [name ' = yop.ast_state(''', name, ''');']);
-%     
-%     elseif name(1)=='z'
-%         evalin('caller', ...
-%         [name ' = yop.ast_algebraic(''', name, ''');']);
-%     
-%     elseif name(1)=='u'
-%         evalin('caller', ...
-%         [name ' = yop.ast_control(''', name, ''',' num2str(deg(cnt)), ');']);
-%         cnt = cnt + 1;
-%     
-%     elseif name(1)=='p'
-%         evalin('caller', ...
-%         [name ' = yop.ast_parameter(''', name, ''');']);
-%     
-%     
-%     else 
-%         error(yop.error.yopvar_not_recognized(name));
-%     end
-% end
+function str = parameter_string(name, w, os)
+str = [name, ' = yop.ast_parameter(''', name, ''',', num2str(w), ',', num2str(os), ');'];
 end

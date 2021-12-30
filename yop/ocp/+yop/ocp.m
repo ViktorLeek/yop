@@ -55,13 +55,13 @@ classdef ocp < handle
             end
             obj.ode_eqs = {};
             obj.alg_eqs = {};
-            obj.ec_eqs = {};
-            obj.ec_hard_eqs = {};
-            obj.ec_ival_eqs = {};
+            obj.ec_eqs  = {};
+            obj.ec_hard_eqs  = {};
+            obj.ec_ival_eqs  = {};
             obj.ec_point_eqs = {};
             obj.iec_eqs = {};
-            obj.iec_hard_eqs = {};
-            obj.iec_ival_eqs = {};
+            obj.iec_hard_eqs  = {};
+            obj.iec_ival_eqs  = {};
             obj.iec_point_eqs = {};
             
             obj.snodes = yop.ocp_expr.empty(1,0);
@@ -69,13 +69,13 @@ classdef ocp < handle
             obj.ints = yop.ocp_expr.empty(1,0);
             obj.ders = yop.ocp_expr.empty(1,0);
             
-            obj.independent = yop.ocp_independent.empty(1,0);
+            obj.independent  = yop.ocp_independent.empty(1,0);
             obj.independent0 = yop.ocp_independent0.empty(1,0);
             obj.independentf = yop.ocp_independentf.empty(1,0);
-            obj.states = yop.ocp_state_control.empty(1,0);
-            obj.algebraics = yop.ocp_algebraic.empty(1,0);
-            obj.controls = yop.ocp_state_control.empty(1,0);
-            obj.parameters = yop.ocp_parameter.empty(1,0);
+            obj.states       = yop.ocp_state_control.empty(1,0);
+            obj.algebraics   = yop.ocp_algebraic.empty(1,0);
+            obj.controls     = yop.ocp_state_control.empty(1,0);
+            obj.parameters   = yop.ocp_parameter.empty(1,0);
             
         end
         

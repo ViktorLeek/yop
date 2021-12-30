@@ -18,19 +18,19 @@ t = yop.time();
 varargout = {t0, tf, t};
 
 if ~isempty(nx)
-    varargout{end+1} = yop.state(nx);
+    varargout{end+1} = yop.state(yop.IF(isempty(nx), [], [nx,1]));
 end
 
 if ~isempty(nz)
-    varargout{end+1} = yop.algebraic(nz);
+    varargout{end+1} = yop.algebraic(yop.IF(isempty(nz), [], [nz,1]));
 end
 
 if ~isempty(nu)
-    varargout{end+1} = yop.control(nu);
+    varargout{end+1} = yop.control(yop.IF(isempty(nu), [], [nu,1]));
 end
 
 if ~isempty(np)
-    varargout{end+1} = yop.parameter(np);
+    varargout{end+1} = yop.parameter(yop.IF(isempty(np), [], [np,1]));
 end
 
 end

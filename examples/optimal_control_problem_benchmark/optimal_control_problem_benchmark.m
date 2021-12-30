@@ -1,5 +1,5 @@
 %% Optimal Control Problem Benchmark
-yopvar time: t time0: t0 timef: tf
+yopvar time: t time_0: t0 time_f: tf
 yopvar states: w_ice p_im p_em w_tc scaling: [1e3, 1e5, 1e5, 1e3]
 yopvar controls: u_f u_wg P_gen deg: [1,0,1] scaling: [1, 1, 1e5]
 
@@ -29,7 +29,7 @@ Ti =  0.5;
 Tt =  1.0;
 e = wd - w_ice;
 u_pi = K*e + I;
-es = u_f - u_pi; % Non-zero when control is limited
+es = u_f - u_pi; % Non-zero when control is saturated
 
 % Power outtake based on logistic function
 P_peak = 100e3; 

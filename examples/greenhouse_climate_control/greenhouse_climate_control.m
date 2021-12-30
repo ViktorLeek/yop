@@ -1,4 +1,4 @@
-[t0, tf, t, x, u] = yop.vars('nx', 2, 'nu', 1);
+yopvar times: t t0 tf states: x size: [2,1] controls: u
 
 p = [7.5e-8; 1; 0.1; 4.55e-4; 136.4];
 I = max(0, 800*sin(4*pi*t/tf - 0.65*pi));

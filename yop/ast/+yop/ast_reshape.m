@@ -29,24 +29,72 @@ classdef ast_reshape < yop.ast_expression
             end
         end
         
-        function obj = set_pred(obj)
-            add_pred(obj.expr, obj);
+        function [bool, tp] = isa_timepoint(obj)
+            [bool, tp] = isa_timepoint(obj.expr);
+            bool = reshape(bool, obj.szs{:});
+            tp = reshape(tp, obj.szs{:});
         end
         
+        function [bool, id] = isa_der(obj)
+            [bool, id] = isa_der(obj.expr);
+            bool = reshape(bool, obj.szs{:});
+            id = reshape(id, obj.szs{:});
+        end
+        
+        function [bool, id] = isa_variable(obj)
+            [bool, id] = isa_variable(obj.expr);
+            bool = reshape(bool, obj.szs{:});
+            id = reshape(id, obj.szs{:});
+        end
+        
+        function [bool, id] = isa_state(obj)
+            [bool, id] = isa_state(obj.expr);
+            bool = reshape(bool, obj.szs{:});
+            id = reshape(id, obj.szs{:});
+        end
+        
+        function [bool, id] = isa_independent(obj)
+            [bool, id] = isa_independent(obj.expr);
+            bool = reshape(bool, obj.szs{:});
+            id = reshape(id, obj.szs{:});
+        end
+        
+        function [bool, id] = isa_independent0(obj)
+            [bool, id] = isa_independent0(obj.expr);
+            bool = reshape(bool, obj.szs{:});
+            id = reshape(id, obj.szs{:});
+        end
+        
+        function [bool, id] = isa_independentf(obj)
+            [bool, id] = isa_independentf(obj.expr);
+            bool = reshape(bool, obj.szs{:});
+            id = reshape(id, obj.szs{:});
+        end
+        
+        function [bool, id] = isa_parameter(obj)
+            [bool, id] = isa_parameter(obj.expr);
+            bool = reshape(bool, obj.szs{:});
+            id = reshape(id, obj.szs{:});
+        end
+        
+        function [bool, id] = isa_control(obj)
+            [bool, id] = isa_control(obj.expr);
+            bool = reshape(bool, obj.szs{:});
+            id = reshape(id, obj.szs{:});
+        end
+        
+        function [bool, id] = isa_algebraic(obj)
+            [bool, id] = isa_algebraic(obj.expr);
+            bool = reshape(bool, obj.szs{:});
+            id = reshape(id, obj.szs{:});
+        end
+            
         function value = evaluate(obj)
-            tmp = cell(size(obj.szs));
-            for k=1:length(tmp)
-                tmp{k} = evaluate(obj.szs{k});
-            end
-            value = reshape(evaluate(obj.expr), tmp{:});
+            value = reshape(evaluate(obj.expr), obj.szs{:});
         end
         
         function v = forward(obj)
-            tmp = cell(size(obj.szs));
-            for k=1:length(tmp)
-                tmp{k} = value(obj.szs{k});
-            end
-            obj.m_value = reshape(value(obj.expr), tmp{:});
+            obj.m_value = reshape(value(obj.expr), obj.szs{:});
             v = obj.m_value;
         end
         
@@ -107,17 +155,6 @@ classdef ast_reshape < yop.ast_expression
             % Visit child
             [topsort, n_elem, visited] = ...
                 topological_sort(obj.expr, visited, topsort, n_elem);
-            
-            for k=1:length(obj.args)
-                % probably unnecessary, as args are expected to be numerics
-                % but could change in the future.
-                [topsort, n_elem, visited] = topological_sort( ...
-                    obj.szs{k}, ...
-                    visited, ...
-                    topsort, ...
-                    n_elem ...
-                    );
-            end
             
             % append self to sort
             n_elem = n_elem + 1;

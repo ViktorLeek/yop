@@ -1,5 +1,7 @@
 %% Formulation 1
-[t0, tf, t, x, u] = yop.vars('nx', 3, 'nu', 1);
+yopvar times: t t0 tf
+yopvar states: x size: [3, 1]
+yopvar controls: u
 
 [dx, y] = rocket_model(x, u);
 
@@ -31,7 +33,7 @@ sol.stairs(t, u);
 % sol = yop.load('Goddard', t, t0, tf, x, u, p);
 
 %% Formulation 1 - variation 1: PW quadratic control, integration of velocity
-yopvar time: t time0: t0 states: x1 x2 x3 ctrls: u deg: 2
+yopvar times: t t0 states: x1 x2 x3 ctrls: u deg: 2
 x = [x1; x2; x3];
 
 [~, y] = rocket_model(x, u);
@@ -59,7 +61,7 @@ subplot(414); hold on
 sol.plot(t, u, 'mag', 5);
 
 %% Formulation 2
-yopvar time: t time0: t0 timef: tf
+yopvar times: t t0 tf
 yopvar states: v h m
 yopvar controls: u
 
@@ -91,7 +93,7 @@ subplot(414); hold on
 sol.stairs(t, u);
 
 %% Formulation 3
-yopvar time: t time0: t0 timef: tf
+yopvar times: t t0 tf
 yopvar states: v h m
 yopvar ctrls: Wf
 

@@ -1,6 +1,5 @@
 classdef interpolating_poly < yop.lagrange_polynomial
     properties
-        %exclude_last = false;
         N % Number of segments, not necessarily the same as no. elements.
         t0
         tf
