@@ -368,7 +368,7 @@ classdef ocp < handle
             obj.snodes.set_mx();
             for sn = obj.snodes
                 mx_expr = fw_eval(sn.ast.expr);
-                sn.fn = casadi.Function('fn', args, {mx_expr});
+                sn.fn = casadi.Function('fn', args, {mx_expr(:)});
             end
         end
         
@@ -478,7 +478,8 @@ classdef ocp < handle
                 info(k).ast = ik;
                 info(k).ub = 0;
                 info(k).lb = 0;
-                info(k).fn = casadi.Function('eq', args, {fw_eval(ik)});
+                expr = fw_eval(ik);
+                info(k).fn = casadi.Function('eq', args, {expr(:)});
             end
             
             for k=1:length(obj.iec_ival_eqs)
@@ -489,7 +490,8 @@ classdef ocp < handle
                 info(k).ast = ik;
                 info(k).ub = 0;
                 info(k).lb = -inf;
-                info(k).fn = casadi.Function('eq', args, {fw_eval(ik)});
+                expr = fw_eval(ik);
+                info(k).fn = casadi.Function('eq', args, {expr(:)});
             end
             
             obj.path_ival = info;
@@ -1216,6 +1218,14 @@ classdef ocp < handle
             
             t0 = t0_lb;
             tf = tf_lb;
+        end
+        
+        function bool = has_path(obj)
+            bool = isempty(obj.path.ub);
+        end
+        
+        function bool = has_hard_path(obj)
+            bool = isempty(obj.path_hard.ub);
         end
         
     end
