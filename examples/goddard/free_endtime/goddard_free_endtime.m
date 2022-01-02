@@ -135,21 +135,3 @@ subplot(413); hold on
 sol.plot(t, m);
 subplot(414); hold on
 sol.stairs(t, Wf);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

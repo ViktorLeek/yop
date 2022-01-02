@@ -90,10 +90,14 @@ classdef ocp < handle
         function obj = st(obj, varargin)
             for k=1:length(varargin)
                 obj.parse_constraint(varargin{k});
-                if ~yop.errors.empty()
-                    error(yop.errors.get());
-                end
             end
+        end
+        
+        function obj = hard(obj, varargin)
+            for k=1:length(varargin)
+                varargin{k} = hard(varargin{k});
+            end
+            obj.st(varargin{:});
         end
         
         function sol = solve(obj, varargin)
@@ -206,27 +210,34 @@ classdef ocp < handle
             if isempty(obj.independent0.ub) && isempty(obj.independent0.lb)
                 obj.independent0.ub = yop.defaults.independent0_ub;
                 obj.independent0.lb = yop.defaults.independent0_lb;
+            end
                 
-            elseif isempty(obj.independent0.ub)
+            if isempty(obj.independent0.ub)
                 obj.independent0.ub = inf;
+            end
                 
-            elseif isempty(obj.independent0.lb)
+            if isempty(obj.independent0.lb)
                 obj.independent0.lb = -inf;
-                
             end
             
             % Timef
             if isempty(obj.independentf.ub) && isempty(obj.independentf.lb)
                 obj.independentf.ub = yop.defaults.independentf_ub;
-                obj.independentf.lb = yop.defaults.independentf_lb;
-                
-            elseif isempty(obj.independentf.ub)
+                obj.independentf.lb = yop.defaults.independentf_lb; 
+            end
+            
+            if isempty(obj.independentf.ub)
                 obj.independentf.ub = inf;
-                
-            elseif isempty(obj.independent0.lb)
+            end
+            
+            if isempty(obj.independentf.lb)
                 % User should introduce t0 <= tf
+                warning(['[Yop] Final time is unbounded from below. ', ...
+                    'If this is intentional, consider introducing ''t0 <= tf''. ', ...
+                    'If this was unintentional, set a lower bound for tf ' ...
+                    '(''tf >= value'') and consider introduction the above mentioned ' ...
+                    'constraint if t0 and tf can overlap.']);
                 obj.independentf.lb = -inf; 
-                
             end
             
             % Time
@@ -1221,11 +1232,11 @@ classdef ocp < handle
         end
         
         function bool = has_path(obj)
-            bool = isempty(obj.path.ub);
+            bool = ~isempty(obj.path.ub);
         end
         
         function bool = has_hard_path(obj)
-            bool = isempty(obj.path_hard.ub);
+            bool = ~isempty(obj.path_hard.ub);
         end
         
     end

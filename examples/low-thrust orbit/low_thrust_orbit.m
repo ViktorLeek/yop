@@ -2,7 +2,7 @@ t0  = yop.time0();
 tf  = yop.timef();
 t   = yop.time();
 x   = yop.state('size', [7, 1]);
-u   = yop.control('size', [3, 1], 'pw', 'quadratic');
+u   = yop.control('size', [3, 1], 'deg', 2);
 tau = yop.parameter();
 
 x_min = [2e7; -1; -1; -1; -1;    pi; 0.1];
