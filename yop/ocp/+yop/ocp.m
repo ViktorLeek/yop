@@ -430,21 +430,22 @@ classdef ocp < handle
             args = obj.mx_args();
             obj.set_mx();
             obj.snodes.set_mx();
+            ode_expr = fw_eval(obj.ode.rhs);
+            alg_expr = fw_eval(obj.alg.rhs);
             obj.ode.fn = ...
-                casadi.Function('ode', args, {fw_eval(obj.ode.rhs)});
+                casadi.Function('ode', args, {ode_expr(:)});
             obj.alg.fn = ...
-                casadi.Function('alg', args, {fw_eval(obj.alg.rhs)});
+                casadi.Function('alg', args, {alg_expr(:)});
         end
         
         function set_path_con(obj)            
             obj.set_mx();
             obj.snodes.set_mx();
-            pc_vec = vertcat(obj.ec_eqs{:}, obj.iec_eqs{:});
-            fn = casadi.Function('eq', obj.mx_args(), {fw_eval(pc_vec)});
-            
+            expr = fw_eval(vertcat(obj.ec_eqs{:}, obj.iec_eqs{:}));
+            obj.path.fn = ...
+                casadi.Function('eq', obj.mx_args(), {expr(:)});
             n_eq  = length(obj.ec_eqs);
             n_ieq = length(obj.iec_eqs);
-            obj.path.fn = fn;
             obj.path.ub = zeros(n_eq+n_ieq, 1);
             obj.path.lb = [zeros(n_eq,1); -inf(n_ieq,1)];
         end
@@ -452,12 +453,11 @@ classdef ocp < handle
         function set_hard_path_con(obj)
             obj.set_mx();
             obj.snodes.set_mx();
-            pc_vec = vertcat(obj.ec_hard_eqs{:}, obj.iec_hard_eqs{:});
-            fn = casadi.Function('eq', obj.mx_args(), {fw_eval(pc_vec)});
-            
+            expr = fw_eval(vertcat(obj.ec_hard_eqs{:}, obj.iec_hard_eqs{:}));
+            obj.path_hard.fn = ...
+                casadi.Function('eq', obj.mx_args(), {expr(:)});
             n_eq  = length(obj.ec_hard_eqs);
             n_ieq = length(obj.iec_hard_eqs);
-            obj.path_hard.fn = fn;
             obj.path_hard.ub = zeros(n_eq+n_ieq, 1);
             obj.path_hard.lb = [zeros(n_eq,1); -inf(n_ieq,1)];
         end
@@ -465,12 +465,11 @@ classdef ocp < handle
         function set_point_con(obj)
             obj.set_mx();
             obj.snodes.set_mx();
-            pc_vec = vertcat(obj.ec_point_eqs{:}, obj.iec_point_eqs{:});
-            fn = casadi.Function('eq', obj.mx_args(), {fw_eval(pc_vec)});
-            
+            expr = fw_eval(vertcat(obj.ec_point_eqs{:}, obj.iec_point_eqs{:}));
+            obj.point.fn = ...
+                casadi.Function('eq', obj.mx_args(), {expr(:)});
             n_eq = length(obj.ec_point_eqs);
             n_ieq = length(obj.iec_point_eqs);
-            obj.point.fn = fn;
             obj.point.ub = zeros(n_eq+n_ieq, 1);
             obj.point.lb = [zeros(n_eq,1); -inf(n_ieq,1)];
         end
