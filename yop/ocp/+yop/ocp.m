@@ -35,6 +35,7 @@ classdef ocp < handle
         iec_hard_eqs
         iec_ival_eqs
         iec_point_eqs
+        guess
         
     end
     
@@ -113,7 +114,7 @@ classdef ocp < handle
             N  = opts.intervals;
             d  = opts.degree;
             cp = opts.points;
-            guess = opts.guess;
+            obj.guess = opts.guess;
             
             % The system is augmented before box bounds are set in order to
             % use the correct default value for the augemented variables.
@@ -135,7 +136,7 @@ classdef ocp < handle
             solver = casadi.nlpsol('solver', 'ipopt', ...
                 struct('f', nlp.J, 'x', nlp.w, 'g', nlp.g), nlp_opts);
             nlp_sol = solver( ...
-                'x0', ones(size(nlp.w)), ...
+                'x0', nlp.w0, ...
                 'lbx', nlp.w_lb, ...
                 'ubx', nlp.w_ub, ...
                 'ubg', nlp.g_ub, ...
@@ -143,13 +144,13 @@ classdef ocp < handle
                 );
             
             w_opt = struct;
-            w_opt.t0 = obj.dst0(nlp.t0(nlp_sol.x));
-            w_opt.tf = obj.dstf(nlp.tf(nlp_sol.x));
-            w_opt.t = obj.dst(nlp.t(nlp_sol.x));
-            w_opt.x = obj.dsx(nlp.x(nlp_sol.x));
-            w_opt.z = obj.dsz(nlp.z(nlp_sol.x));
-            w_opt.u = obj.dsu(nlp.u(nlp_sol.x));
-            w_opt.p = obj.dsp(nlp.p(nlp_sol.x));
+            w_opt.t0 = obj.descale_t0(nlp.t0(nlp_sol.x));
+            w_opt.tf = obj.descale_tf(nlp.tf(nlp_sol.x));
+            w_opt.t = obj.descale_t(nlp.t(nlp_sol.x));
+            w_opt.x = obj.descale_x(nlp.x(nlp_sol.x));
+            w_opt.z = obj.descale_z(nlp.z(nlp_sol.x));
+            w_opt.u = obj.descale_u(nlp.u(nlp_sol.x));
+            w_opt.p = obj.descale_p(nlp.p(nlp_sol.x));
             
             sol = yop.ocp_sol( ...
                 obj.independent0, ...
@@ -563,55 +564,55 @@ classdef ocp < handle
         
         function args = mx_dargs(obj)
             % Descale
-            t0 = obj.dst0(mx_vec(obj.independent0));
-            tf = obj.dstf(mx_vec(obj.independentf));
-            tt = obj.dst (mx_vec(obj.independent));
-            xx = obj.dsx (mx_vec(obj.states));
-            zz = obj.dsz (mx_vec(obj.algebraics));
-            uu = obj.dsu (mx_vec(obj.controls));
-            pp = obj.dsp (mx_vec(obj.parameters));
+            t0 = obj.descale_t0(mx_vec(obj.independent0));
+            tf = obj.descale_tf(mx_vec(obj.independentf));
+            tt = obj.descale_t (mx_vec(obj.independent));
+            xx = obj.descale_x (mx_vec(obj.states));
+            zz = obj.descale_z (mx_vec(obj.algebraics));
+            uu = obj.descale_u (mx_vec(obj.controls));
+            pp = obj.descale_p (mx_vec(obj.parameters));
             tp = mx_vec(obj.tps);
             ii = mx_vec(obj.ints);
             dd = mx_vec(obj.ders);
             args = {t0, tf, tt, xx, zz, uu, pp, tp, ii, dd};
         end
         
-        function vs = sct0(obj, v)
+        function vs = scale_t0(obj, v)
             % scale t0
             vs = (v + obj.OS_t0).*(1./obj.W_t0);
         end
         
-        function vs = sctf(obj, v)
+        function vs = scale_tf(obj, v)
             % scale tf
             vs = (v + obj.OS_tf).*(1./obj.W_tf);
         end
         
-        function vs = sct(obj, v)
+        function vs = scale_t(obj, v)
             % scale t
             vs = (v + obj.OS_t).*(1./obj.W_t);
         end
         
-        function vs = scx(obj, v)
+        function vs = scale_x(obj, v)
             % scale x
             vs = (v + obj.OS_x).*(1./obj.W_x);
         end
         
-        function vs = scz(obj, v)
+        function vs = scale_z(obj, v)
             % scale z
             vs = (v + obj.OS_z).*(1./obj.W_z);
         end
         
-        function vs = scu(obj, v)
+        function vs = scale_u(obj, v)
             % scale u
             vs = (v + obj.OS_u).*(1./obj.W_u);
         end
         
-        function vs = scp(obj, v)
+        function vs = scale_p(obj, v)
             % scale p
             vs = (v + obj.OS_p).*(1./obj.W_p);
         end
         
-        function v = dst0(obj, vs)
+        function v = descale_t0(obj, vs)
             % descale t0
             if isempty(vs)
                 v = vs;
@@ -620,7 +621,7 @@ classdef ocp < handle
             end
         end
         
-        function v = dstf(obj, vs)
+        function v = descale_tf(obj, vs)
             % descale tf
             if isempty(vs)
                 v = vs;
@@ -629,7 +630,7 @@ classdef ocp < handle
             end
         end
         
-        function v = dst(obj, vs)
+        function v = descale_t(obj, vs)
             % descale t
             if isempty(vs)
                 v = vs;
@@ -638,7 +639,7 @@ classdef ocp < handle
             end
         end
         
-        function v = dsx(obj, vs)
+        function v = descale_x(obj, vs)
             % descale x
             if isempty(vs)
                 v = vs;
@@ -647,7 +648,7 @@ classdef ocp < handle
             end
         end
         
-        function v = dsz(obj, vs)
+        function v = descale_z(obj, vs)
             % descale z
             if isempty(vs)
                 v = vs;
@@ -656,7 +657,7 @@ classdef ocp < handle
             end
         end
         
-        function v = dsu(obj, vs)
+        function v = descale_u(obj, vs)
             % descale u
             if isempty(vs)
                 v = vs;
@@ -665,7 +666,7 @@ classdef ocp < handle
             end
         end
         
-        function v = dsp(obj, vs)
+        function v = descale_p(obj, vs)
             % descale p
             if isempty(vs)
                 v = vs;
@@ -1184,7 +1185,7 @@ classdef ocp < handle
             else
                 bd = obj.independent0.ub;
             end
-            bd = obj.sct0(bd);
+            bd = obj.scale_t0(bd);
         end
         
         function bd = t0_lb(obj, t)
@@ -1193,7 +1194,7 @@ classdef ocp < handle
             else
                 bd = obj.independent0.lb;
             end
-            bd = obj.sct0(bd);
+            bd = obj.scale_t0(bd);
         end
         
         function bd = tf_ub(obj, t)
@@ -1202,7 +1203,7 @@ classdef ocp < handle
             else
                 bd = obj.independentf.ub;
             end
-            bd = obj.sctf(bd);
+            bd = obj.scale_tf(bd);
         end
         
         function bd = tf_lb(obj, t)
@@ -1211,7 +1212,7 @@ classdef ocp < handle
             else
                 bd = obj.independentf.lb;
             end
-            bd = obj.sctf(bd);
+            bd = obj.scale_tf(bd);
         end
         
         function bd = x0_ub(obj, t)
@@ -1223,7 +1224,7 @@ classdef ocp < handle
                     bd(end+1) = v.ub0;
                 end
             end
-            bd = obj.scx(bd(:));
+            bd = obj.scale_x(bd(:));
         end
         
         function bd = x0_lb(obj, t)
@@ -1235,7 +1236,7 @@ classdef ocp < handle
                     bd(end+1) = v.lb0;
                 end
             end
-            bd = obj.scx(bd(:));
+            bd = obj.scale_x(bd(:));
         end
         
         function bd = x_ub(obj, t)
@@ -1247,7 +1248,7 @@ classdef ocp < handle
                     bd(end+1) = v.ub;
                 end
             end
-            bd = obj.scx(bd(:));
+            bd = obj.scale_x(bd(:));
         end
         
         function bd = x_lb(obj, t)
@@ -1259,7 +1260,7 @@ classdef ocp < handle
                     bd(end+1) = v.lb;
                 end
             end
-            bd = obj.scx(bd(:));
+            bd = obj.scale_x(bd(:));
         end
         
         function bd = xf_ub(obj, t)
@@ -1271,7 +1272,7 @@ classdef ocp < handle
                     bd(end+1) = v.ubf;
                 end
             end
-            bd = obj.scx(bd(:));
+            bd = obj.scale_x(bd(:));
         end
         
         function bd = xf_lb(obj, t)
@@ -1283,7 +1284,7 @@ classdef ocp < handle
                     bd(end+1) = v.lbf;
                 end
             end
-            bd = obj.scx(bd(:));
+            bd = obj.scale_x(bd(:));
         end
         
         function bd = u0_ub(obj, t)
@@ -1295,7 +1296,7 @@ classdef ocp < handle
                     bd(end+1) = v.ub0;
                 end
             end
-            bd = obj.scu(bd(:));
+            bd = obj.scale_u(bd(:));
         end
         
         function bd = u0_lb(obj, t)
@@ -1307,7 +1308,7 @@ classdef ocp < handle
                     bd(end+1) = v.lb0;
                 end
             end
-            bd = obj.scu(bd(:));
+            bd = obj.scale_u(bd(:));
         end
         
         function bd = u_ub(obj, t)
@@ -1319,7 +1320,7 @@ classdef ocp < handle
                     bd(end+1) = v.ub;
                 end
             end
-            bd = obj.scu(bd(:));
+            bd = obj.scale_u(bd(:));
         end
         
         function bd = u_lb(obj, t)
@@ -1331,7 +1332,7 @@ classdef ocp < handle
                     bd(end+1) = v.lb;
                 end
             end
-            bd = obj.scu(bd(:));
+            bd = obj.scale_u(bd(:));
         end
         
         function bd = uf_ub(obj, t)
@@ -1343,7 +1344,7 @@ classdef ocp < handle
                     bd(end+1) = v.ubf;
                 end
             end
-            bd = obj.scu(bd(:));
+            bd = obj.scale_u(bd(:));
         end
         
         function bd = uf_lb(obj, t)
@@ -1355,7 +1356,7 @@ classdef ocp < handle
                     bd(end+1) = v.lbf;
                 end
             end
-            bd = obj.scu(bd(:));
+            bd = obj.scale_u(bd(:));
         end
         
         function bd = p_ub(obj, t)
@@ -1367,7 +1368,7 @@ classdef ocp < handle
                     bd = obj.parameters.ub;
                 end
             end
-            bd = obj.scp(bd(:));
+            bd = obj.scale_p(bd(:));
         end
         
         function bd = p_lb(obj, t)
@@ -1379,7 +1380,7 @@ classdef ocp < handle
                     bd = obj.parameters.lb;
                 end
             end
-            bd = obj.scp(bd(:));
+            bd = obj.scale_p(bd(:));
         end
         
         function bd = z_ub(obj, t)
@@ -1391,7 +1392,7 @@ classdef ocp < handle
                     bd = obj.algebraics.ub;
                 end
             end
-            bd = obj.scz(bd(:));
+            bd = obj.scale_z(bd(:));
         end
         
         function bd = z_lb(obj, t)
@@ -1403,7 +1404,7 @@ classdef ocp < handle
                     bd = obj.algebraics.lb;
                 end
             end
-            bd = obj.scz(bd(:));
+            bd = obj.scale_z(bd(:));
         end
         
         function [bool, t0, tf] = fixed_horizon(obj)
@@ -1417,6 +1418,53 @@ classdef ocp < handle
             
             t0 = t0_lb;
             tf = tf_lb;
+        end
+        
+        function bool = has_initial_guess(obj)
+            bool = ~isempty(obj.guess);
+        end
+        
+        function [t00, tf0, t0, x0, z0, u0, p0] = initial_guess(obj)
+            t00 = obj.guess.value(obj.independent0.ast);
+            tf0 = obj.guess.value(obj.independentf.ast);
+            t0  = obj.guess.value(obj.independent.ast)';
+            x0  = obj.state_guess(t0);
+            z0  = obj.algebraic_guess(t0);
+            u0  = obj.control_guess(t0);
+            p0  = obj.guess.p(:);
+        end
+        
+        function x0 = state_guess(obj, t0)
+            x0 = [];
+            for x = obj.states
+                xk = obj.guess.value(x.ast);
+                if isempty(xk)
+                    xk = ones(length(t0), 1);
+                end
+                x0 = [x0, xk(:)];
+            end
+        end
+           
+        function z0 = algebraic_guess(obj, t0)
+            z0 = [];
+            for z = obj.algebraics
+                zk = obj.guess.value(z.ast);
+                if isempty(zk)
+                    zk = ones(length(t0), 1);
+                end
+                z0 = [z0, zk(:)];
+            end
+        end
+        
+        function u0 = control_guess(obj, t0)
+            u0 = [];
+            for u = obj.controls
+                uk = obj.guess.value(u.ast);
+                if isempty(uk)
+                    uk = ones(length(t0), 1);
+                end
+                u0 = [u0, uk(:)];
+            end
         end
         
         function bool = has_path(obj)

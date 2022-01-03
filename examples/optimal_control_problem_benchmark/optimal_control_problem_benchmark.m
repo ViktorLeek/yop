@@ -1,7 +1,9 @@
 %% Optimal Control Problem Benchmark
 yopvar times: t t0 tf
 yopvar states: w_ice p_im p_em w_tc weight: [1e3, 1e5, 1e5, 1e3]
-yopvar controls: u_f u_wg P_gen weight: [1, 1, 1e5]
+yopvar controls: u_f u_wg P_gen weight: [1, 1, 1e5] %deg: [,0,1]
+% u_f.der.weight = 1e3;
+% P_ger.der.weight = 1e5;
 
 % States       [rad/s]       [Pa]      [Pa]   [rad/s]
 x =     [        w_ice;     p_im;     p_em;     w_tc];
@@ -68,7 +70,6 @@ res.stairs(t, u_wg)
 subplot(313); hold on
 res.plot(t, P_gen)
 
-
 %%
 ocp = yop.ocp('Optimal Control Problem Benchmark');
 ocp.min( 1e3*int(y.cylinder.fuel_massflow) ); % Min fuel mass
@@ -82,13 +83,13 @@ ocp.st( x_min <= x <= x_max );
 ocp.st( u_min <= u <= u_max );
 % Path constraints
 ocp.st( y.engine.torque >= 0 );
-ocp.hard( y.phi <= y.phi_max ); % Hard constraint
+ocp.hard( y.phi <= y.phi_max ); % Constraint applies to all collocation points
 % Terminal conditions
 ocp.st(  P_gen(tf) == 100e3 ); % [W]
 ocp.st( int(P_gen) >= 100e3 ); % [J]
 ocp.st(     dx(tf) == 0 );     % Stationarity
     
-sol = ocp.solve('intervals', 50, 'degree', 3,'guess', sim);
+sol = ocp.solve('intervals', 75, 'degree', 5,'guess', res);
 
 %%
 figure(1)

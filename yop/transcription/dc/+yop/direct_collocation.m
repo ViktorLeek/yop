@@ -5,7 +5,7 @@ function nlp = direct_collocation(ocp, N, d, cp)
 % [~, T0, Tf] = ocp.fixed_horizon();
 
 T0=[]; Tf=[]; t=[]; t0=[]; tf=[]; p=[]; dt=[]; tau=[]; tp=[]; I=[]; D=[]; 
-g=[]; g_ub=[]; g_lb=[]; w_ub=[]; w_lb=[];
+g=[]; g_ub=[]; g_lb=[]; w_ub=[]; w_lb=[]; w0=[];
 t = yop.interpolating_poly.empty(N+1, 0);
 x = yop.interpolating_poly.empty(N+1, 0);
 z = yop.interpolating_poly.empty(N  , 0);
@@ -24,9 +24,9 @@ end
 
 w = vertcat(t0, tf, x.vec(), z.vec(), u.vec(), p);
 box_bnd();
+initial_guess();
 
 J = ocp.objective.fn(t0, tf, p, tp, I);
-
 t0fn = casadi.Function('t0', {w}, {t0});
 tffn = casadi.Function('tf', {w}, {tf});
 tfn  = casadi.Function('t' , {w}, {t.mat()});
@@ -40,6 +40,7 @@ nlp.J = J;
 nlp.w = w;
 nlp.w_ub = w_ub;
 nlp.w_lb = w_lb;
+nlp.w0 = w0;
 nlp.g = g;
 nlp.g_ub = g_ub;
 nlp.g_lb = g_lb;
@@ -397,4 +398,38 @@ nlp.p  = @(w) full(pfn(w));
         w_lb = vertcat(t0_lb, tf_lb, x_lb, z_lb, u_lb, p_lb);
     end
 
+    function initial_guess()
+        if ocp.has_initial_guess()
+            [t0_0, tf_0, t_0, x_0, z_0, u_0, p_0] = ocp.initial_guess();
+            [t_x, t_z, t_u] = grid_at_iv(t0_0, tf_0);
+            x0 = interpolate(t_0, x_0, t_x(:))';
+            z0 = interpolate(t_0, z_0, t_z(:))';
+            u0 = interpolate(t_0, u_0, t_u(:))';
+            w0 = [t0_0; tf_0; x0(:); z0(:); u0(:); p_0];
+        else
+            w0 = ones(size(w));
+        end
+    end
+    
+    function [tx, tz, tu] = grid_at_iv(t0_0, tf_0)
+        % Time points for the initial values
+        tx=[]; tz=[]; tu=[];
+        h = (tf_0-t0_0)/N;
+        for k=1:N
+            tx = [tx, t0_0 + tau*h];
+            tz = [tz, t0_0 + tau(2:end)*h];
+            tu = [tu, t0_0];
+            t0_0 = t0_0 + h;
+        end
+        tx(end+1) = tf_0;
+    end
+
+end
+
+function v = interpolate(x_data, y_data, x_interp)
+if isempty(y_data)
+    v = [];
+    return;
+end
+v = interp1(x_data, y_data, x_interp);
 end

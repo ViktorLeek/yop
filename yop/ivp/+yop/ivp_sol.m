@@ -25,12 +25,25 @@ classdef ivp_sol < handle
         
         function v = value(obj, expr)
             
+            t_id = 0;
             vars = yop.ivp_sol.find_variables(expr);
             for k=1:length(vars)
                 if isa(vars{k}, 'yop.ast_independent')
                     vars{k}.m_value = obj.mx_args{3};
+                    t_id = vars{k}.id;
                 end
             end
+            
+            % Return if the variables thats not know are in the ast
+            known_vars = false;
+            IDs = [obj.ivp_vars.ids, t_id];
+            for k=1:length(vars)
+                known_vars = known_vars || any(vars{k}.id == IDs);
+            end
+            if ~known_vars
+                v = [];
+                return
+            end 
             
             obj.ivp_vars.set_mx();
             fn = casadi.Function('fn', obj.mx_args, {fw_eval(expr)});

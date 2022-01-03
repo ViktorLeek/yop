@@ -12,8 +12,26 @@ ocp.st( der(x) == v );
 ocp.st( v(t0) == -v(tf) == 1 );
 ocp.st( x(t0) ==  x(tf) == 0 );
 ocp.st( x <= l == 1/9 );
-sol = ocp.solve();
+sol = ocp.solve('intervals', 10, 'degree', 2);
 
+figure(1);
+subplot(311); hold on
+sol.plot(t, x);
+subplot(312); hold on
+sol.plot(t, v);
+subplot(313); hold on
+sol.plot(t, a);
+
+%%
+ocp = yop.ocp('Bryson-Denham Problem');
+ocp.min( 1/2 * int(a^2) );
+ocp.st( t0==0, tf==1 );
+ocp.st( der(v) == a );
+ocp.st( der(x) == v );
+ocp.st( v(t0) == -v(tf) == 1 );
+ocp.st( x(t0) ==  x(tf) == 0 );
+ocp.st( x <= l == 1/9 );
+sol = ocp.solve('guess', sol);
 figure(1);
 subplot(311); hold on
 sol.plot(t, x);
@@ -32,7 +50,7 @@ J = 1/2 * int(u^2);
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( J );
 ocp.st(   t0==0, tf==1    );
-ocp.st( der(x) == [x(2); u]  );
+ocp.st( der(x) == [x(2); u] );
 ocp.st(  x(t0) == [0; +1] );
 ocp.st(  x(tf) == [0; -1] );
 ocp.st(  x(1)  <= 1/9     );
