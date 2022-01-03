@@ -14,6 +14,7 @@ classdef interpolating_poly < yop.lagrange_polynomial
         end
         
         function v = eval(obj, tau)
+            % lazy evaluation
             v = [];
             
             if length(obj.x) == 1

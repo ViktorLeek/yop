@@ -143,13 +143,13 @@ classdef ocp < handle
                 );
             
             w_opt = struct;
-            w_opt.t0 = nlp.t0(nlp_sol.x);
-            w_opt.tf = nlp.tf(nlp_sol.x);
-            w_opt.t = nlp.t(nlp_sol.x);
-            w_opt.x = nlp.x(nlp_sol.x);
-            w_opt.z = nlp.z(nlp_sol.x);
-            w_opt.u = nlp.u(nlp_sol.x);
-            w_opt.p = nlp.p(nlp_sol.x);
+            w_opt.t0 = obj.dst0(nlp.t0(nlp_sol.x));
+            w_opt.tf = obj.dstf(nlp.tf(nlp_sol.x));
+            w_opt.t = obj.dst(nlp.t(nlp_sol.x));
+            w_opt.x = obj.dsx(nlp.x(nlp_sol.x));
+            w_opt.z = obj.dsz(nlp.z(nlp_sol.x));
+            w_opt.u = obj.dsu(nlp.u(nlp_sol.x));
+            w_opt.p = obj.dsp(nlp.p(nlp_sol.x));
             
             sol = yop.ocp_sol( ...
                 obj.independent0, ...
@@ -360,26 +360,31 @@ classdef ocp < handle
         end
         
         function obj = set_objective_fn(obj)
-            args = { ...
-                mx_vec(obj.independent0), ...
-                mx_vec(obj.independentf), ...
-                mx_vec(obj.parameters), ...
-                mx_vec(obj.tps), ...
-                mx_vec(obj.ints), ...
-                };
+            t0 = mx_vec(obj.independent0);
+            tf = mx_vec(obj.independentf);
+            pp = mx_vec(obj.parameters);
+            tp = mx_vec(obj.tps);
+            ii = mx_vec(obj.ints);
+            args = {t0,tf,pp,tp,ii};
             obj.set_mx();
             obj.snodes.set_mx();
-            obj.objective.fn = ...
-                casadi.Function('fn', args, {fw_eval(obj.objective.ast)});
-        end
+            J = casadi.Function('J', args, {fw_eval(obj.objective.ast)});
+            
+            % The nlp variables are scaled, so they must be descaled before
+            % the expression can be evaluate.
+            t0s = t0 .* obj.W_t0 - obj.OS_t0;
+            tfs = tf .* obj.W_tf - obj.OS_tf;
+            pps = pp .* obj.W_p  - obj.OS_p;
+            Js  = J(t0s, tfs, pps, tp, ii);
+            obj.objective.fn = casadi.Function('Js', args, {Js});
+        end 
         
         function obj = set_special_functions(obj)
             args = obj.mx_args();
             obj.set_mx();
             obj.snodes.set_mx();
             for sn = obj.snodes
-                mx_expr = fw_eval(sn.ast.expr);
-                sn.fn = casadi.Function('fn', args, {mx_expr(:)});
+                sn.fn = obj.dsfn(fw_eval(sn.ast.expr));
             end
         end
         
@@ -427,23 +432,25 @@ classdef ocp < handle
         end
         
         function obj = set_dynamics_fn(obj)
-            args = obj.mx_args();
+            args  = obj.mx_args();
+            dargs = obj.mx_dargs();
             obj.set_mx();
             obj.snodes.set_mx();
             ode_expr = fw_eval(obj.ode.rhs);
             alg_expr = fw_eval(obj.alg.rhs);
-            obj.ode.fn = ...
-                casadi.Function('ode', args, {ode_expr(:)});
-            obj.alg.fn = ...
-                casadi.Function('alg', args, {alg_expr(:)});
+            f = casadi.Function('f', args, {ode_expr});
+            
+            % Descale input variables, evaluate ode rhs, scale derivative
+            fs = f(dargs{:}).*(1./obj.W_x);
+            obj.ode.fn = casadi.Function('ode', args, {fs});
+            obj.alg.fn = obj.dsfn(alg_expr, 'alg');
         end
         
         function set_path_con(obj)            
             obj.set_mx();
             obj.snodes.set_mx();
             expr = fw_eval(vertcat(obj.ec_eqs{:}, obj.iec_eqs{:}));
-            obj.path.fn = ...
-                casadi.Function('eq', obj.mx_args(), {expr(:)});
+            obj.path.fn = obj.dsfn(expr(:), 'eq');
             n_eq  = length(obj.ec_eqs);
             n_ieq = length(obj.iec_eqs);
             obj.path.ub = zeros(n_eq+n_ieq, 1);
@@ -454,8 +461,7 @@ classdef ocp < handle
             obj.set_mx();
             obj.snodes.set_mx();
             expr = fw_eval(vertcat(obj.ec_hard_eqs{:}, obj.iec_hard_eqs{:}));
-            obj.path_hard.fn = ...
-                casadi.Function('eq', obj.mx_args(), {expr(:)});
+            obj.path_hard.fn = obj.dsfn(expr(:), 'heq');
             n_eq  = length(obj.ec_hard_eqs);
             n_ieq = length(obj.iec_hard_eqs);
             obj.path_hard.ub = zeros(n_eq+n_ieq, 1);
@@ -466,8 +472,7 @@ classdef ocp < handle
             obj.set_mx();
             obj.snodes.set_mx();
             expr = fw_eval(vertcat(obj.ec_point_eqs{:}, obj.iec_point_eqs{:}));
-            obj.point.fn = ...
-                casadi.Function('eq', obj.mx_args(), {expr(:)});
+            obj.point.fn = obj.dsfn(expr(:), 'peq');
             n_eq = length(obj.ec_point_eqs);
             n_ieq = length(obj.iec_point_eqs);
             obj.point.ub = zeros(n_eq+n_ieq, 1);
@@ -479,32 +484,32 @@ classdef ocp < handle
             obj.set_mx();
             obj.snodes.set_mx();
             
-            info = yop.ocp_ival.empty(1,0);
+            data = yop.ocp_ival.empty(1,0);
             for k=1:length(obj.ec_ival_eqs)
                 ik = obj.ec_ival_eqs{k};
                 [t0, tf] = get_ival(ik);
-                info(k).t0 = t0;
-                info(k).tf = tf;
-                info(k).ast = ik;
-                info(k).ub = 0;
-                info(k).lb = 0;
+                data(k).t0 = t0;
+                data(k).tf = tf;
+                data(k).ast = ik;
+                data(k).ub = 0;
+                data(k).lb = 0;
                 expr = fw_eval(ik);
-                info(k).fn = casadi.Function('eq', args, {expr(:)});
+                data(k).fn = obj.dsfn(expr(:), 'iveq');
             end
             
             for k=1:length(obj.iec_ival_eqs)
                 ik = obj.iec_ival_eqs{k};
                 [t0, tf] = get_ival(ik);
-                info(k).t0 = t0;
-                info(k).tf = tf;
-                info(k).ast = ik;
-                info(k).ub = 0;
-                info(k).lb = -inf;
+                data(k).t0 = t0;
+                data(k).tf = tf;
+                data(k).ast = ik;
+                data(k).ub = 0;
+                data(k).lb = -inf;
                 expr = fw_eval(ik);
-                info(k).fn = casadi.Function('eq', args, {expr(:)});
+                data(k).fn = obj.dsfn(expr(:), 'ivieq');
             end
             
-            obj.path_ival = info;
+            obj.path_ival = data;
         end
         
         function args = mx_vars(obj)
@@ -543,6 +548,186 @@ classdef ocp < handle
             obj.controls.set_mx();
             obj.parameters.set_mx();
             obj.snodes.set_mx();
+        end
+        
+        function fn = dsfn(obj, expr, fname)
+            % descaled function
+            if nargin == 2
+                fname = 'f';
+            end
+            args  = obj.mx_args();
+            dargs = obj.mx_dargs();
+            tmp = casadi.Function(fname, args, {expr});
+            fn  = casadi.Function(fname, args, {tmp(dargs{:})});
+        end
+        
+        function args = mx_dargs(obj)
+            % Descale
+            t0 = obj.dst0(mx_vec(obj.independent0));
+            tf = obj.dstf(mx_vec(obj.independentf));
+            tt = obj.dst (mx_vec(obj.independent));
+            xx = obj.dsx (mx_vec(obj.states));
+            zz = obj.dsz (mx_vec(obj.algebraics));
+            uu = obj.dsu (mx_vec(obj.controls));
+            pp = obj.dsp (mx_vec(obj.parameters));
+            tp = mx_vec(obj.tps);
+            ii = mx_vec(obj.ints);
+            dd = mx_vec(obj.ders);
+            args = {t0, tf, tt, xx, zz, uu, pp, tp, ii, dd};
+        end
+        
+        function vs = sct0(obj, v)
+            % scale t0
+            vs = (v + obj.OS_t0).*(1./obj.W_t0);
+        end
+        
+        function vs = sctf(obj, v)
+            % scale tf
+            vs = (v + obj.OS_tf).*(1./obj.W_tf);
+        end
+        
+        function vs = sct(obj, v)
+            % scale t
+            vs = (v + obj.OS_t).*(1./obj.W_t);
+        end
+        
+        function vs = scx(obj, v)
+            % scale x
+            vs = (v + obj.OS_x).*(1./obj.W_x);
+        end
+        
+        function vs = scz(obj, v)
+            % scale z
+            vs = (v + obj.OS_z).*(1./obj.W_z);
+        end
+        
+        function vs = scu(obj, v)
+            % scale u
+            vs = (v + obj.OS_u).*(1./obj.W_u);
+        end
+        
+        function vs = scp(obj, v)
+            % scale p
+            vs = (v + obj.OS_p).*(1./obj.W_p);
+        end
+        
+        function v = dst0(obj, vs)
+            % descale t0
+            if isempty(vs)
+                v = vs;
+            else
+                v = vs.*obj.W_t0 - obj.OS_t0;
+            end
+        end
+        
+        function v = dstf(obj, vs)
+            % descale tf
+            if isempty(vs)
+                v = vs;
+            else
+                v = vs.*obj.W_tf - obj.OS_tf;
+            end
+        end
+        
+        function v = dst(obj, vs)
+            % descale t
+            if isempty(vs)
+                v = vs;
+            else
+                v = vs.*obj.W_t - obj.OS_t;
+            end
+        end
+        
+        function v = dsx(obj, vs)
+            % descale x
+            if isempty(vs)
+                v = vs;
+            else
+                v = vs.*obj.W_x - obj.OS_x;
+            end
+        end
+        
+        function v = dsz(obj, vs)
+            % descale z
+            if isempty(vs)
+                v = vs;
+            else
+                v = vs.*obj.W_z - obj.OS_z;
+            end
+        end
+        
+        function v = dsu(obj, vs)
+            % descale u
+            if isempty(vs)
+                v = vs;
+            else
+                v = vs.*obj.W_u - obj.OS_u;
+            end
+        end
+        
+        function v = dsp(obj, vs)
+            % descale p
+            if isempty(vs)
+                v = vs;
+            else
+                v = vs.*obj.W_p - obj.OS_p;
+            end
+        end
+        
+        function W = W_t0(obj)
+            W = obj.independent0.weight;
+        end
+        
+        function W = W_tf(obj)
+            W = obj.independentf.weight;
+        end
+        
+        function W = W_t(obj)
+            W = obj.independent.weight;
+        end
+        
+        function W = W_x(obj)
+            W = obj.states.weight;
+        end
+        
+        function W = W_z(obj)
+            W = obj.algebraics.weight;
+        end
+        
+        function W = W_u(obj)
+            W = obj.controls.weight;
+        end
+        
+        function W = W_p(obj)
+            W = obj.parameters.weight;
+        end
+        
+        function OS = OS_t0(obj)
+            OS = obj.independent0.offset;
+        end
+        
+        function OS = OS_tf(obj)
+            OS = obj.independentf.offset;
+        end
+        
+        function OS = OS_t(obj)
+            OS = obj.independent.offset;
+        end
+        
+        function OS = OS_x(obj)
+            OS = obj.states.offset;
+        end
+        
+        function OS = OS_z(obj)
+            OS = obj.algebraics.offset;
+        end
+        
+        function OS = OS_u(obj)
+            OS = obj.controls.offset;
+        end
+        
+        function OS = OS_p(obj)
+            OS = obj.parameters.offset;
         end
         
         function ids = get_state_ids(obj)
@@ -999,6 +1184,7 @@ classdef ocp < handle
             else
                 bd = obj.independent0.ub;
             end
+            bd = obj.sct0(bd);
         end
         
         function bd = t0_lb(obj, t)
@@ -1007,6 +1193,7 @@ classdef ocp < handle
             else
                 bd = obj.independent0.lb;
             end
+            bd = obj.sct0(bd);
         end
         
         function bd = tf_ub(obj, t)
@@ -1015,6 +1202,7 @@ classdef ocp < handle
             else
                 bd = obj.independentf.ub;
             end
+            bd = obj.sctf(bd);
         end
         
         function bd = tf_lb(obj, t)
@@ -1023,6 +1211,7 @@ classdef ocp < handle
             else
                 bd = obj.independentf.lb;
             end
+            bd = obj.sctf(bd);
         end
         
         function bd = x0_ub(obj, t)
@@ -1034,7 +1223,7 @@ classdef ocp < handle
                     bd(end+1) = v.ub0;
                 end
             end
-            bd = bd(:);
+            bd = obj.scx(bd(:));
         end
         
         function bd = x0_lb(obj, t)
@@ -1046,7 +1235,7 @@ classdef ocp < handle
                     bd(end+1) = v.lb0;
                 end
             end
-            bd = bd(:);
+            bd = obj.scx(bd(:));
         end
         
         function bd = x_ub(obj, t)
@@ -1058,7 +1247,7 @@ classdef ocp < handle
                     bd(end+1) = v.ub;
                 end
             end
-            bd = bd(:);
+            bd = obj.scx(bd(:));
         end
         
         function bd = x_lb(obj, t)
@@ -1070,7 +1259,7 @@ classdef ocp < handle
                     bd(end+1) = v.lb;
                 end
             end
-            bd = bd(:);
+            bd = obj.scx(bd(:));
         end
         
         function bd = xf_ub(obj, t)
@@ -1082,7 +1271,7 @@ classdef ocp < handle
                     bd(end+1) = v.ubf;
                 end
             end
-            bd = bd(:);
+            bd = obj.scx(bd(:));
         end
         
         function bd = xf_lb(obj, t)
@@ -1094,7 +1283,7 @@ classdef ocp < handle
                     bd(end+1) = v.lbf;
                 end
             end
-            bd = bd(:);
+            bd = obj.scx(bd(:));
         end
         
         function bd = u0_ub(obj, t)
@@ -1106,7 +1295,7 @@ classdef ocp < handle
                     bd(end+1) = v.ub0;
                 end
             end
-            bd = bd(:);
+            bd = obj.scu(bd(:));
         end
         
         function bd = u0_lb(obj, t)
@@ -1118,7 +1307,7 @@ classdef ocp < handle
                     bd(end+1) = v.lb0;
                 end
             end
-            bd = bd(:);
+            bd = obj.scu(bd(:));
         end
         
         function bd = u_ub(obj, t)
@@ -1130,7 +1319,7 @@ classdef ocp < handle
                     bd(end+1) = v.ub;
                 end
             end
-            bd = bd(:);
+            bd = obj.scu(bd(:));
         end
         
         function bd = u_lb(obj, t)
@@ -1142,7 +1331,7 @@ classdef ocp < handle
                     bd(end+1) = v.lb;
                 end
             end
-            bd = bd(:);
+            bd = obj.scu(bd(:));
         end
         
         function bd = uf_ub(obj, t)
@@ -1154,7 +1343,7 @@ classdef ocp < handle
                     bd(end+1) = v.ubf;
                 end
             end
-            bd = bd(:);
+            bd = obj.scu(bd(:));
         end
         
         function bd = uf_lb(obj, t)
@@ -1166,7 +1355,7 @@ classdef ocp < handle
                     bd(end+1) = v.lbf;
                 end
             end
-            bd = bd(:);
+            bd = obj.scu(bd(:));
         end
         
         function bd = p_ub(obj, t)
@@ -1178,7 +1367,7 @@ classdef ocp < handle
                     bd = obj.parameters.ub;
                 end
             end
-            bd = bd(:);
+            bd = obj.scp(bd(:));
         end
         
         function bd = p_lb(obj, t)
@@ -1190,7 +1379,7 @@ classdef ocp < handle
                     bd = obj.parameters.lb;
                 end
             end
-            bd = bd(:);
+            bd = obj.scp(bd(:));
         end
         
         function bd = z_ub(obj, t)
@@ -1202,7 +1391,7 @@ classdef ocp < handle
                     bd = obj.algebraics.ub;
                 end
             end
-            bd = bd(:);
+            bd = obj.scz(bd(:));
         end
         
         function bd = z_lb(obj, t)
@@ -1214,7 +1403,7 @@ classdef ocp < handle
                     bd = obj.algebraics.lb;
                 end
             end
-            bd = bd(:);
+            bd = obj.scz(bd(:));
         end
         
         function [bool, t0, tf] = fixed_horizon(obj)

@@ -42,10 +42,24 @@ classdef ocp_state_control < handle
             end
         end
         
-        function vec = vec(obj)
-            vec = [];
+        function v = vec(obj)
+            v = [];
             for o=obj
-                vec = [vec; o.ast];
+                v = [v; o.ast];
+            end
+        end
+        
+        function w = weight(obj)
+            w = [];
+            for o=obj
+                w = [w; o.ast.weight];
+            end
+        end
+        
+        function os = offset(obj)
+            os = [];
+            for o=obj
+                os = [os; o.ast.offset];
             end
         end
     end

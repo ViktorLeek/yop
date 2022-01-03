@@ -10,7 +10,7 @@ classdef ast_variable < yop.ast_expression
     
     properties
         name
-        weight = 1 % Scaling: x_s = (x - os)/w
+        weight = 1 % Scaling: x_s = (x + os)/w
         offset = 0 
     end
     

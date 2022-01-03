@@ -1,7 +1,7 @@
 %% Optimal Control Problem Benchmark
-yopvar time: t time_0: t0 time_f: tf
-yopvar states: w_ice p_im p_em w_tc scaling: [1e3, 1e5, 1e5, 1e3]
-yopvar controls: u_f u_wg P_gen deg: [1,0,1] scaling: [1, 1, 1e5]
+yopvar times: t t0 tf
+yopvar states: w_ice p_im p_em w_tc weight: [1e3, 1e5, 1e5, 1e3]
+yopvar controls: u_f u_wg P_gen weight: [1, 1, 1e5]
 
 % States       [rad/s]       [Pa]      [Pa]   [rad/s]
 x =     [        w_ice;     p_im;     p_em;     w_tc];
@@ -18,7 +18,7 @@ u_max = [        150;                   1;   100e3];
 [dx, y] = genset_model(x, u);
 
 %% Initial guess
-yopvar -state I % PID integral state
+yopvar state: I % PID integral state
 
 % Desired engine speed
 wd = rpm2rad(1500);
@@ -71,22 +71,22 @@ res.plot(t, P_gen)
 
 %%
 ocp = yop.ocp('Optimal Control Problem Benchmark');
-ocp.min( 1e3*int(y.cylinder.fuel_massflow) ) ...
-    ... Problem horizon
-    .st( t0==0, tf<=1.4 ) ...
-    ... Differential constraint
-    .st( der(x) == dx ) ...
-    .st(  x(t0) == x0 ) ...
-    ... Box contraints
-    .st( x_min <= x <= x_max ) ...
-    .st( u_min <= u <= u_max ) ...
-    ... Path constraints
-    .st( y.engine.torque >= 0 ) ...
-    .st( hard(y.phi <= y.phi_max) ) ... Hard constraint
-    ... Terminal conditions
-    .st(  P_gen(tf) == 100e3 ) ... [W]
-    .st( int(P_gen) >= 100e3 ) ... [J]
-    .st(     dx(tf) == 0 );      % Stationarity
+ocp.min( 1e3*int(y.cylinder.fuel_massflow) ); % Min fuel mass
+% Problem horizon
+ocp.st( t0==0, 1.0<=tf<=1.4 );
+% Differential constraint
+ocp.st( der(x) == dx );
+ocp.st(  x(t0) == x0 );
+% Box contraints
+ocp.st( x_min <= x <= x_max );
+ocp.st( u_min <= u <= u_max );
+% Path constraints
+ocp.st( y.engine.torque >= 0 );
+ocp.hard( y.phi <= y.phi_max ); % Hard constraint
+% Terminal conditions
+ocp.st(  P_gen(tf) == 100e3 ); % [W]
+ocp.st( int(P_gen) >= 100e3 ); % [J]
+ocp.st(     dx(tf) == 0 );     % Stationarity
     
 sol = ocp.solve('intervals', 50, 'degree', 3,'guess', sim);
 

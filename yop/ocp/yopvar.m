@@ -4,15 +4,14 @@ t_flag     = {'-independent', '-time' , '-t', 'time:'};
 t0_flag    = {'-independent_initial', '-independent0', '-time0', '-t0', 'time0:', 'time_0:'};
 tf_flag    = {'-independent_final', '-independentf', '-timef', '-tf', 'timef:', 'time_f:'};
 ts_flag    = {'times:'};
-state_flag = {'-state', 'states:'};
+state_flag = {'-state', 'states:', 'state:'};
 alg_flag   = {'-algebraic', '-alg', 'algs:', 'algebraics:'};
 ctrl_flag  = {'-control'  , '-ctrl', 'ctrls:', 'controls:'};
 param_flag = {'-parameter', '-param', 'params:', 'parameters:'};
+var_flag = [t_flag(:)', t0_flag(:)', tf_flag(:)', ts_flag(:), ...
+    state_flag(:)', alg_flag(:)', ctrl_flag(:)', param_flag(:)'];
+
 size_flag  = {'size:', 'sz:'};
-
-var_flag = [t_flag(:)', t0_flag(:)', tf_flag(:)', state_flag(:)', ...
-    alg_flag(:)', ctrl_flag(:)', param_flag(:)'];
-
 w_flag = {'-weight', '-w', '-W', 'weight:', 'w:', 'W:', 'weights:', 'scaling:'};
 os_flag = {'-offset', '-os', '-OS', 'offset:', 'os:', 'OS:', 'offsets:'};
 deg_flag = {'-deg', 'deg:', 'degree:'};
@@ -68,14 +67,18 @@ end
     end
 
     function time()
-        vars={};
+        vars={}; w=1; os=0;
         while k <= length(varargin)
             switch varargin{k}
                 case w_flag
-                    error(yop.error.independent_scaled());
+                    step();
+                    w = str2num(varargin{k});
+                    step();
                     
                 case os_flag
-                    error(yop.error.independent_offset());
+                    step();
+                    os = str2num(varargin{k});
+                    step();
                     
                 case var_flag
                     break;
@@ -85,7 +88,7 @@ end
                     step();
             end
         end
-        add_time(vars);
+        add_time(vars, w, os);
     end
 
     function time0()
@@ -273,10 +276,12 @@ end
         add_parameter(vars, w, os);
     end
 
-    function add_time(vars)
+    function add_time(vars, w, os)
         N = length(vars);
+        w   = ones(N, 1) .* w(:);
+        os  = ones(N, 1) .* os(:);
         for n=1:N
-            decl{end+1} = time_string(vars{n});
+            decl{end+1} = time_string(vars{n}, w(n), os(n));
         end
     end
 
@@ -300,19 +305,19 @@ end
 
     function add_times(vars, w, os)
         N = length(vars);
-        w   = ones(N-1, 1) .* w(:);
-        os  = ones(N-1, 1) .* os(:);
+        w   = ones(N, 1) .* w(:);
+        os  = ones(N, 1) .* os(:);
         
         if N >= 1
-            decl{end+1} = time_string(vars{1});
+            decl{end+1} = time_string(vars{1}, w(1), os(1));
         end
         
         if N >= 2
-            decl{end+1} = time0_string(vars{2}, w(1), os(1));
+            decl{end+1} = time0_string(vars{2}, w(2), os(2));
         end
         
         if N >= 3
-            decl{end+1} = timef_string(vars{3}, w(2), os(2));
+            decl{end+1} = timef_string(vars{3}, w(3), os(3));
         end
         
     end
@@ -368,8 +373,8 @@ end
 
 end
 
-function str = time_string(name)
-str = [name, ' = yop.ast_independent(''', name, ''');'];
+function str = time_string(name, w, os)
+str = [name, ' = yop.ast_independent(''', name, ''',', num2str(w), ',', num2str(os), ');'];
 end
 
 function str = time0_string(name, w, os)
