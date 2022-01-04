@@ -6,7 +6,7 @@ tf_flag    = {'-independent_final', '-independentf', '-timef', '-tf', 'timef:', 
 ts_flag    = {'times:'};
 state_flag = {'-state', 'states:', 'state:'};
 alg_flag   = {'-algebraic', '-alg', 'algs:', 'algebraics:'};
-ctrl_flag  = {'-control'  , '-ctrl', 'ctrl:', 'ctrls:', 'controls:'};
+ctrl_flag  = {'-control'  , '-ctrl', 'ctrl:', 'ctrls:', 'controls:', 'control:'};
 param_flag = {'-parameter', '-param', 'param:', 'params:', 'parameters:'};
 var_flag = [t_flag(:)', t0_flag(:)', tf_flag(:)', ts_flag(:), ...
     state_flag(:)', alg_flag(:)', ctrl_flag(:)', param_flag(:)'];

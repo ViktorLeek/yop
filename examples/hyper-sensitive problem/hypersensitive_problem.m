@@ -1,9 +1,9 @@
 % Hypersensitive problem from GPOPS-II
-yopvar times: t t0 tf states: x ctrls: u
+yopvar times: t t0 tf states: x controls: u
 
 ocp = yop.ocp('Hyper-senstive problem');
 ocp.min( 0.5*int(x^2 + u^2) );
-ocp.st( der(x) == -x^3 + u, x(t0)==1.5, x(tf)==1, tf==1000 );
+ocp.st( tf==1000, der(x) == -x^3 + u, x(t0)==1.5, x(tf)==1 );
 sol = ocp.solve('intervals', 500);
 
 figure(1)
