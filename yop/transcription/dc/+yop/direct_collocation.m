@@ -401,7 +401,7 @@ nlp.p  = @(w) full(pfn(w));
     function initial_guess()
         if ocp.has_initial_guess()
             [t0_0, tf_0, t_0, x_0, z_0, u_0, p_0] = ocp.initial_guess();
-            [t_x, t_z, t_u] = grid_at_iv(t0_0, tf_0);
+            [t_x, t_z, t_u] = grid_at_iv(t_0(1), t_0(end));
             x0 = interpolate(t_0, x_0, t_x(:))';
             z0 = interpolate(t_0, z_0, t_z(:))';
             u0 = interpolate(t_0, u_0, t_u(:))';

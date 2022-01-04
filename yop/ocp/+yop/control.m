@@ -4,7 +4,7 @@ ip = inputParser();
 ip.FunctionName = "yop.control";
 ip.addOptional('size', [1, 1]);
 ip.addParameter('name', 'u');
-ip.addParameter('weight', 1);
+ip.addParameter('scaling', 1);
 ip.addParameter('offset', 0);
 ip.addParameter('deg', 0);
 ip.parse(varargin{:});
@@ -12,7 +12,7 @@ ip.parse(varargin{:});
 sz = ip.Results.size;
 nu = prod(sz);
 name = ip.Results.name;
-weight = ones(nu,1) .* ip.Results.weight(:);
+scaling = ones(nu,1) .* ip.Results.scaling(:);
 offset = ones(nu,1) .* ip.Results.offset(:);
 deg = ip.Results.deg;
 
@@ -21,7 +21,7 @@ if any(deg < 0)
 end
 
 if isequal(sz, [1, 1])
-    u = yop.ast_control(name, weight, offset, deg);
+    u = yop.ast_control(name, scaling, offset, deg);
     varargout = {u};
     du = u.der;
     while ~isempty(du)
@@ -31,7 +31,7 @@ if isequal(sz, [1, 1])
 else
    controls = {}; 
     for k=1:nu
-        u = yop.ast_control([name , '_', num2str(k)], weight(k), offset(k), deg);
+        u = yop.ast_control([name , '_', num2str(k)], scaling(k), offset(k), deg);
         controls{k,1} = u;
         du = u.der;
         for n=1:deg

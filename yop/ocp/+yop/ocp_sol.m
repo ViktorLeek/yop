@@ -76,13 +76,28 @@ classdef ocp_sol < handle
             
             % Ensure that the independent variable always can be plotted by
             % setting its mx value to that of the ocp.
+            t_id = 0;
             for k=1:length(vars)
                 if isa(vars{k}, 'yop.ast_independent')
                     % Three is the independent variable. Hard coded, but
                     % efficient.
                     vars{k}.m_value = obj.mx_vars{3};
+                    t_id = vars{k}.id;
                 end
             end
+            
+            % Return if the variables thats not know are in the ast
+            % This is used in getting values for ocp initial guess, but
+            % could also be a user error.
+            known_vars = false;
+            IDs = [obj.ids, t_id];
+            for k=1:length(vars)
+                known_vars = known_vars || any(vars{k}.id == IDs);
+            end
+            if ~known_vars
+                v = [];
+                return
+            end 
             
             % Create functions for the special nodes and expression
             args = { ...
@@ -110,6 +125,12 @@ classdef ocp_sol < handle
             else
                 v = obj.variant_value(fn, tpv, intv, derv, mag);
             end
+        end
+        
+        function IDs = ids(obj)
+            IDs = [obj.independent0.ids, obj.independentf.ids, ...
+                obj.independent.ids, obj.states.ids, obj.algebraics.ids, ...
+                obj.controls.ids, obj.parameters.ids];
         end
         
         function v = invariant_value(obj, expr, tps, ints, ders)

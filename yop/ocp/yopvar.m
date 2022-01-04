@@ -6,8 +6,8 @@ tf_flag    = {'-independent_final', '-independentf', '-timef', '-tf', 'timef:', 
 ts_flag    = {'times:'};
 state_flag = {'-state', 'states:', 'state:'};
 alg_flag   = {'-algebraic', '-alg', 'algs:', 'algebraics:'};
-ctrl_flag  = {'-control'  , '-ctrl', 'ctrls:', 'controls:'};
-param_flag = {'-parameter', '-param', 'params:', 'parameters:'};
+ctrl_flag  = {'-control'  , '-ctrl', 'ctrl:', 'ctrls:', 'controls:'};
+param_flag = {'-parameter', '-param', 'param:', 'params:', 'parameters:'};
 var_flag = [t_flag(:)', t0_flag(:)', tf_flag(:)', ts_flag(:), ...
     state_flag(:)', alg_flag(:)', ctrl_flag(:)', param_flag(:)'];
 
@@ -197,9 +197,14 @@ end
     end
 
     function algebraic()
-        vars={}; w=1; os=0;
+        vars={};  size=[1,1]; w=1; os=0;
         while k <= length(varargin)
             switch varargin{k}
+                case size_flag
+                    step();
+                    size = str2num(varargin{k});
+                    step();
+                    
                 case w_flag
                     step();
                     w = str2num(varargin{k});
@@ -218,13 +223,18 @@ end
                     step();
             end
         end
-        add_algebraic(vars, w, os);
+        add_algebraic(vars, size, w, os);
     end
 
     function control()
-        vars={}; w=1; os=0; deg=0;
+        vars={}; size=[1,1]; w=1; os=0; deg=0;
         while k <= length(varargin)
             switch varargin{k}
+                case size_flag
+                    step();
+                    size = str2num(varargin{k});
+                    step();
+                    
                 case w_flag
                     step();
                     w = str2num(varargin{k});
@@ -248,13 +258,18 @@ end
                     step();
             end
         end
-        add_control(vars, w, os, deg);
+        add_control(vars, size, w, os, deg);
     end
 
     function parameter()
-        vars={}; w=1; os=0;
+        vars={}; size=[1,1]; w=1; os=0;
         while k <= length(varargin)
             switch varargin{k}
+                case size_flag
+                    step();
+                    size = str2num(varargin{k});
+                    step();
+                    
                 case w_flag
                     step();
                     w = str2num(varargin{k});
@@ -273,7 +288,7 @@ end
                     step();
             end
         end
-        add_parameter(vars, w, os);
+        add_parameter(vars, size, w, os);
     end
 
     function add_time(vars, w, os)
@@ -330,6 +345,30 @@ end
         end
     end
 
+    function add_algebraic(vars, sz, w, os)
+        if isequal(sz, [1, 1])
+            add_algebraic_scalar(vars, w, os);
+        else
+            add_algebraic_matrix(vars, sz, w, os);
+        end
+    end
+
+    function add_control(vars, sz, w, os, deg)
+        if isequal(sz, [1, 1])
+            add_control_scalar(vars, w, os, deg);
+        else
+            add_control_matrix(vars, sz, w, os, deg);
+        end
+    end
+
+    function add_parameter(vars, sz, w, os)
+        if isequal(sz, [1, 1])
+            add_parameter_scalar(vars, w, os);
+        else
+            add_parameter_matrix(vars, sz, w, os);
+        end
+    end
+
     function add_state_scalar(vars, w, os)
         N = length(vars);
         w   = ones(N, 1) .* w(:);
@@ -339,36 +378,45 @@ end
         end
     end
 
-    function add_state_matrix(vars, sz, w, os)
-        decl{end+1} = state_string_matrix(vars{1}, w(:)', os(:)', sz);
-    end
-
-    function add_algebraic(vars, w, os)
+    function add_algebraic_scalar(vars, w, os)
         N = length(vars);
         w   = ones(N, 1) .* w(:);
         os  = ones(N, 1) .* os(:);
         for n=1:N
-            decl{end+1} = algebraic_string(vars{n}, w(n), os(n));
+            decl{end+1} = algebraic_string_scalar(vars{n}, w(n), os(n));
         end
     end
 
-    function add_control(vars, w, os, deg)
+    function add_control_scalar(vars, w, os, deg)
         N = length(vars);
         w   = ones(N, 1) .* w(:);
         os  = ones(N, 1) .* os(:);
         deg = ones(N, 1) .* deg(:);
         for n=1:N
-            decl{end+1} = ctrl_string(vars{n}, w(n), os(n), deg(n));
+            decl{end+1} = control_string_scalar(vars{n}, w(n), os(n), deg(n));
         end
     end
 
-    function add_parameter(vars, w, os)
+    function add_parameter_scalar(vars, w, os)
         N = length(vars);
         w   = ones(N, 1) .* w(:);
         os  = ones(N, 1) .* os(:);
         for n=1:N
-            decl{end+1} = parameter_string(vars{n}, w(n), os(n));
+            decl{end+1} = parameter_string_scalar(vars{n}, w(n), os(n));
         end
+    end
+
+    function add_state_matrix(vars, sz, w, os)
+        decl{end+1} = state_string_matrix(vars{1}, w(:)', os(:)', sz);
+    end
+
+
+    function add_algebraic_matrix(vars, sz, w, os)
+        decl{end+1} = algebraic_string_matrix(vars{1}, w(:)', os(:)', sz);
+    end
+
+    function add_control_matrix(vars, sz, w, os, deg)
+        decl{end+1} = control_string_matrix(vars{1}, w(:)', os(:)', sz, deg);
     end
 
 end
@@ -389,18 +437,61 @@ function str = state_string_scalar(name, w, os)
 str = [name, ' = yop.ast_state(''', name, ''',', num2str(w), ',', num2str(os) ');'];
 end
 
+function str = algebraic_string_scalar(name, w, os)
+str = [name, ' = yop.ast_algebraic(''', name, ''',', num2str(w), ',', num2str(os), ');'];
+end
+
+function str = control_string_scalar(name, w, os, deg)
+str = [name, ' = yop.ast_control(''', name, ''',', num2str(w), ',', num2str(os), ',', num2str(deg), ');'];
+end
+
+function str = parameter_string_scalar(name, w, os)
+str = [name, ' = yop.ast_parameter(''', name, ''',', num2str(w), ',', num2str(os), ');'];
+end
+
 function str = state_string_matrix(name, w, os, sz)
 str = [name ' = yop.state([' num2str(sz) '],''name'',''' name ''',''scaling'',[' num2str(w), '],''offset'',[', num2str(os) ']);'];
 end
 
-function str = algebraic_string(name, w, os)
-str = [name, ' = yop.ast_algebraic(''', name, ''',', num2str(w), ',', num2str(os), ');'];
+function str = algebraic_string_matrix(name, w, os, sz)
+str = [name ' = yop.algebraic([' num2str(sz) '],''name'',''' name ''',''scaling'',[' num2str(w), '],''offset'',[', num2str(os) ']);'];
 end
 
-function str = ctrl_string(name, w, os, deg)
-str = [name, ' = yop.ast_control(''', name, ''',', num2str(w), ',', num2str(os), ',', num2str(deg), ');'];
+function str = control_string_matrix(name, w, os, sz, deg)
+str = [name ' = yop.control([' num2str(sz) '],''name'',''' name ''',''scaling'',[' num2str(w), '],''offset'',[' num2str(os) '], ''deg'',[' num2str(deg) ']);'];
 end
 
-function str = parameter_string(name, w, os)
-str = [name, ' = yop.ast_parameter(''', name, ''',', num2str(w), ',', num2str(os), ');'];
+function str = parameter_string_matrix(name, w, os, sz)
+str = [name ' = yop.parameter([' num2str(sz) '],''name'',''' name ''',''scaling'',[' num2str(w), '],''offset'',[', num2str(os) ']);'];
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

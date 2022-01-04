@@ -1425,17 +1425,19 @@ classdef ocp < handle
         end
         
         function [t00, tf0, t0, x0, z0, u0, p0] = initial_guess(obj)
-            t00 = obj.guess.value(obj.independent0.ast);
-            tf0 = obj.guess.value(obj.independentf.ast);
-            t0  = obj.guess.value(obj.independent.ast)';
+            t0  = obj.guess.value(obj.independent.ast)'; % Do not scale, used for interpolation only
+            t00 = obj.scale_t0(t0(1));
+            tf0 = obj.scale_tf(t0(end));
             x0  = obj.state_guess(t0);
             z0  = obj.algebraic_guess(t0);
             u0  = obj.control_guess(t0);
-            p0  = obj.guess.p(:);
+            p0  = obj.scale_p(obj.guess.p(:));
         end
         
         function x0 = state_guess(obj, t0)
             x0 = [];
+            W = obj.W_x;
+            OS = obj.OS_x;
             for x = obj.states
                 xk = obj.guess.value(x.ast);
                 if isempty(xk)
@@ -1443,6 +1445,7 @@ classdef ocp < handle
                 end
                 x0 = [x0, xk(:)];
             end
+            x0 = (x0 + obj.OS_x').*(1./obj.W_x');
         end
            
         function z0 = algebraic_guess(obj, t0)
@@ -1454,6 +1457,7 @@ classdef ocp < handle
                 end
                 z0 = [z0, zk(:)];
             end
+            z0 = (z0 + obj.OS_z').*(1./obj.W_z');
         end
         
         function u0 = control_guess(obj, t0)
@@ -1465,6 +1469,7 @@ classdef ocp < handle
                 end
                 u0 = [u0, uk(:)];
             end
+            u0 = (u0 + obj.OS_u').*(1./obj.W_u');
         end
         
         function bool = has_path(obj)

@@ -1,9 +1,7 @@
 %% Optimal Control Problem Benchmark
 yopvar times: t t0 tf
-yopvar states: w_ice p_im p_em w_tc weight: [1e3, 1e5, 1e5, 1e3]
-yopvar controls: u_f u_wg P_gen weight: [1, 1, 1e5] %deg: [,0,1]
-% u_f.der.weight = 1e3;
-% P_ger.der.weight = 1e5;
+yopvar states: w_ice p_im p_em w_tc scaling: [1e3, 1e5, 1e5, 1e3]
+yopvar controls: u_f u_wg P_gen scaling: [1, 1, 1e5]
 
 % States       [rad/s]       [Pa]      [Pa]   [rad/s]
 x =     [        w_ice;     p_im;     p_em;     w_tc];
@@ -70,7 +68,7 @@ res.stairs(t, u_wg)
 subplot(313); hold on
 res.plot(t, P_gen)
 
-%%
+%% Optimal control problem
 ocp = yop.ocp('Optimal Control Problem Benchmark');
 ocp.min( 1e3*int(y.cylinder.fuel_massflow) ); % Min fuel mass
 % Problem horizon
@@ -89,27 +87,24 @@ ocp.st(  P_gen(tf) == 100e3 ); % [W]
 ocp.st( int(P_gen) >= 100e3 ); % [J]
 ocp.st(     dx(tf) == 0 );     % Stationarity
     
-sol = ocp.solve('intervals', 75, 'degree', 5,'guess', res);
+sol = ocp.solve('intervals', 75, 'degree', 3,'guess', res);
 
-%%
+%% Plot the optimal control and trajectory
 figure(1)
 subplot(411); hold on
-sol.plot(t, rad2rpm(w_ice), 'mag', 5)
+sol.plot(t, rad2rpm(w_ice), 'mag', 2)
 subplot(412); hold on
-sol.plot(t, p_im, 'mag', 5)
+sol.plot(t, p_im, 'mag', 2)
 subplot(413); hold on
-sol.plot(t, p_em, 'mag', 5)
+sol.plot(t, p_em, 'mag', 2)
 subplot(414); hold on
-sol.plot(t, w_tc, 'mag', 5)
+sol.plot(t, w_tc, 'mag', 2)
 
 figure(2)
 subplot(311); hold on
-sol.plot(t, u_f, 'mag', 5)
+sol.stairs(t, u_f)
 sol.plot(t, y.u_f_max);
 subplot(312); hold on
 sol.stairs(t, u_wg)
 subplot(313); hold on
-sol.plot(t, P_gen, 'mag', 5)
-
-figure(3); hold on
-sol.stairs(t, der(P_gen), 'mag', 5)
+sol.plot(t, P_gen)

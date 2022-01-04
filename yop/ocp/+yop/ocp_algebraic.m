@@ -58,5 +58,12 @@ classdef ocp_algebraic < handle
                 os = [os; o.ast.offset];
             end
         end
+        
+        function ID = ids(obj)
+            ID = [];
+            for o = obj
+                ID = [ID, o.ast.id];
+            end
+        end
     end
 end
