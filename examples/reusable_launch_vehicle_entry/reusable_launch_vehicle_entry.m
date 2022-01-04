@@ -1,19 +1,8 @@
-clear;
+yopvar times: t t0 tf
+yopvar states: rad lon lat v fpa azi scaling: [1e6,1,1,1e4,1,1]
+yopvar ctrls: aoa bank
 
-t  = yop.time();
-t0 = yop.time0();
-tf = yop.timef();
-
-rad  = yop.state();
-lon  = yop.state();
-lat  = yop.state();
-v    = yop.state();
-fpa  = yop.state();
-azi  = yop.state();
 x = [rad; lon; lat; v; fpa; azi]; 
-
-aoa  = yop.control;%('pw', 'quadratic');
-bank = yop.control;%('pw', 'linear');
 u = [aoa; bank]; 
 
 d2r   = pi/180;
@@ -26,67 +15,73 @@ u_max = [ 90*d2r;   1*d2r];
 u_min = [-90*d2r; -90*d2r];
 
 %% First guess
-ivp = yop.ivp( ...
-    t0==0, tf==2000, ...
-    der(x) == launch_vehicle(x, u), ...
-    x(t0)  == x0, ...
-    u == [17.4*d2r; 70/2000*t-70] ...
-    );
-sim = ivp.solve();
+ivp = yop.simulation(t0==0, tf==2000);
+ivp.add( der(x) == launch_vehicle(x, u) );
+ivp.add(  x(t0) == x0 );
+% ivp.add( u == [17.4*d2r; 70/2000*t-70] );
+ivp.add( u == 0 );
+sim = ivp.solve('points', 2000);
 
-%% Improved guess (relaxed problem - fixed time)
-ocp = yop.ocp('Reusable Launch Vehicle Entry - fixed time');
-ocp.max(lat(tf));
-ocp.st(...
-    tf == 2000, ...
-    der(x) == launch_vehicle(x, u), ...
-     x(t0) == x0, ...
-    x_min <= x <= x_max, ...
-    u_min <= u <= u_max, ...
-    rad(tf) == 24384 + Re, ...
-      v(tf) == 762, ...
-    fpa(tf) == -5*d2r, ...
-    azi(tf) == -90*d2r ...
-    );
-
-sol = ocp.solve('intervals', 200, 'degree', 3, 'guess', sim);
-% sol.plot(t, rad - Re)
-%% Reusable Launch Vehicle Entry
-ocp = yop.ocp('Reusable Launch Vehicle Entry');
-ocp.max(lat(tf));
-ocp.st(...
-    1000 <= tf <= 3000, ...
-    der(x) == launch_vehicle(x, u), ...
-     x(t0) == x0, ...
-    x_min <= x <= x_max, ...
-    u_min <= u <= u_max, ...
-    rad(tf) == 24384 + Re, ...
-      v(tf) == 762, ...
-    fpa(tf) == -5*d2r, ...
-    azi(tf) == -90*d2r ...
-    );
-
-sol2 = ocp.solve('intervals', 1000, 'degree', 5, 'guess', sol);
-
-
-%%
+%% Plot guess
 figure(1)
 subplot(321); hold on;
-sol2.plot(t, rad - Re)
+sim.plot(t, rad - Re)
 subplot(322); hold on;
-sol2.plot(t, v)
+sim.plot(t, v)
 subplot(323); hold on;
-sol2.plot(lon*180/pi, lat*180/pi)
+sim.plot(lon*180/pi, lat*180/pi)
 subplot(324); hold on;
-sol2.plot(t, fpa*180/pi)
+sim.plot(t, fpa*180/pi)
 subplot(325); hold on;
-sol2.plot(t, aoa*180/pi)
+sim.plot(t, aoa*180/pi)
 subplot(326); hold on;
-sol2.plot(t, bank*180/pi)
+sim.plot(t, bank*180/pi)
 
+%% Reusable Launch Vehicle Entry
+ocp = yop.ocp('Reusable Launch Vehicle Entry');
+ocp.max( lat(tf) );
+ocp.st( 1000 <= tf <= 3000 );
+ocp.st( der(x) == launch_vehicle(x, u) );
+ocp.st(  x(t0) == x0                   );
+ocp.st( x_min <= x <= x_max );
+ocp.st( u_min <= u <= u_max );
+ocp.st( rad(tf) == 24384 + Re );
+ocp.st(   v(tf) == 762        );
+ocp.st( fpa(tf) == -5*d2r     );
 
+sol = ocp.solve('guess', sim, 'intervals', 250, 'degree', 3);
 
+%% Plot solution
+figure(1)
+subplot(321); hold on;
+sol.plot(t, (rad - Re)*1e-3)
+xlabel('t [s]')
+ylabel('h [km]')
 
+subplot(322); hold on;
+sol.plot(t, v*1e-3)
+xlabel('t [s]')
+ylabel('v [km/s]')
+
+subplot(323); hold on;
+sol.plot(lon*180/pi, lat*180/pi)
+xlabel('\phi [deg]')
+ylabel('\theta [deg]')
+
+subplot(324); hold on;
+sol.plot(t, fpa*180/pi)
+xlabel('t [s]')
+ylabel('\gamma [deg]')
+
+subplot(325); hold on;
+sol.plot(t, aoa*180/pi)
+xlabel('t [s]')
+ylabel('\alpha [deg]')
+
+subplot(326); hold on;
+sol.plot(t, bank*180/pi)
+xlabel('t [s]')
+ylabel('\sigma [deg]')
 
 
 

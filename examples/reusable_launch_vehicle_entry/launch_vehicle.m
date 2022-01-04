@@ -12,8 +12,8 @@ bank = u(2);
 
 Re = 6371204;                   % Earth radius [m]
 S  = 249.1;                     % Vehicle reference area [m2]
-cl = [-0.2070, 1.6756];         % Lift coeffcicient
-cd = [0.0785, -0.3529, 2.0400]; % Drag coefficient
+cl = [-0.2070; 1.6756];         % Lift coeffcicient
+cd = [0.0785; -0.3529; 2.0400]; % Drag coefficient
 H  = 7254.24;                   % Density scale height [m]
 rho0 = 1.225570827014494;       % Density of air at sea level [kg/m3]
 mu   = 3.986031954093051e14;    % Earth gravitational paramter [m3/s2]
