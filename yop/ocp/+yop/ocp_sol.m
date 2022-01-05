@@ -371,7 +371,7 @@ classdef ocp_sol < handle
             
             % Get values
             for k=1:length(args)
-                if isa(args{k}, 'yop.node')
+                if isa(args{k}, 'yop.ast_node')
                     args{k} = obj.value(args{k}, round(mag));
                 end
             end

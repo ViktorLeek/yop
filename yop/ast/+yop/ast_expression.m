@@ -1,4 +1,4 @@
-classdef ast_expression < yop.node & yop.ast_ool
+classdef ast_expression < yop.ast_node
     % ast_expression
     % The purpose of this class is to enable to right operator and function
     % overloads for expressions. This class is inferior to the
@@ -13,7 +13,7 @@ classdef ast_expression < yop.node & yop.ast_ool
     methods
         
         function obj = ast_expression(ival)
-            obj@yop.node();
+            obj@yop.ast_node();
             if nargin == 1
                 obj.m_ival = ival;
             end
@@ -371,7 +371,7 @@ classdef ast_expression < yop.node & yop.ast_ool
                 % Case: node(numeric_subs)
                 varargout{1} = yop.ast_subsref(obj, s);
                 
-            elseif length(s.subs)==1 && isa(s.subs{1}, 'yop.node')
+            elseif length(s.subs)==1 && isa(s.subs{1}, 'yop.ast_node')
                 % timed expression: obj(t==4)
                 % Error handling in ast_timepoint class, as it easier to
                 % intuitively understand where that logic is placed if it

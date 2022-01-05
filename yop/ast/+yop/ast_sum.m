@@ -11,7 +11,7 @@ classdef ast_sum < yop.ast_expression
             % ast_sum
             
             % This only works for cases where the optional arguments are
-            % not yop.node
+            % not yop.ast_node
             obj@yop.ast_expression(is_ival(expr));
             obj.expr = expr;
             obj.nargs = nargin;

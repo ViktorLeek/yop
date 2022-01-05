@@ -67,7 +67,7 @@ classdef ivp_sol < handle
         
         function args = filter(obj, args)
             for k=1:length(args)
-                if isa(args{k}, 'yop.node')
+                if isa(args{k}, 'yop.ast_node')
                     args{k} = obj.value(args{k});
                 end
             end

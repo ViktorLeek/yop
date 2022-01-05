@@ -66,17 +66,17 @@ classdef ocp < handle
             obj.iec_point_eqs = {};
             
             obj.snodes = yop.ocp_expr.empty(1,0);
-            obj.tps  = yop.ocp_expr.empty(1,0);
-            obj.ints = yop.ocp_expr.empty(1,0);
-            obj.ders = yop.ocp_expr.empty(1,0);
+            obj.tps    = yop.ocp_expr.empty(1,0);
+            obj.ints   = yop.ocp_expr.empty(1,0);
+            obj.ders   = yop.ocp_expr.empty(1,0);
             
-            obj.independent  = yop.ocp_independent.empty(1,0);
-            obj.independent0 = yop.ocp_independent0.empty(1,0);
-            obj.independentf = yop.ocp_independentf.empty(1,0);
-            obj.states       = yop.ocp_state_control.empty(1,0);
-            obj.algebraics   = yop.ocp_algebraic.empty(1,0);
-            obj.controls     = yop.ocp_state_control.empty(1,0);
-            obj.parameters   = yop.ocp_parameter.empty(1,0);
+            obj.independent  = yop.ocp_var.empty(1,0);
+            obj.independent0 = yop.ocp_var.empty(1,0);
+            obj.independentf = yop.ocp_var.empty(1,0);
+            obj.states       = yop.ocp_var.empty(1,0);
+            obj.algebraics   = yop.ocp_var.empty(1,0);
+            obj.controls     = yop.ocp_var.empty(1,0);
+            obj.parameters   = yop.ocp_var.empty(1,0);
             
         end
         
@@ -485,7 +485,7 @@ classdef ocp < handle
             obj.set_mx();
             obj.snodes.set_mx();
             
-            data = yop.ocp_ival.empty(1,0);
+            data = yop.ival.empty(1,0);
             for k=1:length(obj.ec_ival_eqs)
                 ik = obj.ec_ival_eqs{k};
                 [t0, tf] = get_ival(ik);
@@ -1104,7 +1104,7 @@ classdef ocp < handle
         
         function obj = add_independent(obj, t)
             if isempty(obj.independent)
-                obj.independent = yop.ocp_independent(t);
+                obj.independent = yop.ocp_var(t);
             else
                 yop.error.multiple_independent_variables();
             end
@@ -1112,7 +1112,7 @@ classdef ocp < handle
         
         function obj = add_independent0(obj, t)
             if isempty(obj.independent0)
-                obj.independent0 = yop.ocp_independent0(t);
+                obj.independent0 = yop.ocp_var(t);
             else
                 error(yop.error.multiple_independent_initial());
             end
@@ -1120,22 +1120,22 @@ classdef ocp < handle
         
         function obj = add_independentf(obj, t)
             if isempty(obj.independentf)
-                obj.independentf = yop.ocp_independentf(t);
+                obj.independentf = yop.ocp_var(t);
             else
                 error(yop.error.multiple_independent_final());
             end
         end
         
         function obj = add_state(obj, x)
-            obj.states(end+1) = yop.ocp_state_control(x);
+            obj.states(end+1) = yop.ocp_var(x);
         end
         
         function obj = add_algebraic(obj, z)
-            obj.algebraics(end+1) = yop.ocp_algebraic(z);
+            obj.algebraics(end+1) = yop.ocp_var(z);
         end
         
         function obj = add_control(obj, u)
-            obj.controls(end+1) = yop.ocp_state_control(u);
+            obj.controls(end+1) = yop.ocp_var(u);
         end
         
         function obj = add_unique_control(obj, u)
@@ -1148,7 +1148,7 @@ classdef ocp < handle
         end
         
         function obj = add_parameter(obj, p)
-            obj.parameters(end+1) = yop.ocp_parameter(p);
+            obj.parameters(end+1) = yop.ocp_var(p);
         end
         
         function n = n_x(obj)

@@ -1,4 +1,4 @@
-classdef ocp_ival < handle
+classdef ival < handle
     properties
         t0
         tf

@@ -1,16 +1,8 @@
-classdef node < handle
-    % Base class for all yop nodes. Primarily used for the AST class.
-    
+classdef ast_node < handle
     properties 
         id
         m_value
     end
-    
-    %     properties %(to remove?)
-    %         pred = {} % predecessors
-    %         dom = {} % dominators
-    %         %idom = {} % immediate dominators
-    %     end
     
     properties (Constant)
         % reference to handle is constant, but not the value itself.
@@ -20,8 +12,8 @@ classdef node < handle
     
     methods
         
-        function obj = node()
-            obj.id = yop.node.get_uid();
+        function obj = ast_node()
+            obj.id = yop.ast_node.get_uid();
         end
         
         function node = at(expression, timepoint)
@@ -52,12 +44,6 @@ classdef node < handle
                 end
             end
             val = value(sort{K});
-        end
-        
-        
-        
-        function id = get_id(obj)
-            id = obj.id;
         end
         
         function vars = get_vars(obj)

@@ -40,10 +40,6 @@ classdef ast_der < yop.ast_expression
             v = obj.m_value;
         end
         
-        function bool = is_differential(obj)
-            bool = true;
-        end
-        
         function draw(obj)
             fprintf('der(var)\n');
             last_child(obj);

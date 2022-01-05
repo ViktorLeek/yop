@@ -10,23 +10,9 @@ if ~isa(expressions_cell, 'cell')
     expressions_cell = {expressions_cell};
 end
 
-% First iteration is hoisted out in order to later warm start the search
-% for every expression. Otherwise it might even lead to erroneous 
-% results as doublettes are likely to appear, these could be found 
-% afterwards, but it is faster to warm start the search after the 
-% first iteration.
-
-[tsort, n_elem, visited] = topological_sort(expressions_cell{1});
-for n=1:n_elem
-    if isa(tsort{n}, 'yop.ast_variable')
-        vars = {vars{:}, tsort{n}};
-    end
-end
-
-for k=2:length(expressions_cell)
-    
+visited = [];
+for k=1:length(expressions_cell)
     [tsort, n_elem, visited] = topological_sort(expressions_cell{k}, visited);
-    
     for n=1:n_elem
         if isa(tsort{n}, 'yop.ast_variable')
             vars = {vars{:}, tsort{n}};
