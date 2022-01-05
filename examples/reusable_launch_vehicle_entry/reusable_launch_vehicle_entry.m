@@ -82,15 +82,3 @@ subplot(326); hold on;
 sol.plot(t, bank*180/pi)
 xlabel('t [s]')
 ylabel('\sigma [deg]')
-
-
-
-
-
-
-
-
-
-
-
-
