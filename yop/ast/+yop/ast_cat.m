@@ -20,8 +20,6 @@ classdef ast_cat < yop.ast_expression
         end
         
         function boolv = isa_numeric(obj)
-            % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used.
             tmp = {isa_numeric(obj.args{1})};
             for k=2:length(obj.args)
                 tmp = {tmp{:}, isa_numeric(obj.args{k})};
@@ -29,18 +27,20 @@ classdef ast_cat < yop.ast_expression
             boolv = cat(obj.d, tmp{:});
         end
         
-        function boolv = is_transcription_invariant(obj)
-            tmp = {is_transcription_invariant(obj.args{1})};
+        function [bool, id, type] = isa_variable(obj)
+            [bool, id, type] = isa_variable(obj.args{1});
+            tmp_bool = {bool};
+            tmp_id = {id};
+            tmp_type = {type};
             for k=2:length(obj.args)
-                tmp = {tmp{:}, is_transcription_invariant(obj.args{k})};
-            end
-            boolv = cat(obj.d, tmp{:});
-        end
-        
-        function obj = set_pred(obj)
-            for k=1:length(obj.args)
-                add_pred(obj.args{k}, obj);
-            end
+                [bk, ik, tk] = isa_variable(obj.args{k});
+                tmp_bool = {tmp_bool{:}, bk};
+                tmp_id = {tmp_id{:}, ik};
+                tmp_type = {tmp_type{:}, tk};
+            end      
+            bool = cat(obj.d, tmp_bool{:});
+            id = cat(obj.d, tmp_id{:});
+            type = cat(obj.d, tmp_type{:});
         end
         
         function [bool, id] = isa_der(obj)
@@ -56,109 +56,6 @@ classdef ast_cat < yop.ast_expression
             id = cat(obj.d, tmp_id{:});
         end
         
-        function [bool, id] = isa_variable(obj)
-            [bool, id] = isa_variable(obj.args{1});
-            tmp_bool = {bool};
-            tmp_id = {id};
-            for k=2:length(obj.args)
-                [bk, ik] = isa_variable(obj.args{k});
-                tmp_bool = {tmp_bool{:}, bk};
-                tmp_id = {tmp_id{:}, ik};
-            end      
-            bool = cat(obj.d, tmp_bool{:});
-            id = cat(obj.d, tmp_id{:});
-        end
-        
-        function [bool, id] = isa_state(obj)
-            [bool, id] = isa_state(obj.args{1});
-            tmp_bool = {bool};
-            tmp_id = {id};
-            for k=2:length(obj.args)
-                [bk, ik] = isa_state(obj.args{k});
-                tmp_bool = {tmp_bool{:}, bk};
-                tmp_id = {tmp_id{:}, ik};
-            end      
-            bool = cat(obj.d, tmp_bool{:});
-            id = cat(obj.d, tmp_id{:});
-        end
-        
-        function [bool, id] = isa_independent(obj)
-            [bool, id] = isa_independent(obj.args{1});
-            tmp_bool = {bool};
-            tmp_id = {id};
-            for k=2:length(obj.args)
-                [bk, ik] = isa_independent(obj.args{k});
-                tmp_bool = {tmp_bool{:}, bk};
-                tmp_id = {tmp_id{:}, ik};
-            end      
-            bool = cat(obj.d, tmp_bool{:});
-            id = cat(obj.d, tmp_id{:});
-        end
-        
-        function [bool, id] = isa_independent0(obj)
-            [bool, id] = isa_independent0(obj.args{1});
-            tmp_bool = {bool};
-            tmp_id = {id};
-            for k=2:length(obj.args)
-                [bk, ik] = isa_independent0(obj.args{k});
-                tmp_bool = {tmp_bool{:}, bk};
-                tmp_id = {tmp_id{:}, ik};
-            end      
-            bool = cat(obj.d, tmp_bool{:});
-            id = cat(obj.d, tmp_id{:});
-        end
-        
-        function [bool, id] = isa_independentf(obj)
-            [bool, id] = isa_independentf(obj.args{1});
-            tmp_bool = {bool};
-            tmp_id = {id};
-            for k=2:length(obj.args)
-                [bk, ik] = isa_independentf(obj.args{k});
-                tmp_bool = {tmp_bool{:}, bk};
-                tmp_id = {tmp_id{:}, ik};
-            end      
-            bool = cat(obj.d, tmp_bool{:});
-            id = cat(obj.d, tmp_id{:});
-        end
-        
-        function [bool, id] = isa_parameter(obj)
-            [bool, id] = isa_parameter(obj.args{1});
-            tmp_bool = {bool};
-            tmp_id = {id};
-            for k=2:length(obj.args)
-                [bk, ik] = isa_parameter(obj.args{k});
-                tmp_bool = {tmp_bool{:}, bk};
-                tmp_id = {tmp_id{:}, ik};
-            end      
-            bool = cat(obj.d, tmp_bool{:});
-            id = cat(obj.d, tmp_id{:});
-        end
-        
-        function [bool, id] = isa_control(obj)
-            [bool, id] = isa_control(obj.args{1});
-            tmp_bool = {bool};
-            tmp_id = {id};
-            for k=2:length(obj.args)
-                [bk, ik] = isa_control(obj.args{k});
-                tmp_bool = {tmp_bool{:}, bk};
-                tmp_id = {tmp_id{:}, ik};
-            end      
-            bool = cat(obj.d, tmp_bool{:});
-            id = cat(obj.d, tmp_id{:});
-        end
-        
-        function [bool, id] = isa_algebraic(obj)
-            [bool, id] = isa_algebraic(obj.args{1});
-            tmp_bool = {bool};
-            tmp_id = {id};
-            for k=2:length(obj.args)
-                [bk, ik] = isa_algebraic(obj.args{k});
-                tmp_bool = {tmp_bool{:}, bk};
-                tmp_id = {tmp_id{:}, ik};
-            end      
-            bool = cat(obj.d, tmp_bool{:});
-            id = cat(obj.d, tmp_id{:});
-        end
         
         function [bool, tp] = isa_timepoint(obj)
             [bool, tp] = isa_timepoint(obj.args{1});
@@ -171,6 +68,14 @@ classdef ast_cat < yop.ast_expression
             end
             bool = cat(obj.d, tmp_bool{:});
             tp = cat(obj.d, tmp_tp{:});
+        end
+        
+        function boolv = is_transcription_invariant(obj)
+            tmp = {is_transcription_invariant(obj.args{1})};
+            for k=2:length(obj.args)
+                tmp = {tmp{:}, is_transcription_invariant(obj.args{k})};
+            end
+            boolv = cat(obj.d, tmp{:});
         end
         
         function value = evaluate(obj)

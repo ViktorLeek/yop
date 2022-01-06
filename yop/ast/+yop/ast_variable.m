@@ -23,11 +23,6 @@ classdef ast_variable < yop.ast_expression
             obj.offset = offset;
         end
         
-        function [bool, id] = isa_variable(obj)
-            bool = true(size(obj));
-            id = obj.id*ones(size(obj));
-        end
-        
         function boolv = is_transcription_invariant(obj)
             % overloaded for states, algebraics and controls
             boolv = true(size(obj));
@@ -42,16 +37,16 @@ classdef ast_variable < yop.ast_expression
             tp = zeros(size(obj));
         end
         
-        function draw(obj)
-            fprintf(['[', num2str(obj.id), ']:', obj.name, '\n']);
-        end
-        
         function value = evaluate(obj)
             value = obj.m_value;
         end
         
         function v = forward(obj)
             v = obj.m_value;
+        end
+        
+        function draw(obj)
+            fprintf(['[', num2str(obj.id), ']:', obj.name, '\n']);
         end
         
         function [topsort, n_elem, visited] = ...

@@ -24,93 +24,23 @@ classdef ast_subsasgn < yop.ast_expression
         end
         
         function boolv = isa_numeric(obj)
-            % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used, or an
-            % instance variable to remember the answer (assumes graph is
-            % static)
             boolv = isa_numeric(obj.node);
             idx = get_indices(obj);
             boolv(idx) = isa_numeric(obj.b);
         end
         
-        function boolv = is_transcription_invariant(obj)
-            boolv = is_transcription_invariant(obj.node);
+        function [bool, id, type] = isa_variable(obj)
+            [bool, id, type] = isa_variable(obj.node);
+            [boolb, idb, typeb] = isa_variable(obj.b);
             idx = get_indices(obj);
-            boolv(idx) = is_transcription_invariant(obj.b);
-        end
-        
-        function obj = set_pred(obj)
-            add_pred(obj.node, obj);
-            add_pred(obj.b, obj);
+            bool(idx) = boolb;
+            id(idx) = idb;
+            type(idx) = typeb;
         end
         
         function [bool, id] = isa_der(obj)
             [bool, id] = isa_der(obj.node);
             [boolb, idb] = isa_der(obj.b);
-            idx = get_indices(obj);
-            bool(idx) = boolb;
-            id(idx) = idb;
-        end
-        
-        function [bool, id] = isa_variable(obj)
-            [bool, id] = isa_variable(obj.node);
-            [boolb, idb] = isa_variable(obj.b);
-            idx = get_indices(obj);
-            bool(idx) = boolb;
-            id(idx) = idb;
-        end
-        
-        function [bool, id] = isa_state(obj)
-            [bool, id] = isa_state(obj.node);
-            [boolb, idb] = isa_state(obj.b);
-            idx = get_indices(obj);
-            bool(idx) = boolb;
-            id(idx) = idb;
-        end
-        
-        function [bool, id] = isa_independent(obj)
-            [bool, id] = isa_independent(obj.node);
-            [boolb, idb] = isa_independent(obj.b);
-            idx = get_indices(obj);
-            bool(idx) = boolb;
-            id(idx) = idb;
-        end
-        
-        function [bool, id] = isa_independent0(obj)
-            [bool, id] = isa_independent0(obj.node);
-            [boolb, idb] = isa_independent0(obj.b);
-            idx = get_indices(obj);
-            bool(idx) = boolb;
-            id(idx) = idb;
-        end
-        
-        function [bool, id] = isa_independentf(obj)
-            [bool, id] = isa_independentf(obj.node);
-            [boolb, idb] = isa_independentf(obj.b);
-            idx = get_indices(obj);
-            bool(idx) = boolb;
-            id(idx) = idb;
-        end
-        
-        function [bool, id] = isa_parameter(obj)
-            [bool, id] = isa_parameter(obj.node);
-            [boolb, idb] = isa_parameter(obj.b);
-            idx = get_indices(obj);
-            bool(idx) = boolb;
-            id(idx) = idb;
-        end
-        
-        function [bool, id] = isa_control(obj)
-            [bool, id] = isa_control(obj.node);
-            [boolb, idb] = isa_control(obj.b);
-            idx = get_indices(obj);
-            bool(idx) = boolb;
-            id(idx) = idb;
-        end
-        
-        function [bool, id] = isa_algebraic(obj)
-            [bool, id] = isa_algebraic(obj.node);
-            [boolb, idb] = isa_algebraic(obj.b);
             idx = get_indices(obj);
             bool(idx) = boolb;
             id(idx) = idb;
@@ -122,6 +52,12 @@ classdef ast_subsasgn < yop.ast_expression
             [boolb, tpb] = isa_timepoint(obj.b);
             bool(idx) = boolb;
             tp(idx) = tpb;
+        end
+        
+        function boolv = is_transcription_invariant(obj)
+            boolv = is_transcription_invariant(obj.node);
+            idx = get_indices(obj);
+            boolv(idx) = is_transcription_invariant(obj.b);
         end
         
         function value = evaluate(obj)

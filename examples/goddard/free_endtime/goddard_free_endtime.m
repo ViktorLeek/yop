@@ -33,7 +33,9 @@ sol.stairs(t, u);
 % sol = yop.load('Goddard', t, t0, tf, x, u, p);
 
 %% Formulation 1 - variation 1: PW quadratic control, integration of velocity
-yopvar times: t t0 states: x1 x2 x3 weight: [1e3,1e5,1e2] ctrls: u deg: 2
+yopvar times: t t0 
+yopvar states: x1 x2 x3 weight: [1e3,1e5,1e2] 
+yopvar ctrls: u deg: 2
 x = [x1; x2; x3];
 
 [~, y] = rocket_model(x, u);

@@ -19,10 +19,6 @@ classdef ast_inv < yop.ast_expression
             boolv = is_transcription_invariant(obj.expr);
         end
         
-        function obj = set_pred(obj)
-            add_pred(obj.A, obj);
-        end
-        
         function value = evaluate(obj)
             value = inv(evaluate(obj.A));
         end

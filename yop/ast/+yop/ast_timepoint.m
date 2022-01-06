@@ -17,13 +17,17 @@ classdef ast_timepoint < yop.ast_expression
             boolv = isa_numeric(obj.expr);
         end
         
-        function boolv = is_transcription_invariant(obj)
-            boolv = true(size(obj));
+        function [bool, id, type] = isa_variable(obj)
+            [bool, id, type] = isa_variable(obj.expr);
         end
         
         function [bool, tp] = isa_timepoint(obj)
             bool = true(size(obj.expr));
             tp = obj.timepoint*ones(size(obj.expr));
+        end
+        
+        function boolv = is_transcription_invariant(obj)
+            boolv = true(size(obj));
         end
         
         function value = evaluate(obj)            
@@ -42,38 +46,6 @@ classdef ast_timepoint < yop.ast_expression
             % has occured, the idea is that an MX/sym variable (of the
             % right size) is used to represent its value.
             v = obj.m_value;
-        end
-        
-        function [bool, id] = isa_variable(obj)
-            [bool, id] = isa_variable(obj.expr);
-        end
-        
-        function [bool, id] = isa_state(obj)
-            [bool, id] = isa_state(obj.expr);
-        end
-        
-        function [bool, id] = isa_independent(obj)
-            [bool, id] = isa_independent(obj.expr);
-        end
-        
-        function [bool, id] = isa_independent0(obj)
-            [bool, id] = isa_independent0(obj.expr);
-        end
-        
-        function [bool, id] = isa_independentf(obj)
-            [bool, id] = isa_independentf(obj.expr);
-        end
-        
-        function [bool, id] = isa_parameter(obj)
-            [bool, id] = isa_parameter(obj.expr);
-        end
-        
-        function [bool, id] = isa_control(obj)
-            [bool, id] = isa_control(obj.expr);
-        end
-        
-        function [bool, id] = isa_algebraic(obj)
-            [bool, id] = isa_algebraic(obj.expr);
         end
         
         function draw(obj)

@@ -15,10 +15,11 @@ classdef ast_ctranspose < yop.ast_expression
             boolv = isa_numeric(obj.expr);
         end
         
-        function [bool, tp] = isa_timepoint(obj)
-            [bool, tp] = isa_timepoint(obj.expr);
+        function [bool, tp, type] = isa_timepoint(obj)
+            [bool, tp, type] = isa_timepoint(obj.expr);
             bool = ctranspose(bool);
             tp = ctranspose(tp);
+            type = ctranspose(type);
         end
         
         function [bool, id] = isa_der(obj)
@@ -33,54 +34,8 @@ classdef ast_ctranspose < yop.ast_expression
             id = ctranspose(id);
         end
         
-        function [bool, id] = isa_state(obj)
-            [bool, id] = isa_state(obj.expr);
-            bool = ctranspose(bool);
-            id = ctranspose(id);
-        end
-        
-        function [bool, id] = isa_independent(obj)
-            [bool, id] = isa_independent(obj.expr);
-            bool = ctranspose(bool);
-            id = ctranspose(id);
-        end
-        
-        function [bool, id] = isa_independent0(obj)
-            [bool, id] = isa_independent0(obj.expr);
-            bool = ctranspose(bool);
-            id = ctranspose(id);
-        end
-        
-        function [bool, id] = isa_independentf(obj)
-            [bool, id] = isa_independentf(obj.expr);
-            bool = ctranspose(bool);
-            id = ctranspose(id);
-        end
-        
-        function [bool, id] = isa_parameter(obj)
-            [bool, id] = isa_parameter(obj.expr);
-            bool = ctranspose(bool);
-            id = ctranspose(id);
-        end
-        
-        function [bool, id] = isa_control(obj)
-            [bool, id] = isa_control(obj.expr);
-            bool = ctranspose(bool);
-            id = ctranspose(id);
-        end
-        
-        function [bool, id] = isa_algebraic(obj)
-            [bool, id] = isa_algebraic(obj.expr);
-            bool = ctranspose(bool);
-            id = ctranspose(id);
-        end
-        
         function boolv = is_transcription_invariant(obj)
             boolv = is_transcription_invariant(obj.expr);
-        end
-        
-        function obj = set_pred(obj)
-            add_pred(obj.expr, obj);
         end
         
         function value = evaluate(obj)

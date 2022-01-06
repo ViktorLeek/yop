@@ -51,7 +51,7 @@ final = @(expr) expr(tf);
 ocp = yop.ocp('Low-thrust orbit');
 ocp.max( w(tf) );
 ocp.st( 50e3 <= tf <= 100e3 );
-ocp.st( der(x) == spacecraft(x, u, tau) );
+ocp.st( der(x) == dx );
 ocp.st(  x(t0) == x0 );
 ocp.st( norm(u)^2 == 1 );
 ocp.st( x_min <=  x  <= x_max );

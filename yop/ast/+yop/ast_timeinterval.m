@@ -16,9 +16,11 @@ classdef ast_timeinterval < yop.ast_expression
         end
         
         function boolv = isa_numeric(obj)
-            % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used.
             boolv = isa_numeric(obj.expr);
+        end
+        
+        function [bool, id, type] = isa_variable(obj)
+            [bool, id, type] = isa_variable(obj.expr);
         end
         
         function boolv = is_transcription_invariant(obj)
@@ -42,38 +44,6 @@ classdef ast_timeinterval < yop.ast_expression
             % right size) is used to represent its value.
             obj.m_value = value(obj.expr);
             v = obj.m_value;
-        end
-        
-        function [bool, id] = isa_variable(obj)
-            [bool, id] = isa_variable(obj.expr);
-        end
-        
-        function [bool, id] = isa_state(obj)
-            [bool, id] = isa_state(obj.expr);
-        end
-        
-        function [bool, id] = isa_independent(obj)
-            [bool, id] = isa_independent(obj.expr);
-        end
-        
-        function [bool, id] = isa_independent0(obj)
-            [bool, id] = isa_independent0(obj.expr);
-        end
-        
-        function [bool, id] = isa_independentf(obj)
-            [bool, id] = isa_independentf(obj.expr);
-        end
-        
-        function [bool, id] = isa_parameter(obj)
-            [bool, id] = isa_parameter(obj.expr);
-        end
-        
-        function [bool, id] = isa_control(obj)
-            [bool, id] = isa_control(obj.expr);
-        end
-        
-        function [bool, id] = isa_algebraic(obj)
-            [bool, id] = isa_algebraic(obj.expr);
         end
         
         function draw(obj)

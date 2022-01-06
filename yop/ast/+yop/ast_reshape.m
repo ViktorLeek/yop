@@ -12,8 +12,6 @@ classdef ast_reshape < yop.ast_expression
         end
         
         function boolv = isa_numeric(obj)
-            % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used.
             if all(isa_numeric(obj.expr))
                 boolv = true(size(obj));
             else
@@ -21,12 +19,11 @@ classdef ast_reshape < yop.ast_expression
             end
         end
         
-        function boolv = is_transcription_invariant(obj)
-            if all(is_transcription_invariant(obj.expr))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
-            end
+        function [bool, id, type] = isa_variable(obj)
+            [bool, id, type] = isa_variable(obj.expr);
+            bool = reshape(bool, obj.szs{:});
+            id = reshape(id, obj.szs{:});
+            type = reshape(type, obj.szs{:});
         end
         
         function [bool, tp] = isa_timepoint(obj)
@@ -41,52 +38,12 @@ classdef ast_reshape < yop.ast_expression
             id = reshape(id, obj.szs{:});
         end
         
-        function [bool, id] = isa_variable(obj)
-            [bool, id] = isa_variable(obj.expr);
-            bool = reshape(bool, obj.szs{:});
-            id = reshape(id, obj.szs{:});
-        end
-        
-        function [bool, id] = isa_state(obj)
-            [bool, id] = isa_state(obj.expr);
-            bool = reshape(bool, obj.szs{:});
-            id = reshape(id, obj.szs{:});
-        end
-        
-        function [bool, id] = isa_independent(obj)
-            [bool, id] = isa_independent(obj.expr);
-            bool = reshape(bool, obj.szs{:});
-            id = reshape(id, obj.szs{:});
-        end
-        
-        function [bool, id] = isa_independent0(obj)
-            [bool, id] = isa_independent0(obj.expr);
-            bool = reshape(bool, obj.szs{:});
-            id = reshape(id, obj.szs{:});
-        end
-        
-        function [bool, id] = isa_independentf(obj)
-            [bool, id] = isa_independentf(obj.expr);
-            bool = reshape(bool, obj.szs{:});
-            id = reshape(id, obj.szs{:});
-        end
-        
-        function [bool, id] = isa_parameter(obj)
-            [bool, id] = isa_parameter(obj.expr);
-            bool = reshape(bool, obj.szs{:});
-            id = reshape(id, obj.szs{:});
-        end
-        
-        function [bool, id] = isa_control(obj)
-            [bool, id] = isa_control(obj.expr);
-            bool = reshape(bool, obj.szs{:});
-            id = reshape(id, obj.szs{:});
-        end
-        
-        function [bool, id] = isa_algebraic(obj)
-            [bool, id] = isa_algebraic(obj.expr);
-            bool = reshape(bool, obj.szs{:});
-            id = reshape(id, obj.szs{:});
+        function boolv = is_transcription_invariant(obj)
+            if all(is_transcription_invariant(obj.expr))
+                boolv = true(size(obj));
+            else
+                boolv = false(size(obj));
+            end
         end
             
         function value = evaluate(obj)

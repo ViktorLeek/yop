@@ -16,22 +16,14 @@ classdef ast_control < yop.ast_variable
             boolv = false(size(obj));
         end
         
-        function [bool, id] = isa_control(obj)
-            if isempty(obj.der)
-                bool = true(size(obj));
-            else
-                bool = false(size(obj));
-            end
+        function [bool, id, type] = isa_variable(obj)
+            bool = true(size(obj));
             id = obj.id*ones(size(obj));
-        end
-        
-        function [bool, id] = isa_state(obj)
             if isempty(obj.der)
-                bool = false(size(obj));
+                type = yop.var_type.control*ones(size(obj));
             else
-                bool = true(size(obj));
+                type = yop.var_type.state*ones(size(obj));
             end
-            id = obj.id*ones(size(obj));
         end
     end
 end

@@ -21,17 +21,36 @@ classdef ast_subsref < yop.ast_expression
             obj.dim = size( subsref( ones(size(node)), s ) );
         end
         
-        function obj = set_pred(obj)
-            add_pred(obj.node, obj);
+        function bool = isa_numeric(obj)
+            bool = isa_numeric(obj.node);
+            bool = bool(get_indices(obj));            
         end
         
-        function value = evaluate(obj)
-            value = subsref(evaluate(obj.node), obj.s);
+        function [bool, id, type] = isa_variable(obj)
+            [bool, id, type] = isa_variable(obj.node);
+            idx = get_indices(obj);
+            bool = bool(idx);
+            id = id(idx);
+            type = type(idx);
         end
         
-        function v = forward(obj)
-            obj.m_value = subsref(value(obj.node), obj.s);
-            v = obj.m_value;
+        function [bool, id] = isa_der(obj)
+            [bool, id] = isa_der(obj.node);
+            idx = get_indices(obj);
+            bool = bool(idx);
+            id = id(idx);
+        end
+        
+        function [bool, tp] = isa_timepoint(obj)
+            [bool, tp] = isa_timepoint(obj.node);
+            idx = get_indices(obj);
+            bool = bool(idx);
+            tp = tp(idx);
+        end
+        
+        function boolv = is_transcription_invariant(obj)
+            boolv = is_transcription_invariant(obj.node);
+            boolv = boolv(get_indices(obj));
         end
         
         function idx = get_indices(obj)
@@ -45,88 +64,13 @@ classdef ast_subsref < yop.ast_expression
             obj.node.m_value = node_val;
         end
         
-        function [bool, id] = isa_variable(obj)
-            [bool, id] = isa_variable(obj.node);
-            idx = get_indices(obj);
-            bool = bool(idx);
-            id = id(idx);
+        function value = evaluate(obj)
+            value = subsref(evaluate(obj.node), obj.s);
         end
         
-        function [bool, id] = isa_state(obj)
-            [bool, id] = isa_state(obj.node);
-            idx = get_indices(obj);
-            bool = bool(idx);
-            id = id(idx);
-        end
-        
-        function [bool, id] = isa_independent(obj)
-            [bool, id] = isa_independent(obj.node);
-            idx = get_indices(obj);
-            bool = bool(idx);
-            id = id(idx);
-        end
-        
-        function [bool, id] = isa_independent0(obj)
-            [bool, id] = isa_independent0(obj.node);
-            idx = get_indices(obj);
-            bool = bool(idx);
-            id = id(idx);
-        end
-        
-        function [bool, id] = isa_independentf(obj)
-            [bool, id] = isa_independentf(obj.node);
-            idx = get_indices(obj);
-            bool = bool(idx);
-            id = id(idx);
-        end
-        
-        function [bool, id] = isa_parameter(obj)
-            [bool, id] = isa_parameter(obj.node);
-            idx = get_indices(obj);
-            bool = bool(idx);
-            id = id(idx);
-        end
-        
-        function [bool, id] = isa_control(obj)
-            [bool, id] = isa_control(obj.node);
-            idx = get_indices(obj);
-            bool = bool(idx);
-            id = id(idx);
-        end
-        
-        function [bool, id] = isa_algebraic(obj)
-            [bool, id] = isa_algebraic(obj.node);
-            idx = get_indices(obj);
-            bool = bool(idx);
-            id = id(idx);
-        end
-        
-        function [bool, id] = isa_der(obj)
-            [bool, id] = isa_der(obj.node);
-            idx = get_indices(obj);
-            bool = bool(idx);
-            id = id(idx);
-        end
-        
-        function bool = isa_numeric(obj)
-            bool = isa_numeric(obj.node);
-            bool = bool(get_indices(obj));            
-        end
-        
-        function boolv = is_transcription_invariant(obj)
-            boolv = is_transcription_invariant(obj.node);
-            boolv = boolv(get_indices(obj));
-        end
-        
-        function [bool, tp] = isa_timepoint(obj)
-            [bool, tp] = isa_timepoint(obj.node);
-            idx = get_indices(obj);
-            bool = bool(idx);
-            tp = tp(idx);
-        end
-        
-        function var = get_variable(obj)
-            var  = get_variable(obj.node);
+        function v = forward(obj)
+            obj.m_value = subsref(value(obj.node), obj.s);
+            v = obj.m_value;
         end
         
         function draw(obj)

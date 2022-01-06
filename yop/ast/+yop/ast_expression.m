@@ -310,10 +310,6 @@ classdef ast_expression < yop.ast_node
             node = yop.ast_der(obj);
         end
         
-        function node = alg(obj)
-            node = yop.ast_alg(obj);
-        end
-        
         function node = int(obj)
             node = yop.ast_int(obj);
         end
@@ -418,9 +414,10 @@ classdef ast_expression < yop.ast_node
     methods (Static)
         function ast = timed_expression(texpr, expr)
             
-            ist0 = isa_independent0(texpr); % expr(t0)
-            istf = isa_independentf(texpr); % expr(tf)
-            ist  = isa_independent(texpr);  % expr(t)
+            [~, ~, type] = isa_variable(texpr);
+            ist  = type == yop.var_type.time;  % expr(t)
+            ist0 = type == yop.var_type.time0; % expr(t0)
+            istf = type == yop.var_type.timef; % expr(tf)
             
             isrel = isa(texpr, 'yop.ast_relation');
             ssr = yop.to_ssr(texpr);
@@ -429,37 +426,55 @@ classdef ast_expression < yop.ast_node
             if isrel && n==1
                 lhs1 = ssr{1}.lhs;
                 rhs1 = ssr{1}.rhs;
-                a1_is_eq = isa(ssr{1}, 'yop.ast_eq');
-                a1_is_le = isa(ssr{1}, 'yop.ast_lt') || isa(ssr{1}, 'yop.ast_le');
-                a1_is_ge = isa(ssr{1}, 'yop.ast_gt') || isa(ssr{1}, 'yop.ast_ge');
-                a1_lhs_is_t = isa_independent(lhs1);
-                a1_rhs_is_t = isa_independent(rhs1);
-                a1_lhs_is_t0 = isa_independent0(lhs1);
-                a1_rhs_is_t0 = isa_independent0(rhs1);
-                a1_lhs_is_tf = isa_independentf(lhs1);
-                a1_rhs_is_tf = isa_independentf(rhs1);
-                a1_lhs_is_num = isa_numeric(lhs1);
-                a1_rhs_is_num = isa_numeric(rhs1);
                 
+                a1_eq = isa(ssr{1}, 'yop.ast_eq');
+                a1_le = isa(ssr{1}, 'yop.ast_lt') || isa(ssr{1}, 'yop.ast_le');
+                a1_ge = isa(ssr{1}, 'yop.ast_gt') || isa(ssr{1}, 'yop.ast_ge');
+                
+                a1_num_lhs = isa_numeric(lhs1);
+                a1_num_rhs = isa_numeric(rhs1);
+                
+                [~, ~, a1_type_lhs] = isa_variable(lhs1);
+                [~, ~, a1_type_rhs] = isa_variable(rhs1);
+                
+                a1_time_lhs  = a1_type_lhs == yop.var_type.time;
+                a1_time0_lhs = a1_type_lhs == yop.var_type.time0;
+                a1_timef_lhs = a1_type_lhs == yop.var_type.timef;
+                
+                a1_time_rhs  = a1_type_rhs == yop.var_type.time;
+                a1_time0_rhs = a1_type_rhs == yop.var_type.time0;
+                a1_timef_rhs = a1_type_rhs == yop.var_type.timef;
                 
             elseif isrel && n==2
                 lhs1 = ssr{1}.lhs;
                 rhs1 = ssr{1}.rhs;
-                a1_is_le = isa(ssr{1}, 'yop.ast_lt') || isa(ssr{1}, 'yop.ast_le');
-                a1_is_ge = isa(ssr{1}, 'yop.ast_gt') || isa(ssr{1}, 'yop.ast_ge');
-                a1_lhs_is_t = isa_independent(lhs1);
-                a1_rhs_is_t0 = isa_independent0(rhs1);
-                a1_rhs_is_tf = isa_independentf(rhs1);
-                a1_rhs_is_num = isa_numeric(rhs1);
+                
+                a1_le = isa(ssr{1}, 'yop.ast_lt') || isa(ssr{1}, 'yop.ast_le');
+                a1_ge = isa(ssr{1}, 'yop.ast_gt') || isa(ssr{1}, 'yop.ast_ge');
+                
+                a1_num_rhs = isa_numeric(rhs1);
+                
+                [~, ~, a1_type_lhs] = isa_variable(lhs1);
+                [~, ~, a1_type_rhs] = isa_variable(rhs1);
+                
+                a1_time_lhs  = a1_type_lhs == yop.var_type.time;
+                a1_time0_rhs = a1_type_rhs == yop.var_type.time0;
+                a1_timef_rhs = a1_type_rhs == yop.var_type.timef;
                 
                 lhs2 = ssr{2}.lhs;
                 rhs2 = ssr{2}.rhs;
-                a2_is_le = isa(ssr{2}, 'yop.ast_lt') || isa(ssr{2}, 'yop.ast_le');
-                a2_is_ge = isa(ssr{2}, 'yop.ast_gt') || isa(ssr{2}, 'yop.ast_ge');
-                a2_rhs_is_t = isa_independent(rhs2);
-                a2_lhs_is_t0 = isa_independent0(lhs2);
-                a2_lhs_is_tf = isa_independentf(lhs2);
-                a2_lhs_is_num = isa_numeric(lhs2);
+                
+                a2_le = isa(ssr{2}, 'yop.ast_lt') || isa(ssr{2}, 'yop.ast_le');
+                a2_ge = isa(ssr{2}, 'yop.ast_gt') || isa(ssr{2}, 'yop.ast_ge');
+                
+                [~, ~, a2_type_lhs] = isa_variable(lhs2);
+                [~, ~, a2_type_rhs] = isa_variable(rhs2);
+                
+                a2_time0_lhs = a2_type_lhs == yop.var_type.time0;
+                a2_timef_lhs = a2_type_lhs == yop.var_type.timef;
+                a2_num_lhs = isa_numeric(lhs2);
+                
+                a2_time_rhs = a2_type_rhs == yop.var_type.time;
                 
             end
             
@@ -480,152 +495,152 @@ classdef ast_expression < yop.ast_node
                 % expr(t)
                 ast = expr;
                 
-            elseif n==1 && a1_lhs_is_t && a1_is_eq && a1_rhs_is_t0
+            elseif n==1 && a1_time_lhs && a1_eq && a1_time0_rhs
                 % expr(t == t0)
                 ast = yop.ast_timepoint(yop.initial_timepoint, expr);
                 
-            elseif n==1 && a1_lhs_is_t && a1_is_eq && a1_rhs_is_tf
+            elseif n==1 && a1_time_lhs && a1_eq && a1_timef_rhs
                 % expr(t == tf)
                 ast = yop.ast_timepoint(yop.final_timepoint, expr);
                 
-            elseif n==1 && a1_lhs_is_t && a1_is_eq && a1_rhs_is_num
+            elseif n==1 && a1_time_lhs && a1_eq && a1_num_rhs
                 % expr(t == num)
                 ast = yop.ast_timepoint(yop.prop_num(rhs1), expr);
                 
-            elseif n==1 && a1_lhs_is_t0 && a1_is_eq && a1_rhs_is_t
+            elseif n==1 && a1_time0_lhs && a1_eq && a1_time_rhs
                 % expr(t0 == t)
                 ast = yop.ast_timepoint(yop.initial_timepoint, expr);
                 
-            elseif n==1 && a1_lhs_is_tf && a1_is_eq && a1_rhs_is_t
+            elseif n==1 && a1_timef_lhs && a1_eq && a1_time_rhs
                 % expr(tf == t)
                 ast = yop.ast_timepoint(yop.final_timepoint, expr);
                 
-            elseif n==1 && a1_lhs_is_num && a1_is_eq && a1_rhs_is_t
+            elseif n==1 && a1_num_lhs && a1_eq && a1_time_rhs
                 % expr(num == t)
                 ast = yop.ast_timepoint(yop.prop_num(lhs1), expr);
                 
-            elseif n==1 && a1_lhs_is_t && a1_is_le && a1_rhs_is_t0
+            elseif n==1 && a1_time_lhs && a1_le && a1_time0_rhs
                 % expr(t <= t0)
                 ast = yop.ast_timepoint(yop.initial_timepoint, expr);
                 
-            elseif n==1 && a1_lhs_is_t && a1_is_le && a1_rhs_is_tf
+            elseif n==1 && a1_time_lhs && a1_le && a1_timef_rhs
                 % expr(t <= tf)
                 ast = expr;
                 
-            elseif n==1 && a1_lhs_is_t && a1_is_le && a1_rhs_is_num
+            elseif n==1 && a1_time_lhs && a1_le && a1_num_rhs
                 % expr(t <= num)
                 ast = yop.ast_timeinterval( ...
                     yop.initial_timepoint, ...
                     yop.prop_num(rhs1), ...
                     expr);
                 
-            elseif n==1 && a1_lhs_is_t0 && a1_is_le && a1_rhs_is_t
+            elseif n==1 && a1_time0_lhs && a1_le && a1_time_rhs
                 % expr(t0 <= t)
                 ast = expr;
                 
-            elseif n==1 && a1_lhs_is_tf && a1_is_le && a1_rhs_is_t
+            elseif n==1 && a1_timef_lhs && a1_le && a1_time_rhs
                 % expr(tf <= t)
                 ast = yop.ast_timepoint(yop.final_timepoint, expr);
                 
-            elseif n==1 && a1_lhs_is_num && a1_is_le && a1_rhs_is_t
+            elseif n==1 && a1_num_lhs && a1_le && a1_time_rhs
                 % expr(num <= t)
                 ast = yop.ast_timeinterval( ...
                     yop.prop_num(lhs1), ...
                     yop.final_timepoint, ...
                     expr);
                 
-            elseif n==1 && a1_lhs_is_t && a1_is_ge && a1_rhs_is_t0
+            elseif n==1 && a1_time_lhs && a1_ge && a1_time0_rhs
                 % expr(t >= t0)
                 ast = expr;
                 
-            elseif n==1 && a1_lhs_is_t && a1_is_ge && a1_rhs_is_tf
+            elseif n==1 && a1_time_lhs && a1_ge && a1_timef_rhs
                 % expr(t >= tf)
                 ast = yop.ast_timepoint(yop.final_timepoint, expr);
                 
-            elseif n==1 && a1_lhs_is_t && a1_is_ge && a1_rhs_is_num
+            elseif n==1 && a1_time_lhs && a1_ge && a1_num_rhs
                 % expr(t >= num)
                 ast = yop.ast_timeinterval( ...
                     yop.prop_num(rhs1), ...
                     yop.final_timepoint, ...
                     expr);
                 
-            elseif n==1 && a1_lhs_is_t0 && a1_is_ge && a1_rhs_is_t
+            elseif n==1 && a1_time0_lhs && a1_ge && a1_time_rhs
                 % expr(t0 >= t)
                 ast = yop.ast_timepoint(yop.initial_timepoint, expr);
                 
-            elseif n==1 && a1_lhs_is_tf && a1_is_ge && a1_rhs_is_t
+            elseif n==1 && a1_timef_lhs && a1_ge && a1_time_rhs
                 % expr(tf >= t)
                 ast = expr;
                 
-            elseif n==1 && a1_lhs_is_num && a1_is_ge && a1_rhs_is_t
+            elseif n==1 && a1_num_lhs && a1_ge && a1_time_rhs
                 % expr(num >= t)
                 ast = yop.ast_timeinterval( ...
                     yop.initial_timepoint, ...
                     yop.prop_num(lhs1), ...
                     expr);
                 
-            elseif n==2 && a1_lhs_is_t && a1_is_le && a1_rhs_is_t0 && a2_lhs_is_t0 && a2_is_le && a2_rhs_is_t
+            elseif n==2 && a1_time_lhs && a1_le && a1_time0_rhs && a2_time0_lhs && a2_le && a2_time_rhs
                 % expr(t0 <= t <= t0) -> expr(t <= t0), expr(t0 <= t)
                 % Operator binding and dfs gives the two relations
                 ast = yop.ast_timepoint(yop.initial_timepoint, expr);
                 
-            elseif n==2 && a1_lhs_is_t && a1_is_le && a1_rhs_is_tf && a2_lhs_is_t0 && a2_is_le && a2_rhs_is_t
+            elseif n==2 && a1_time_lhs && a1_le && a1_timef_rhs && a2_time0_lhs && a2_le && a2_time_rhs
                 % expr(t0 <= t <= tf) -> expr(t <= tf), expr(t0 <= t)
                 ast = expr;
                 
-            elseif n==2 && a1_lhs_is_t && a1_is_le && a1_rhs_is_tf && a2_lhs_is_tf && a2_is_le && a2_rhs_is_t
+            elseif n==2 && a1_time_lhs && a1_le && a1_timef_rhs && a2_timef_lhs && a2_le && a2_time_rhs
                 % expr(tf <= t <= tf) -> expr(t <= tf), expr(tf <= t)
                 % Operator binding and dfs gives the two relations
                 ast = yop.ast_timepoint(yop.final_timepoint, expr);
                 
-            elseif n==2 && a1_lhs_is_t && a1_is_le && a1_rhs_is_tf && a2_lhs_is_num && a2_is_le && a2_rhs_is_t
+            elseif n==2 && a1_time_lhs && a1_le && a1_timef_rhs && a2_num_lhs && a2_le && a2_time_rhs
                 % expr(num <= t <= tf) -> expr(t <= tf), expr(num <= t)
                 ast = yop.ast_timeinterval( ...
                     yop.prop_num(lhs2), ...
                     yop.final_timepoint, ...
                     expr);
                 
-            elseif n==2 && a1_lhs_is_t && a1_is_le && a1_rhs_is_num && a2_lhs_is_t0 && a2_is_le && a2_rhs_is_t
+            elseif n==2 && a1_time_lhs && a1_le && a1_num_rhs && a2_time0_lhs && a2_le && a2_time_rhs
                 % expr(t0 <= t <= num) -> expr(t <= num), expr(t0 <= t)
                 ast = yop.ast_timeinterval( ...
                     yop.initial_timepoint, ...
                     yop.prop_num(rhs1), ...
                     expr);
                 
-            elseif n==2 && a1_lhs_is_t && a1_is_le && a1_rhs_is_num && a2_lhs_is_num && a2_is_le && a2_rhs_is_t
+            elseif n==2 && a1_time_lhs && a1_le && a1_num_rhs && a2_num_lhs && a2_le && a2_time_rhs
                 % expr(num <= t <= num) -> expr(t <= num), expr(num <= t)
                 ast = yop.ast_timeinterval( ...
                     yop.prop_num(lhs2), ...
                     yop.prop_num(rhs1), ...
                     expr);
                 
-            elseif n==2 && a1_lhs_is_t && a1_is_ge && a1_rhs_is_t0 && a2_lhs_is_t0 && a2_is_ge && a2_rhs_is_t
+            elseif n==2 && a1_time_lhs && a1_ge && a1_time0_rhs && a2_time0_lhs && a2_ge && a2_time_rhs
                 % expr(t0 >= t >= t0) -> expr(t >= t0), expr(t0 >= t)
                 ast = yop.ast_timepoint(yop.initial_timepoint, expr);
                 
-            elseif n==2 && a1_lhs_is_t && a1_is_ge && a1_rhs_is_t0 && a2_lhs_is_tf && a2_is_ge && a2_rhs_is_t
+            elseif n==2 && a1_time_lhs && a1_ge && a1_time0_rhs && a2_timef_lhs && a2_ge && a2_time_rhs
                 % expr(tf >= t >= t0) -> expr(t >= t0), expr(tf >= t)
                 ast = expr;
                 
-            elseif n==2 && a1_lhs_is_t && a1_is_ge && a1_rhs_is_t0 && a2_lhs_is_num && a2_is_ge && a2_rhs_is_t
+            elseif n==2 && a1_time_lhs && a1_ge && a1_time0_rhs && a2_num_lhs && a2_ge && a2_time_rhs
                 % expr(num >= t >= t0) -> expr(t >= t0), expr(num >= t)
                 ast = yop.ast_timeinterval( ...
                     yop.initial_timepoint, ...
                     yop.prop_num(lhs2), ...
                     expr);
                 
-            elseif n==2 && a1_lhs_is_t && a1_is_ge && a1_rhs_is_tf && a2_lhs_is_tf && a2_is_ge && a2_rhs_is_t
+            elseif n==2 && a1_time_lhs && a1_ge && a1_timef_rhs && a2_timef_lhs && a2_ge && a2_time_rhs
                 % expr(tf >= t >= tf) -> expr(t >= tf), expr(tf >= t)
                 ast = yop.ast_timepoint(yop.final_timepoint, expr);
                 
-            elseif n==2 && a1_lhs_is_t && a1_is_ge && a1_rhs_is_num && a2_lhs_is_tf && a2_is_ge && a2_rhs_is_t
+            elseif n==2 && a1_time_lhs && a1_ge && a1_num_rhs && a2_timef_lhs && a2_ge && a2_time_rhs
                 % expr(tf >= t >= num) -> expr(t >= num), expr(tf >= t)
                 ast = yop.ast_timeinterval( ...
                     yop.prop_num(rhs1), ...
                     yop.final_timepoint, ...
                     expr);
                 
-            elseif n==2 && a1_lhs_is_t && a1_is_ge && a1_rhs_is_num && a2_lhs_is_num && a2_is_ge && a2_rhs_is_t
+            elseif n==2 && a1_time_lhs && a1_ge && a1_num_rhs && a2_num_lhs && a2_ge && a2_time_rhs
                 % expr(num >= t >= num) -> expr(t >= num), expr(num >= t)
                 ast = yop.ast_timeinterval( ...
                     yop.prop_num(rhs1), ...

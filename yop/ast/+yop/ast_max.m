@@ -49,8 +49,6 @@ classdef ast_max < yop.ast_expression
         end
         
         function boolv = isa_numeric(obj)
-            % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used.
             switch obj.nargs
                 case 1
                     if all(isa_numeric(obj.A))
@@ -85,13 +83,6 @@ classdef ast_max < yop.ast_expression
                         boolv = false(size(obj));
                     end
             end
-        end
-        
-        function obj = set_pred(obj)
-            add_pred(obj.A, obj);
-            add_pred(obj.B, obj);
-            add_pred(obj.d, obj);
-            add_pred(obj.flag, obj);
         end
         
         function value = evaluate(obj)

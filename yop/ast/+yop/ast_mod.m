@@ -12,8 +12,6 @@ classdef ast_mod < yop.ast_expression
         end
         
         function boolv = isa_numeric(obj)
-            % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used.
             if all(isa_numeric(obj.a)) && all(isa_numeric(obj.m))
                 boolv = true(size(obj));
             else
@@ -28,11 +26,6 @@ classdef ast_mod < yop.ast_expression
             else
                 boolv = false(size(obj));
             end
-        end
-        
-        function obj = set_pred(obj)
-            add_pred(obj.a, obj);
-            add_pred(obj.m, obj);
         end
         
         function value = evaluate(obj)

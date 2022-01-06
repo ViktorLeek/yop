@@ -30,14 +30,7 @@ classdef ast_ge < yop.ast_relation
             fn = get_constructor(obj);
             ceq = fn(obj.rhs-obj.lhs, 0);
         end
-        
-        function cbox = canonicalize_box(box)
-            if all(isa_variable(box.lhs)) % var >= num
-                cbox = box;
-            else % num >= var
-                cbox = yop.ast_le(box.rhs, box.lhs, box.m_hard);
-            end
-        end
+
     end
     
 end

@@ -22,8 +22,6 @@ classdef ast_cumsum < yop.ast_expression
         end
         
         function boolv = isa_numeric(obj)
-            % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used.
             boolv = isa_numeric(obj.expr);
             switch obj.nargs
                 case 1
@@ -47,10 +45,6 @@ classdef ast_cumsum < yop.ast_expression
             else
                 boolv = false(size(obj));
             end
-        end
-        
-        function obj = set_pred(obj)
-            add_pred(obj.A, obj);
         end
         
         function value = evaluate(obj)

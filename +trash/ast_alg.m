@@ -4,7 +4,7 @@ classdef ast_alg < yop.ast_expression
     end
     methods
         function obj = ast_alg(var)
-            obj@yop.ast_expression(is_ival(expr));
+            obj@yop.ast_expression(is_ival(var));
             obj.expr = var;
             obj.dim = size(var);
         end
@@ -26,8 +26,6 @@ classdef ast_alg < yop.ast_expression
         end
         
         function boolv = isa_numeric(obj)
-            % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used.
             error('[Yop] Error: Method not implemented.');
         end
         

@@ -12,13 +12,18 @@ classdef ast_repmat < yop.ast_expression
         end
         
         function boolv = isa_numeric(obj)
-            % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used.
             if all(isa_numeric(obj.expr))
                 boolv = true(size(obj));
             else
                 boolv = false(size(obj));
             end
+        end
+        
+        function [bool, id, type] = isa_variable(obj)
+            [bool, id, type] = isa_variable(obj.expr);
+            bool = repmat(bool, obj.args{:});
+            id = repmat(id, obj.args{:});
+            type = repmat(type, obj.args{:});
         end
         
         function boolv = is_transcription_invariant(obj)
@@ -27,10 +32,6 @@ classdef ast_repmat < yop.ast_expression
             else
                 boolv = false(size(obj));
             end
-        end
-        
-        function obj = set_pred(obj)
-            add_pred(obj.expr, obj);
         end
         
         function value = evaluate(obj)

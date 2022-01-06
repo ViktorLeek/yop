@@ -10,9 +10,14 @@ classdef ast_transpose < yop.ast_expression
         end
         
         function boolv = isa_numeric(obj)
-            % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used.
             boolv = transpose(isa_numeric(obj.expr));
+        end
+        
+        function [bool, id, type] = isa_variable(obj)
+            [bool, id, type] = isa_variable(obj.expr);
+            bool = transpose(bool);
+            id = transpose(id);
+            type = transpose(type);
         end
         
         function [bool, tp] = isa_timepoint(obj)
@@ -27,60 +32,8 @@ classdef ast_transpose < yop.ast_expression
             id = transpose(id);
         end
         
-        function [bool, id] = isa_variable(obj)
-            [bool, id] = isa_variable(obj.expr);
-            bool = transpose(bool);
-            id = transpose(id);
-        end
-        
-        function [bool, id] = isa_state(obj)
-            [bool, id] = isa_state(obj.expr);
-            bool = transpose(bool);
-            id = transpose(id);
-        end
-        
-        function [bool, id] = isa_independent(obj)
-            [bool, id] = isa_independent(obj.expr);
-            bool = transpose(bool);
-            id = transpose(id);
-        end
-        
-        function [bool, id] = isa_independent0(obj)
-            [bool, id] = isa_independent0(obj.expr);
-            bool = transpose(bool);
-            id = transpose(id);
-        end
-        
-        function [bool, id] = isa_independentf(obj)
-            [bool, id] = isa_independentf(obj.expr);
-            bool = transpose(bool);
-            id = transpose(id);
-        end
-        
-        function [bool, id] = isa_parameter(obj)
-            [bool, id] = isa_parameter(obj.expr);
-            bool = transpose(bool);
-            id = transpose(id);
-        end
-        
-        function [bool, id] = isa_control(obj)
-            [bool, id] = isa_control(obj.expr);
-            bool = transpose(bool);
-            id = transpose(id);
-        end
-        
-        function [bool, id] = isa_algebraic(obj)
-            [bool, id] = isa_algebraic(obj.expr);
-            bool = transpose(bool);
-            id = transpose(id);
-        end
-        
         function boolv = is_transcription_invariant(obj)
             boolv = transpose(is_transcription_invariant(obj.expr));
-        end
-        
-        function obj = set_pred(obj)
-            add_pred(obj.expr, obj);
         end
         
         function value = evaluate(obj)

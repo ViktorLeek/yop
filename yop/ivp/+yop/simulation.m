@@ -244,73 +244,73 @@ classdef simulation < handle
             
             isa_eq = isa(ssr, 'yop.ast_eq');
             
-            lhs_num = isa_numeric(lhs);
-            isa_der_lhs = isa_der(lhs);
-            [~, id_lhs] = isa_variable(lhs);
-            isa_state_lhs = isa_state(lhs);
-            isa_control_lhs = isa_control(lhs);
-            isa_algebraic_lhs = isa_algebraic(lhs);
-            isa_parameter_lhs = isa_parameter(lhs);
-            [lhs_istp, lhs_tp] = isa_timepoint(lhs);
-            isa_independent0_lhs = isa_independent0(lhs);
-            isa_independentf_lhs = isa_independentf(lhs);
+            num_lhs = isa_numeric(lhs);
+            der_lhs = isa_der(lhs);
+            [istp_lhs, tp_lhs] = isa_timepoint(lhs);
+            [~, id_lhs, type_lhs] = isa_variable(lhs);
+            time0_lhs     = type_lhs == yop.var_type.time0;
+            timef_lhs     = type_lhs == yop.var_type.timef;
+            state_lhs     = type_lhs == yop.var_type.state;
+            control_lhs   = type_lhs == yop.var_type.control;
+            algebraic_lhs = type_lhs == yop.var_type.algebraic;
+            parameter_lhs = type_lhs == yop.var_type.parameter;
             
-            rhs_num = isa_numeric(rhs);
-            isa_der_rhs = isa_der(rhs);
-            [~, id_rhs] = isa_variable(rhs);
-            isa_state_rhs = isa_state(rhs);
-            isa_control_rhs = isa_control(rhs);
-            isa_algebraic_rhs = isa_algebraic(rhs);
-            isa_parameter_rhs = isa_parameter(rhs);
-            [rhs_istp, rhs_tp] = isa_timepoint(rhs);
-            isa_independent0_rhs = isa_independent0(rhs);
-            isa_independentf_rhs = isa_independentf(rhs);
+            num_rhs = isa_numeric(rhs);
+            der_rhs = isa_der(rhs);
+            [istp_rhs, tp_rhs] = isa_timepoint(rhs);
+            [~, id_rhs, type_rhs] = isa_variable(rhs);
+            time0_rhs     = type_rhs == yop.var_type.time0;
+            timef_rhs     = type_rhs == yop.var_type.timef;
+            state_rhs     = type_rhs == yop.var_type.state;
+            control_rhs   = type_rhs == yop.var_type.control;
+            algebraic_rhs = type_rhs == yop.var_type.algebraic;
+            parameter_rhs = type_rhs == yop.var_type.parameter;
                 
-            if isa_der_lhs && isa_state_lhs && isa_eq
+            if der_lhs && state_lhs && isa_eq
                 % der(x) == expr
                 obj.ode_eqs{end+1} = ssr;
                 
-            elseif isa_der_rhs && isa_state_rhs && isa_eq
+            elseif der_rhs && state_rhs && isa_eq
                 % expr == der(x)
                 c = get_constructor(ssr);
                 obj.ode_eqs{end+1} = c(ssr.rhs, ssr.lhs);
                 
-            elseif lhs_istp && lhs_tp==t0 && rhs_num && isa_eq && (isa_state_lhs || isa_control_lhs || isa_algebraic_lhs)
+            elseif istp_lhs && tp_lhs==t0 && num_rhs && isa_eq && (state_lhs || control_lhs || algebraic_lhs)
                 % v(t0) == num
                 var = obj.find_variable(id_lhs);
                 var.iv = yop.prop_num(rhs);
                 
-            elseif lhs_num && rhs_istp && rhs_tp==t0 && isa_eq && (isa_state_rhs || isa_control_rhs || isa_algebraic_rhs)
+            elseif num_lhs && istp_rhs && tp_rhs==t0 && isa_eq && (state_rhs || control_rhs || algebraic_rhs)
                 % num == v(t0)
                 var = obj.find_variable(id_rhs);
                 var.iv = yop.prop_num(lhs);
                 
-            elseif isa_independent0_lhs && rhs_num && isa_eq
+            elseif time0_lhs && num_rhs && isa_eq
                 % t0 == num
                 var = obj.find_variable(id_lhs);
                 var.iv = yop.prop_num(rhs);
                 
-            elseif isa_independent0_rhs && lhs_num && isa_eq
+            elseif time0_rhs && num_lhs && isa_eq
                 % num == t0
                 var = obj.find_variable(id_rhs);
                 var.iv = yop.prop_num(lhs);
                 
-            elseif isa_independentf_lhs && rhs_num && isa_eq
+            elseif timef_lhs && num_rhs && isa_eq
                 % tf == num
                 var = obj.find_variable(id_lhs);
                 var.iv = yop.prop_num(rhs);
                 
-            elseif isa_independentf_rhs && lhs_num && isa_eq
+            elseif timef_rhs && num_lhs && isa_eq
                 % num == tf
                 var = obj.find_variable(id_rhs);
                 var.iv = yop.prop_num(lhs);
                 
-            elseif isa_parameter_lhs && rhs_num && isa_eq
+            elseif parameter_lhs && num_rhs && isa_eq
                 % p == num
                 var = obj.find_variable(id_lhs);
                 var.iv = yop.prop_num(rhs);
                 
-            elseif lhs_num && isa_parameter_rhs && isa_eq
+            elseif num_lhs && parameter_rhs && isa_eq
                 % num == p
                 var = obj.find_variable(id_rhs);
                 var.iv = yop.prop_num(lhs);
@@ -361,7 +361,7 @@ classdef simulation < handle
             %ode_rhs = vertcat(tmp_rhs{:});
             
             % Test if all states are bound to an ode
-            [~, ode_ids] = isa_state(ode_lhs);
+            [~, ode_ids] = isa_variable(ode_lhs);
             [ode_ids, idx] = sort(ode_ids);
             x_ids = obj.get_state_ids();
             if ~isequal(x_ids, ode_ids)
@@ -506,16 +506,6 @@ classdef simulation < handle
         
         function n = n_z(obj)
             n = length(obj.algebraics);
-        end 
-        
-        function bool = isa_ode(obj)
-            bool = ~isempty(obj.ode) && isempty(obj.alg) && ...
-                obj.n_x > 0 && obj.n_z == 0;
-        end
-        
-        function bool = isa_dae(obj)
-            bool = ~isempty(obj.ode) && ~isempty(obj.alg) && ...
-                obj.n_x > 0 && obj.n_z > 0;
         end
         
     end

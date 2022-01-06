@@ -10,8 +10,6 @@ classdef ast_asinh < yop.ast_expression
         end
         
         function boolv = isa_numeric(obj)
-            % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used.
             boolv = isa_numeric(obj.expr);
         end
         

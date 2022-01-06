@@ -16,6 +16,13 @@ classdef ast_node < handle
             obj.id = yop.ast_node.get_uid();
         end
         
+        function id = get_id(obj)
+            % Has a function overload that must be on the path. This way it
+            % is possible to get the id of all expressions, including
+            % built-in type, which get id = 0
+            id = obj.id;
+        end
+        
         function node = at(expression, timepoint)
             % Alternative syntax for evaluating expression at a timepoint
             %node = yop.ast_timepoint(timepoint, expression);

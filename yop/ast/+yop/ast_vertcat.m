@@ -18,19 +18,20 @@ classdef ast_vertcat < yop.ast_expression
         end
         
         function boolv = isa_numeric(obj)
-            % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used.
             boolv = isa_numeric(obj.args{1});
             for k=2:length(obj.args)
                 boolv = [boolv; isa_numeric(obj.args{k})];
             end
         end
         
-        function boolv = is_transcription_invariant(obj)
-            boolv = is_transcription_invariant(obj.args{1});
+        function [bool, id, type] = isa_variable(obj)
+            [bool, id, type] = isa_variable(obj.args{1});
             for k=2:length(obj.args)
-                boolv = [boolv; is_transcription_invariant(obj.args{k})];
-            end
+                [bk, ik, tk] = isa_variable(obj.args{k});
+                bool = [bool; bk];
+                id = [id; ik];
+                type = [type; tk];
+            end       
         end
         
         function [bool, tp] = isa_timepoint(obj)
@@ -51,76 +52,11 @@ classdef ast_vertcat < yop.ast_expression
             end       
         end
         
-        function [bool, id] = isa_variable(obj)
-            [bool, id] = isa_variable(obj.args{1});
+        function boolv = is_transcription_invariant(obj)
+            boolv = is_transcription_invariant(obj.args{1});
             for k=2:length(obj.args)
-                [bk, ik] = isa_variable(obj.args{k});
-                bool = [bool; bk];
-                id = [id; ik];
-            end       
-        end
-        
-        function [bool, id] = isa_state(obj)
-            [bool, id] = isa_state(obj.args{1});
-            for k=2:length(obj.args)
-                [bk, ik] = isa_state(obj.args{k});
-                bool = [bool; bk];
-                id = [id; ik];
-            end       
-        end
-        
-        function [bool, id] = isa_independent(obj)
-            [bool, id] = isa_independent(obj.args{1});
-            for k=2:length(obj.args)
-                [bk, ik] = isa_independent(obj.args{k});
-                bool = [bool; bk];
-                id = [id; ik];
-            end       
-        end
-        
-        function [bool, id] = isa_independent0(obj)
-            [bool, id] = isa_independent0(obj.args{1});
-            for k=2:length(obj.args)
-                [bk, ik] = isa_independent0(obj.args{k});
-                bool = [bool; bk];
-                id = [id; ik];
-            end       
-        end
-        
-        function [bool, id] = isa_independentf(obj)
-            [bool, id] = isa_independentf(obj.args{1});
-            for k=2:length(obj.args)
-                [bk, ik] = isa_independentf(obj.args{k});
-                bool = [bool; bk];
-                id = [id; ik];
-            end       
-        end
-        
-        function [bool, id] = isa_parameter(obj)
-            [bool, id] = isa_parameter(obj.args{1});
-            for k=2:length(obj.args)
-                [bk, ik] = isa_parameter(obj.args{k});
-                bool = [bool; bk];
-                id = [id; ik];
-            end       
-        end
-        
-        function [bool, id] = isa_control(obj)
-            [bool, id] = isa_control(obj.args{1});
-            for k=2:length(obj.args)
-                [bk, ik] = isa_control(obj.args{k});
-                bool = [bool; bk];
-                id = [id; ik];
-            end       
-        end
-        
-        function [bool, id] = isa_algebraic(obj)
-            [bool, id] = isa_algebraic(obj.args{1});
-            for k=2:length(obj.args)
-                [bk, ik] = isa_algebraic(obj.args{k});
-                bool = [bool; bk];
-                id = [id; ik];
-            end       
+                boolv = [boolv; is_transcription_invariant(obj.args{k})];
+            end
         end
         
         function value = evaluate(obj)
