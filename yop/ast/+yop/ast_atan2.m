@@ -19,9 +19,9 @@ classdef ast_atan2 < yop.ast_expression
             end
         end
         
-        function boolv = is_transcription_invariant(obj)
-            if all(is_transcription_invariant(obj.y)) && ...
-                    all(is_transcription_invariant(obj.x))
+        function boolv = isa_reducible(obj)
+            if all(isa_reducible(obj.y)) && ...
+                    all(isa_reducible(obj.x))
                 boolv = true(size(obj));
             else
                 boolv = false(size(obj));

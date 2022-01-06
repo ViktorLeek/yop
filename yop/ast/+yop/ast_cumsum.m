@@ -39,8 +39,8 @@ classdef ast_cumsum < yop.ast_expression
             end
         end
         
-        function boolv = is_transcription_invariant(obj)
-            if all(is_transcription_invariant(obj.A))
+        function boolv = isa_reducible(obj)
+            if all(isa_reducible(obj.A))
                 boolv = true(size(obj));
             else
                 boolv = false(size(obj));

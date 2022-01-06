@@ -118,7 +118,7 @@ classdef ocp_sol < handle
             [tpv, intv, derv] = obj.comp_sn(sn, ...
                 n_elem(tps), n_elem(ints), n_elem(ders));
             
-            if is_transcription_invariant(expr)
+            if isa_reducible(expr)
                 v = obj.invariant_value(fn, tpv, intv, derv);
             elseif is_ival(expr)
                 v = obj.interval_value(expr, fn, tpv, intv, derv, mag);

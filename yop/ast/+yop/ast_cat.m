@@ -67,10 +67,10 @@ classdef ast_cat < yop.ast_expression
             tp = cat(obj.d, tmp_tp{:});
         end
         
-        function boolv = is_transcription_invariant(obj)
-            tmp = {is_transcription_invariant(obj.args{1})};
+        function boolv = isa_reducible(obj)
+            tmp = {isa_reducible(obj.args{1})};
             for k=2:length(obj.args)
-                tmp = {tmp{:}, is_transcription_invariant(obj.args{k})};
+                tmp = {tmp{:}, isa_reducible(obj.args{k})};
             end
             boolv = cat(obj.d, tmp{:});
         end

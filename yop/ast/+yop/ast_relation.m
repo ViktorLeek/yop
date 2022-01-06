@@ -25,9 +25,9 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
             bool = obj.m_hard;
         end
         
-        function boolv = is_transcription_invariant(obj)
-            boolv = is_transcription_invariant(obj.lhs) & ...
-                is_transcription_invariant(obj.rhs);
+        function boolv = isa_reducible(obj)
+            boolv = isa_reducible(obj.lhs) & ...
+                isa_reducible(obj.rhs);
         end
         
         function sz = size(obj, varargin)

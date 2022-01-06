@@ -51,10 +51,10 @@ classdef ast_vertcat < yop.ast_expression
             end       
         end
         
-        function boolv = is_transcription_invariant(obj)
-            boolv = is_transcription_invariant(obj.args{1});
+        function boolv = isa_reducible(obj)
+            boolv = isa_reducible(obj.args{1});
             for k=2:length(obj.args)
-                boolv = [boolv; is_transcription_invariant(obj.args{k})];
+                boolv = [boolv; isa_reducible(obj.args{k})];
             end
         end
         

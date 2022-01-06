@@ -14,7 +14,7 @@ classdef ast_int < yop.ast_expression
             boolv = isa_numeric(obj.expr);
         end
         
-        function boolv = is_transcription_invariant(obj)
+        function boolv = isa_reducible(obj)
             boolv = true(size(obj));
         end
         

@@ -23,7 +23,7 @@ classdef ast_timeinterval < yop.ast_expression
             [type, id] = Type(obj.expr);
         end
         
-        function boolv = is_transcription_invariant(obj)
+        function boolv = isa_reducible(obj)
             boolv = false(size(obj));
         end
         

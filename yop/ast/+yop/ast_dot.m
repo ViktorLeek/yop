@@ -44,9 +44,9 @@ classdef ast_dot < yop.ast_expression
             end
         end
         
-        function boolv = is_transcription_invariant(obj)
-            if all(is_transcription_invariant(obj.A)) && ...
-                    all(is_transcription_invariant(obj.B))
+        function boolv = isa_reducible(obj)
+            if all(isa_reducible(obj.A)) && ...
+                    all(isa_reducible(obj.B))
                 boolv = true(size(obj));
             else
                 boolv = false(size(obj));

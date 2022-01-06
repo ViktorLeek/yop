@@ -25,8 +25,8 @@ classdef ast_repmat < yop.ast_expression
             id = repmat(id, obj.args{:});
         end
         
-        function boolv = is_transcription_invariant(obj)
-            if all(is_transcription_invariant(obj.expr))
+        function boolv = isa_reducible(obj)
+            if all(isa_reducible(obj.expr))
                 boolv = true(size(obj));
             else
                 boolv = false(size(obj));

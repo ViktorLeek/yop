@@ -59,8 +59,8 @@ classdef ocp_expr < handle
             end
         end
         
-        function bool = is_transcription_invariant(obj)
-            bool = all(is_transcription_invariant(obj.ast));
+        function bool = isa_reducible(obj)
+            bool = all(isa_reducible(obj.ast));
         end
         
         function tp = timepoint(obj)

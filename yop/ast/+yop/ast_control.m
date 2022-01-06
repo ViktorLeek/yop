@@ -12,7 +12,7 @@ classdef ast_control < yop.ast_variable
             end
         end
         
-        function boolv = is_transcription_invariant(obj)
+        function boolv = isa_reducible(obj)
             boolv = false(size(obj));
         end
         

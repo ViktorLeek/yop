@@ -53,10 +53,10 @@ classdef ast_subsasgn < yop.ast_expression
             tp(idx) = tpb;
         end
         
-        function boolv = is_transcription_invariant(obj)
-            boolv = is_transcription_invariant(obj.node);
+        function boolv = isa_reducible(obj)
+            boolv = isa_reducible(obj.node);
             idx = get_indices(obj);
-            boolv(idx) = is_transcription_invariant(obj.b);
+            boolv(idx) = isa_reducible(obj.b);
         end
         
         function value = evaluate(obj)

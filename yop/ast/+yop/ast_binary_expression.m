@@ -20,9 +20,9 @@ classdef ast_binary_expression < yop.ast_expression
             end
         end
         
-        function boolv = is_transcription_invariant(obj)
-            if all(is_transcription_invariant(obj.lhs)) && ...
-                    all(is_transcription_invariant(obj.rhs))
+        function boolv = isa_reducible(obj)
+            if all(isa_reducible(obj.lhs)) && ...
+                    all(isa_reducible(obj.rhs))
                 boolv = true(size(obj));
             else
                 boolv = false(size(obj));

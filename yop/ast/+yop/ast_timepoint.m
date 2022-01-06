@@ -24,7 +24,7 @@ classdef ast_timepoint < yop.ast_expression
             tp = obj.timepoint*ones(size(obj.expr));
         end
         
-        function boolv = is_transcription_invariant(obj)
+        function boolv = isa_reducible(obj)
             boolv = true(size(obj));
         end
         

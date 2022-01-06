@@ -13,8 +13,8 @@ classdef ast_exp < yop.ast_expression
             boolv = isa_numeric(obj.expr);
         end
         
-        function boolv = is_transcription_invariant(obj)
-            boolv = is_transcription_invariant(obj.expr);
+        function boolv = isa_reducible(obj)
+            boolv = isa_reducible(obj.expr);
         end
         
         function value = evaluate(obj)

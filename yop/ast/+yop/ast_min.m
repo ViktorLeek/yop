@@ -66,18 +66,18 @@ classdef ast_min < yop.ast_expression
             end
         end
         
-        function boolv = is_transcription_invariant(obj)
+        function boolv = isa_reducible(obj)
             switch obj.nargs
                 case 1
-                    if all(is_transcription_invariant(obj.A))
+                    if all(isa_reducible(obj.A))
                         boolv = true(size(obj));
                     else
                         boolv = false(size(obj));
                     end
                     
                 case {2, 3, 4}
-                    if all(is_transcription_invariant(obj.A)) && ...
-                            all(is_transcription_invariant(obj.B))
+                    if all(isa_reducible(obj.A)) && ...
+                            all(isa_reducible(obj.B))
                         boolv = true(size(obj));
                     else
                         boolv = false(size(obj));

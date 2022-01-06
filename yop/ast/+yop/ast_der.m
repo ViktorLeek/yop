@@ -22,8 +22,8 @@ classdef ast_der < yop.ast_expression
             [type, id] = Type(obj.expr);
         end
         
-        function boolv = is_transcription_invariant(obj)
-            boolv = is_transcription_invariant(obj.expr);
+        function boolv = isa_reducible(obj)
+            boolv = isa_reducible(obj.expr);
         end
         
         function value = evaluate(obj)

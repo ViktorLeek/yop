@@ -763,7 +763,7 @@ classdef ocp < handle
             isa_eq = isa(ssr, 'yop.ast_eq');
             isa_le = isa(ssr, 'yop.ast_le') || isa(ssr, 'yop.ast_lt');
             isa_ge = isa(ssr, 'yop.ast_ge') || isa(ssr, 'yop.ast_gt');
-            invariant = is_transcription_invariant(ssr);
+            invariant = isa_reducible(ssr);
             hard = is_hard(ssr);
             
             num_lhs = isa_numeric(lhs);

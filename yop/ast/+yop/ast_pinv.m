@@ -13,8 +13,8 @@ classdef ast_pinv < yop.ast_expression
             boolv = isa_numeric(obj.A);
         end
         
-        function boolv = is_transcription_invariant(obj)
-            boolv = is_transcription_invariant(obj.A);
+        function boolv = isa_reducible(obj)
+            boolv = isa_reducible(obj.A);
         end
         
         function value = evaluate(obj)

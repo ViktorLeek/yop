@@ -31,8 +31,8 @@ classdef ast_transpose < yop.ast_expression
             id = transpose(id);
         end
         
-        function boolv = is_transcription_invariant(obj)
-            boolv = transpose(is_transcription_invariant(obj.expr));
+        function boolv = isa_reducible(obj)
+            boolv = transpose(isa_reducible(obj.expr));
         end
         
         function value = evaluate(obj)

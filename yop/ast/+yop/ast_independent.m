@@ -4,7 +4,7 @@ classdef ast_independent < yop.ast_variable
             obj@yop.ast_variable(name, w, os);
         end
         
-        function boolv = is_transcription_invariant(obj)
+        function boolv = isa_reducible(obj)
             boolv = false(size(obj));
         end
         

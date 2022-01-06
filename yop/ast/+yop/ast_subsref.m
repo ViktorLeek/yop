@@ -47,8 +47,8 @@ classdef ast_subsref < yop.ast_expression
             tp = tp(idx);
         end
         
-        function boolv = is_transcription_invariant(obj)
-            boolv = is_transcription_invariant(obj.node);
+        function boolv = isa_reducible(obj)
+            boolv = isa_reducible(obj.node);
             boolv = boolv(get_indices(obj));
         end
         

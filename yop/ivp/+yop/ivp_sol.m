@@ -48,7 +48,7 @@ classdef ivp_sol < handle
             obj.ivp_vars.set_mx();
             fn = casadi.Function('fn', obj.mx_args, {fw_eval(expr)});
             
-            if is_transcription_invariant(expr)
+            if isa_reducible(expr)
                 v = obj.invariant_value(fn);
             else
                 v = obj.variant_value(fn);

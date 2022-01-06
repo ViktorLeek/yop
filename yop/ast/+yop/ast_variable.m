@@ -23,7 +23,7 @@ classdef ast_variable < yop.ast_expression
             obj.offset = offset;
         end
         
-        function boolv = is_transcription_invariant(obj)
+        function boolv = isa_reducible(obj)
             % overloaded for states, algebraics and controls
             boolv = true(size(obj));
         end

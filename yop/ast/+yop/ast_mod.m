@@ -19,9 +19,9 @@ classdef ast_mod < yop.ast_expression
             end
         end
         
-        function boolv = is_transcription_invariant(obj)
-            if all(is_transcription_invariant(obj.a)) && ...
-                    all(is_transcription_invariant(obj.m))
+        function boolv = isa_reducible(obj)
+            if all(isa_reducible(obj.a)) && ...
+                    all(isa_reducible(obj.m))
                 boolv = true(size(obj));
             else
                 boolv = false(size(obj));
