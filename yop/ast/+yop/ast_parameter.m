@@ -4,10 +4,9 @@ classdef ast_parameter < yop.ast_variable
             obj@yop.ast_variable(name, w, os);
         end
         
-        function [bool, id, type] = isa_variable(obj)
-            bool = true(size(obj));
-            id = obj.id*ones(size(obj));
+        function [type, id] = Type(obj)
             type = yop.var_type.parameter*ones(size(obj));
+            id = obj.id*ones(size(obj));
         end
     end
 end

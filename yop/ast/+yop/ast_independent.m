@@ -8,10 +8,9 @@ classdef ast_independent < yop.ast_variable
             boolv = false(size(obj));
         end
         
-        function [bool, id, type] = isa_variable(obj)
-            bool = true(size(obj));
-            id = obj.id*ones(size(obj));
+        function [type, id] = Type(obj)
             type = yop.var_type.time*ones(size(obj));
+            id = obj.id*ones(size(obj));
         end
     end
 end

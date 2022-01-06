@@ -18,8 +18,8 @@ classdef ast_der < yop.ast_expression
             boolv = isa_numeric(obj.expr);
         end
         
-        function [bool, id, type] = isa_variable(obj)
-            [bool, id, type] = isa_variable(obj.expr);
+        function [type, id] = Type(obj)
+            [type, id] = Type(obj.expr);
         end
         
         function boolv = is_transcription_invariant(obj)

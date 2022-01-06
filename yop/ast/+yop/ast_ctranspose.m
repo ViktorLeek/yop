@@ -10,9 +10,13 @@ classdef ast_ctranspose < yop.ast_expression
         end
         
         function boolv = isa_numeric(obj)
-            % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used.
             boolv = isa_numeric(obj.expr);
+        end
+        
+        function [type, id] = Type(obj)
+            [type, id] = Type(obj.expr);
+            type = ctranspose(type);
+            id = ctranspose(id);
         end
         
         function [bool, tp, type] = isa_timepoint(obj)
@@ -24,12 +28,6 @@ classdef ast_ctranspose < yop.ast_expression
         
         function [bool, id] = isa_der(obj)
             [bool, id] = isa_der(obj.expr);
-            bool = ctranspose(bool);
-            id = ctranspose(id);
-        end
-        
-        function [bool, id] = isa_variable(obj)
-            [bool, id] = isa_variable(obj.expr);
             bool = ctranspose(bool);
             id = ctranspose(id);
         end

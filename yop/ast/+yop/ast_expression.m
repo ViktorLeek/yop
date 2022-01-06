@@ -414,7 +414,7 @@ classdef ast_expression < yop.ast_node
     methods (Static)
         function ast = timed_expression(texpr, expr)
             
-            [~, ~, type] = isa_variable(texpr);
+            type = Type(texpr);
             ist  = type == yop.var_type.time;  % expr(t)
             ist0 = type == yop.var_type.time0; % expr(t0)
             istf = type == yop.var_type.timef; % expr(tf)
@@ -434,8 +434,8 @@ classdef ast_expression < yop.ast_node
                 a1_num_lhs = isa_numeric(lhs1);
                 a1_num_rhs = isa_numeric(rhs1);
                 
-                [~, ~, a1_type_lhs] = isa_variable(lhs1);
-                [~, ~, a1_type_rhs] = isa_variable(rhs1);
+                a1_type_lhs = Type(lhs1);
+                a1_type_rhs = Type(rhs1);
                 
                 a1_time_lhs  = a1_type_lhs == yop.var_type.time;
                 a1_time0_lhs = a1_type_lhs == yop.var_type.time0;
@@ -454,8 +454,8 @@ classdef ast_expression < yop.ast_node
                 
                 a1_num_rhs = isa_numeric(rhs1);
                 
-                [~, ~, a1_type_lhs] = isa_variable(lhs1);
-                [~, ~, a1_type_rhs] = isa_variable(rhs1);
+                a1_type_lhs = Type(lhs1);
+                a1_type_rhs = Type(rhs1);
                 
                 a1_time_lhs  = a1_type_lhs == yop.var_type.time;
                 a1_time0_rhs = a1_type_rhs == yop.var_type.time0;
@@ -467,8 +467,8 @@ classdef ast_expression < yop.ast_node
                 a2_le = isa(ssr{2}, 'yop.ast_lt') || isa(ssr{2}, 'yop.ast_le');
                 a2_ge = isa(ssr{2}, 'yop.ast_gt') || isa(ssr{2}, 'yop.ast_ge');
                 
-                [~, ~, a2_type_lhs] = isa_variable(lhs2);
-                [~, ~, a2_type_rhs] = isa_variable(rhs2);
+                a2_type_lhs = Type(lhs2);
+                a2_type_rhs = Type(rhs2);
                 
                 a2_time0_lhs = a2_type_lhs == yop.var_type.time0;
                 a2_timef_lhs = a2_type_lhs == yop.var_type.timef;

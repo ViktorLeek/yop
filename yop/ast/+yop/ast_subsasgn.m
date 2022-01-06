@@ -29,13 +29,12 @@ classdef ast_subsasgn < yop.ast_expression
             boolv(idx) = isa_numeric(obj.b);
         end
         
-        function [bool, id, type] = isa_variable(obj)
-            [bool, id, type] = isa_variable(obj.node);
-            [boolb, idb, typeb] = isa_variable(obj.b);
+        function [type, id] = Type(obj)
+            [type , id ] = Type(obj.node);
+            [typeb, idb] = Type(obj.b);
             idx = get_indices(obj);
-            bool(idx) = boolb;
-            id(idx) = idb;
             type(idx) = typeb;
+            id(idx) = idb;
         end
         
         function [bool, id] = isa_der(obj)

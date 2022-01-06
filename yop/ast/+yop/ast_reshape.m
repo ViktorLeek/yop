@@ -19,11 +19,10 @@ classdef ast_reshape < yop.ast_expression
             end
         end
         
-        function [bool, id, type] = isa_variable(obj)
-            [bool, id, type] = isa_variable(obj.expr);
-            bool = reshape(bool, obj.szs{:});
-            id = reshape(id, obj.szs{:});
+        function [type, id] = Type(obj)
+            [type, id] = Type(obj.expr);
             type = reshape(type, obj.szs{:});
+            id = reshape(id, obj.szs{:});
         end
         
         function [bool, tp] = isa_timepoint(obj)

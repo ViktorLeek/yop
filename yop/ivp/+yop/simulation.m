@@ -247,7 +247,7 @@ classdef simulation < handle
             num_lhs = isa_numeric(lhs);
             der_lhs = isa_der(lhs);
             [istp_lhs, tp_lhs] = isa_timepoint(lhs);
-            [~, id_lhs, type_lhs] = isa_variable(lhs);
+            [type_lhs, id_lhs] = Type(lhs);
             time0_lhs     = type_lhs == yop.var_type.time0;
             timef_lhs     = type_lhs == yop.var_type.timef;
             state_lhs     = type_lhs == yop.var_type.state;
@@ -258,7 +258,7 @@ classdef simulation < handle
             num_rhs = isa_numeric(rhs);
             der_rhs = isa_der(rhs);
             [istp_rhs, tp_rhs] = isa_timepoint(rhs);
-            [~, id_rhs, type_rhs] = isa_variable(rhs);
+            [type_rhs, id_rhs] = Type(rhs);
             time0_rhs     = type_rhs == yop.var_type.time0;
             timef_rhs     = type_rhs == yop.var_type.timef;
             state_rhs     = type_rhs == yop.var_type.state;
@@ -361,7 +361,7 @@ classdef simulation < handle
             %ode_rhs = vertcat(tmp_rhs{:});
             
             % Test if all states are bound to an ode
-            [~, ode_ids] = isa_variable(ode_lhs);
+            [~, ode_ids] = Type(ode_lhs);
             [ode_ids, idx] = sort(ode_ids);
             x_ids = obj.get_state_ids();
             if ~isequal(x_ids, ode_ids)

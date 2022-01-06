@@ -19,11 +19,10 @@ classdef ast_repmat < yop.ast_expression
             end
         end
         
-        function [bool, id, type] = isa_variable(obj)
-            [bool, id, type] = isa_variable(obj.expr);
-            bool = repmat(bool, obj.args{:});
-            id = repmat(id, obj.args{:});
+        function [type, id] = Type(obj)
+            [type, id] = Type(obj.expr);
             type = repmat(type, obj.args{:});
+            id = repmat(id, obj.args{:});
         end
         
         function boolv = is_transcription_invariant(obj)

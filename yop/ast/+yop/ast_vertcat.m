@@ -24,13 +24,12 @@ classdef ast_vertcat < yop.ast_expression
             end
         end
         
-        function [bool, id, type] = isa_variable(obj)
-            [bool, id, type] = isa_variable(obj.args{1});
+        function [type, id] = Type(obj)
+            [type, id] = Type(obj.args{1});
             for k=2:length(obj.args)
-                [bk, ik, tk] = isa_variable(obj.args{k});
-                bool = [bool; bk];
-                id = [id; ik];
+                [tk, ik] = Type(obj.args{k});
                 type = [type; tk];
+                id = [id; ik];
             end       
         end
         

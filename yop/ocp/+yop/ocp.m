@@ -402,7 +402,7 @@ classdef ocp < handle
             %ode_rhs = vertcat(tmp_rhs{:});
             
             % Test if all states are bound to an ode
-            [~, ode_ids] = isa_variable(ode_lhs);
+            [~, ode_ids] = Type(ode_lhs);
             [ode_ids, idx] = sort(ode_ids);
             x_ids = obj.get_state_ids();
             if ~isequal(x_ids, ode_ids)
@@ -770,7 +770,8 @@ classdef ocp < handle
             ival_lhs = is_ival(lhs);
             [istp_lhs, tp_lhs] = isa_timepoint(lhs);
             [der_lhs, der_id_lhs] = isa_der(lhs);
-            [var_lhs, id_lhs, type_lhs] = isa_variable(lhs);
+            [type_lhs, id_lhs] = Type(lhs);
+            var_lhs = yop.var_type.isa_variable(type_lhs);
             fnh_lhs = isa(ssr.lhs, 'function_handle');
             state_lhs   = type_lhs == yop.var_type.state;
             control_lhs = type_lhs == yop.var_type.control;
@@ -779,7 +780,8 @@ classdef ocp < handle
             ival_rhs = is_ival(rhs);
             [istp_rhs, tp_rhs] = isa_timepoint(rhs);
             [der_rhs, der_id_rhs] = isa_der(rhs);
-            [var_rhs, id_rhs, type_rhs] = isa_variable(rhs);
+            [type_rhs, id_rhs] = Type(rhs);
+            var_rhs = yop.var_type.isa_variable(type_rhs);
             fnh_rhs = isa(ssr.rhs, 'function_handle');
             state_rhs   = type_rhs == yop.var_type.state;
             control_rhs = type_rhs == yop.var_type.control;
@@ -807,77 +809,77 @@ classdef ocp < handle
                 % alg(expr1 == expr2)
                 obj.alg_eqs{end+1} = ssr;
                 
-            elseif istp_lhs && tp_lhs==t0 && var_lhs && rhs_num && isa_eq && (state_lhs || control_lhs)
+            elseif istp_lhs && tp_lhs==t0 && rhs_num && isa_eq && (state_lhs || control_lhs)
                 % v(t0) == num
                 var = obj.find_variable(id_lhs);
                 bnd = yop.prop_num(rhs);
                 var.ub0 = bnd;
                 var.lb0 = bnd;
                 
-            elseif istp_lhs && tp_lhs==t0 && var_lhs && rhs_num && isa_le && (state_lhs || control_lhs)
+            elseif istp_lhs && tp_lhs==t0 && rhs_num && isa_le && (state_lhs || control_lhs)
                 % v(t0) <= num
                 var = obj.find_variable(id_lhs);
                 bnd = yop.prop_num(rhs);
                 var.ub0 = bnd;
                 
-            elseif istp_lhs && tp_lhs==t0 && var_lhs && rhs_num && isa_ge && (state_lhs || control_lhs)
+            elseif istp_lhs && tp_lhs==t0 && rhs_num && isa_ge && (state_lhs || control_lhs)
                 % v(t0) >= num
                 var = obj.find_variable(id_lhs);
                 bnd = yop.prop_num(rhs);
                 var.lb0 = bnd;
                 
-            elseif num_lhs && istp_rhs && tp_rhs==t0 && var_rhs && isa_eq && (state_rhs || control_rhs)
+            elseif num_lhs && istp_rhs && tp_rhs==t0 && isa_eq && (state_rhs || control_rhs)
                 % num == v(t0)
                 var = obj.find_variable(id_rhs);
                 bnd = yop.prop_num(lhs);
                 var.ub0 = bnd;
                 var.lb0 = bnd;
                 
-            elseif num_lhs && istp_rhs && tp_rhs==t0 && var_rhs && isa_le && (state_rhs || control_rhs)
+            elseif num_lhs && istp_rhs && tp_rhs==t0 && isa_le && (state_rhs || control_rhs)
                 % num <= v(t0)
                 var = obj.find_variable(id_rhs);
                 bnd = yop.prop_num(lhs);
                 var.lb0 = bnd;
                 
-            elseif num_lhs && istp_rhs && tp_rhs==t0 && var_rhs && isa_ge && (state_rhs || control_rhs)
+            elseif num_lhs && istp_rhs && tp_rhs==t0 && isa_ge && (state_rhs || control_rhs)
                 % num >= v(t0)
                 var = obj.find_variable(id_rhs);
                 bnd = yop.prop_num(lhs);
                 var.ub0 = bnd;
                 
-            elseif istp_lhs && tp_lhs==tf && var_lhs && rhs_num && isa_eq && (state_lhs || control_lhs)
+            elseif istp_lhs && tp_lhs==tf && rhs_num && isa_eq && (state_lhs || control_lhs)
                 % v(tf) == num
                 var = obj.find_variable(id_lhs);
                 bnd = yop.prop_num(rhs);
                 var.ubf = bnd;
                 var.lbf = bnd;
                 
-            elseif istp_lhs && tp_lhs==tf && var_lhs && rhs_num && isa_le && (state_lhs || control_lhs)
+            elseif istp_lhs && tp_lhs==tf && rhs_num && isa_le && (state_lhs || control_lhs)
                 % v(tf) <= num
                 var = obj.find_variable(id_lhs);
                 bnd = yop.prop_num(rhs);
                 var.ub0 = bnd;
                 
-            elseif istp_lhs && tp_lhs==tf && var_lhs && rhs_num && isa_ge && (state_lhs || control_lhs)
+            elseif istp_lhs && tp_lhs==tf && rhs_num && isa_ge && (state_lhs || control_lhs)
                 % v(tf) >= num
                 var = obj.find_variable(id_lhs);
                 bnd = yop.prop_num(rhs);
                 var.lb0 = bnd;
                 
-            elseif num_lhs && istp_rhs && tp_rhs==tf && var_rhs && isa_eq && (state_rhs || control_rhs)
+            elseif num_lhs && istp_rhs && tp_rhs==tf && isa_eq && (state_rhs || control_rhs)
                 % num == v(tf)
                 var = obj.find_variable(id_rhs);
                 bnd = yop.prop_num(lhs);
                 var.ub0 = bnd;
                 var.lb0 = bnd;
                 
-            elseif num_lhs && istp_rhs && tp_rhs==tf && var_rhs && isa_le && (state_rhs || control_rhs)
+            elseif num_lhs && istp_rhs && tp_rhs==tf && isa_le && (state_rhs || control_rhs)
                 % num <= v(tf)
                 var = obj.find_variable(id_rhs);
                 bnd = yop.prop_num(lhs);
                 var.lb0 = bnd;
                 
-            elseif num_lhs && istp_rhs && tp_rhs==tf && var_rhs && isa_ge && (state_rhs || control_rhs)
+            elseif num_lhs && istp_rhs && tp_rhs==tf && isa_ge && (state_rhs || control_rhs)
                 % num >= v(tf)
                 var = obj.find_variable(id_rhs);
                 bnd = yop.prop_num(lhs);
@@ -1030,8 +1032,7 @@ classdef ocp < handle
             for k=1:length(obj.ders)
                 [bool, id_k] = isa_der(obj.ders(k).ast);
                 if all(bool) && all(id_k == id)
-                    [~, ~, type] = isa_variable(obj.ders(k).ast);
-                    if all(type == yop.var_type.state)
+                    if all(Type(obj.ders(k).ast) == yop.var_type.state)
                         to_remove = obj.ders(k);
                         obj.ders = [obj.ders(1:k-1), obj.ders(k+1:end)]; 
                         % Also need to remove it from special nodes vector
