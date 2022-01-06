@@ -1,16 +1,14 @@
-% is_alg
-% is_ival
-% is_transcription_invariant
-% isa_algebraic - ivp
-% isa_control
-% isa_der
-% isa_independent - ivp
-% isa_independent0 - ivp
-% isa_independentf - ivp
-% isa_numeric 
-% isa_parameter - ivp
-% isa_state
-% isa_timepoint
-% isa_variable
-
-
+ocp = yop.ocp('Low-thrust orbit');
+ocp.max( w(tf) );
+ocp.st( 50e3 <= tf <= 100e3 );
+ocp.st( der(x) == dx );
+ocp.st(  x(t0) == x0 );
+ocp.st( norm(u)^2 == 1 );
+ocp.st( x_min <=  x  <= x_max );
+ocp.st(   -1  <=  u  <= 1 );
+ocp.st(  -50  <= tau <= 0 );
+ocp.st( p(tf) == 40007346.015232 );
+ocp.st( final( f^2 + g^2 ) == 0.73550320568829^2 );
+ocp.st( final( h^2 + k^2 ) == 0.61761258786099^2 );
+ocp.st( final( f*h + g*k ) == 0 );
+ocp.st( -3 <= final( g*h - k*f ) <= 0 );

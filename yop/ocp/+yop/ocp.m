@@ -118,6 +118,7 @@ classdef ocp < handle
             
             % The system is augmented before box bounds are set in order to
             % use the correct default value for the augemented variables.
+            yop.progress.ocp_parsing();
             obj.augment_system();
             obj.sort_states();
             obj.set_box_bounds();
@@ -128,6 +129,7 @@ classdef ocp < handle
             obj.set_hard_path_con();
             obj.set_ival_path_con();
             obj.set_special_functions();
+            yop.progress.ocp_parsed();
             
             nlp = yop.direct_collocation(obj, N, d, cp);
             

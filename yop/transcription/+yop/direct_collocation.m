@@ -4,6 +4,7 @@ function nlp = direct_collocation(ocp, N, d, cp)
 % to be used for a fixed horizon, that is OK.
 % [~, T0, Tf] = ocp.fixed_horizon();
 
+                       yop.progress.nlp_building();
 T0=[]; Tf=[]; t=[]; t0=[]; tf=[]; p=[]; dt=[]; tau=[]; tp=[]; I=[]; D=[]; 
 g=[]; g_ub=[]; g_lb=[]; w_ub=[]; w_lb=[]; w0=[];
 t = yop.interpolating_poly.empty(N+1, 0);
@@ -12,19 +13,20 @@ z = yop.interpolating_poly.empty(N  , 0);
 u = yop.interpolating_poly.empty(N  , 0);
 
 init_collocation();
-init_variables();
-special_nodes();
-discretize_dynamics();
-pointcons();
-pathcons();
+init_variables();      yop.progress.nlp_initialized();
+special_nodes();       yop.progress.nlp_special_nodes_done();
+discretize_dynamics(); yop.progress.nlp_dynamics_done();
+pointcons();           yop.progress.nlp_pointcons_done();
+pathcons();            
 hard_pathcons();
 for pk = ocp.path_ival
     ival_pathcons(pk);
 end
+                       yop.progress.nlp_pathcons_done();
 
 w = vertcat(t0, tf, x.vec(), z.vec(), u.vec(), p);
-box_bnd();
-initial_guess();
+box_bnd();             yop.progress.nlp_box_done();
+initial_guess();       yop.progress.nlp_guess_done();
 
 J = ocp.objective.fn(t0, tf, p, tp, I);
 t0fn = casadi.Function('t0', {w}, {t0});
@@ -50,7 +52,9 @@ nlp.t  = @(w) full(tfn(w));
 nlp.x  = @(w) full(xfn(w));
 nlp.z  = @(w) full(zfn(w));
 nlp.u  = @(w) full(ufn(w));
-nlp.p  = @(w) full(pfn(w));
+nlp.p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
+
+
 
     function init_collocation()
         tau = full([0, casadi.collocation_points(d, cp)]);
