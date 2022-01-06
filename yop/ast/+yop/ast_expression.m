@@ -8,6 +8,7 @@ classdef ast_expression < yop.ast_node
     properties
         dim = [1, 1] % dimensions of 'size'
         m_ival = false
+        m_type
     end
     
     methods
@@ -431,8 +432,10 @@ classdef ast_expression < yop.ast_node
                 a1_le = isa(ssr{1}, 'yop.ast_lt') || isa(ssr{1}, 'yop.ast_le');
                 a1_ge = isa(ssr{1}, 'yop.ast_gt') || isa(ssr{1}, 'yop.ast_ge');
                 
-                a1_num_lhs = isa_numeric(lhs1);
-                a1_num_rhs = isa_numeric(rhs1);
+                a1_num_lhs = numval(lhs1);
+                a1_num_rhs = numval(rhs1);
+                a1_isnum_lhs = ~isnan(a1_num_lhs);
+                a1_isnum_rhs = ~isnan(a1_num_rhs);
                 
                 a1_type_lhs = Type(lhs1);
                 a1_type_rhs = Type(rhs1);
@@ -452,7 +455,8 @@ classdef ast_expression < yop.ast_node
                 a1_le = isa(ssr{1}, 'yop.ast_lt') || isa(ssr{1}, 'yop.ast_le');
                 a1_ge = isa(ssr{1}, 'yop.ast_gt') || isa(ssr{1}, 'yop.ast_ge');
                 
-                a1_num_rhs = isa_numeric(rhs1);
+                a1_num_rhs = numval(rhs1);
+                a1_isnum_rhs = ~isnan(a1_num_rhs);
                 
                 a1_type_lhs = Type(lhs1);
                 a1_type_rhs = Type(rhs1);
@@ -472,14 +476,15 @@ classdef ast_expression < yop.ast_node
                 
                 a2_time0_lhs = a2_type_lhs == yop.var_type.time0;
                 a2_timef_lhs = a2_type_lhs == yop.var_type.timef;
-                a2_num_lhs = isa_numeric(lhs2);
+                a2_num_lhs = numval(lhs2);
+                a2_isnum_lhs = ~isnan(a2_num_lhs);
                 
                 a2_time_rhs = a2_type_rhs == yop.var_type.time;
                 
             end
             
-            % Notice that the comparison to n (which is a value that always
-            % exist here) is done first. Since Matlab applies short 
+            % Notice that the comparison to n (which is a value that is
+            % defined here) is done first. Since Matlab applies short 
             % circuiting none of the other logical expressions are 
             % evaluated if the first one failes, so it does not matter if
             % several of the others may not have a definition.
@@ -503,9 +508,9 @@ classdef ast_expression < yop.ast_node
                 % expr(t == tf)
                 ast = yop.ast_timepoint(yop.final_timepoint, expr);
                 
-            elseif n==1 && a1_time_lhs && a1_eq && a1_num_rhs
+            elseif n==1 && a1_time_lhs && a1_eq && a1_isnum_rhs
                 % expr(t == num)
-                ast = yop.ast_timepoint(yop.prop_num(rhs1), expr);
+                ast = yop.ast_timepoint(a1_num_rhs, expr);
                 
             elseif n==1 && a1_time0_lhs && a1_eq && a1_time_rhs
                 % expr(t0 == t)
@@ -515,9 +520,9 @@ classdef ast_expression < yop.ast_node
                 % expr(tf == t)
                 ast = yop.ast_timepoint(yop.final_timepoint, expr);
                 
-            elseif n==1 && a1_num_lhs && a1_eq && a1_time_rhs
+            elseif n==1 && a1_isnum_lhs && a1_eq && a1_time_rhs
                 % expr(num == t)
-                ast = yop.ast_timepoint(yop.prop_num(lhs1), expr);
+                ast = yop.ast_timepoint(a1_num_lhs, expr);
                 
             elseif n==1 && a1_time_lhs && a1_le && a1_time0_rhs
                 % expr(t <= t0)
@@ -527,11 +532,11 @@ classdef ast_expression < yop.ast_node
                 % expr(t <= tf)
                 ast = expr;
                 
-            elseif n==1 && a1_time_lhs && a1_le && a1_num_rhs
+            elseif n==1 && a1_time_lhs && a1_le && a1_isnum_rhs
                 % expr(t <= num)
                 ast = yop.ast_timeinterval( ...
                     yop.initial_timepoint, ...
-                    yop.prop_num(rhs1), ...
+                    a1_num_rhs, ...
                     expr);
                 
             elseif n==1 && a1_time0_lhs && a1_le && a1_time_rhs
@@ -542,10 +547,10 @@ classdef ast_expression < yop.ast_node
                 % expr(tf <= t)
                 ast = yop.ast_timepoint(yop.final_timepoint, expr);
                 
-            elseif n==1 && a1_num_lhs && a1_le && a1_time_rhs
+            elseif n==1 && a1_isnum_lhs && a1_le && a1_time_rhs
                 % expr(num <= t)
                 ast = yop.ast_timeinterval( ...
-                    yop.prop_num(lhs1), ...
+                    a1_num_lhs, ...
                     yop.final_timepoint, ...
                     expr);
                 
@@ -557,10 +562,10 @@ classdef ast_expression < yop.ast_node
                 % expr(t >= tf)
                 ast = yop.ast_timepoint(yop.final_timepoint, expr);
                 
-            elseif n==1 && a1_time_lhs && a1_ge && a1_num_rhs
+            elseif n==1 && a1_time_lhs && a1_ge && a1_isnum_rhs
                 % expr(t >= num)
                 ast = yop.ast_timeinterval( ...
-                    yop.prop_num(rhs1), ...
+                    a1_num_rhs, ...
                     yop.final_timepoint, ...
                     expr);
                 
@@ -572,11 +577,11 @@ classdef ast_expression < yop.ast_node
                 % expr(tf >= t)
                 ast = expr;
                 
-            elseif n==1 && a1_num_lhs && a1_ge && a1_time_rhs
+            elseif n==1 && a1_isnum_lhs && a1_ge && a1_time_rhs
                 % expr(num >= t)
                 ast = yop.ast_timeinterval( ...
                     yop.initial_timepoint, ...
-                    yop.prop_num(lhs1), ...
+                    a1_num_lhs, ...
                     expr);
                 
             elseif n==2 && a1_time_lhs && a1_le && a1_time0_rhs && a2_time0_lhs && a2_le && a2_time_rhs
@@ -593,25 +598,25 @@ classdef ast_expression < yop.ast_node
                 % Operator binding and dfs gives the two relations
                 ast = yop.ast_timepoint(yop.final_timepoint, expr);
                 
-            elseif n==2 && a1_time_lhs && a1_le && a1_timef_rhs && a2_num_lhs && a2_le && a2_time_rhs
+            elseif n==2 && a1_time_lhs && a1_le && a1_timef_rhs && a2_isnum_lhs && a2_le && a2_time_rhs
                 % expr(num <= t <= tf) -> expr(t <= tf), expr(num <= t)
                 ast = yop.ast_timeinterval( ...
-                    yop.prop_num(lhs2), ...
+                    a2_num_lhs, ...
                     yop.final_timepoint, ...
                     expr);
                 
-            elseif n==2 && a1_time_lhs && a1_le && a1_num_rhs && a2_time0_lhs && a2_le && a2_time_rhs
+            elseif n==2 && a1_time_lhs && a1_le && a1_isnum_rhs && a2_time0_lhs && a2_le && a2_time_rhs
                 % expr(t0 <= t <= num) -> expr(t <= num), expr(t0 <= t)
                 ast = yop.ast_timeinterval( ...
                     yop.initial_timepoint, ...
-                    yop.prop_num(rhs1), ...
+                    a1_num_rhs, ...
                     expr);
                 
-            elseif n==2 && a1_time_lhs && a1_le && a1_num_rhs && a2_num_lhs && a2_le && a2_time_rhs
+            elseif n==2 && a1_time_lhs && a1_le && a1_isnum_rhs && a2_isnum_lhs && a2_le && a2_time_rhs
                 % expr(num <= t <= num) -> expr(t <= num), expr(num <= t)
                 ast = yop.ast_timeinterval( ...
-                    yop.prop_num(lhs2), ...
-                    yop.prop_num(rhs1), ...
+                    a2_num_lhs, ...
+                    a1_num_rhs, ...
                     expr);
                 
             elseif n==2 && a1_time_lhs && a1_ge && a1_time0_rhs && a2_time0_lhs && a2_ge && a2_time_rhs
@@ -622,29 +627,29 @@ classdef ast_expression < yop.ast_node
                 % expr(tf >= t >= t0) -> expr(t >= t0), expr(tf >= t)
                 ast = expr;
                 
-            elseif n==2 && a1_time_lhs && a1_ge && a1_time0_rhs && a2_num_lhs && a2_ge && a2_time_rhs
+            elseif n==2 && a1_time_lhs && a1_ge && a1_time0_rhs && a2_isnum_lhs && a2_ge && a2_time_rhs
                 % expr(num >= t >= t0) -> expr(t >= t0), expr(num >= t)
                 ast = yop.ast_timeinterval( ...
                     yop.initial_timepoint, ...
-                    yop.prop_num(lhs2), ...
+                    a2_num_lhs, ...
                     expr);
                 
             elseif n==2 && a1_time_lhs && a1_ge && a1_timef_rhs && a2_timef_lhs && a2_ge && a2_time_rhs
                 % expr(tf >= t >= tf) -> expr(t >= tf), expr(tf >= t)
                 ast = yop.ast_timepoint(yop.final_timepoint, expr);
                 
-            elseif n==2 && a1_time_lhs && a1_ge && a1_num_rhs && a2_timef_lhs && a2_ge && a2_time_rhs
+            elseif n==2 && a1_time_lhs && a1_ge && a1_isnum_rhs && a2_timef_lhs && a2_ge && a2_time_rhs
                 % expr(tf >= t >= num) -> expr(t >= num), expr(tf >= t)
                 ast = yop.ast_timeinterval( ...
-                    yop.prop_num(rhs1), ...
+                    a1_num_rhs, ...
                     yop.final_timepoint, ...
                     expr);
                 
-            elseif n==2 && a1_time_lhs && a1_ge && a1_num_rhs && a2_num_lhs && a2_ge && a2_time_rhs
+            elseif n==2 && a1_time_lhs && a1_ge && a1_isnum_rhs && a2_isnum_lhs && a2_ge && a2_time_rhs
                 % expr(num >= t >= num) -> expr(t >= num), expr(num >= t)
                 ast = yop.ast_timeinterval( ...
-                    yop.prop_num(rhs1), ...
-                    yop.prop_num(lhs2), ...
+                    a1_num_rhs, ...
+                    a2_num_lhs, ...
                     expr);
                 
             else

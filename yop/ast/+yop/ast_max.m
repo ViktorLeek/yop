@@ -48,21 +48,28 @@ classdef ast_max < yop.ast_expression
             
         end
         
-        function boolv = isa_numeric(obj)
+        function val = numval(obj)
             switch obj.nargs
                 case 1
-                    if all(isa_numeric(obj.A))
-                        boolv = true(size(obj));
-                    else
-                        boolv = false(size(obj));
-                    end
+                    val = max(numval(obj.A));
                     
-                case {2, 3, 4}
-                    if all(isa_numeric(obj.A)) && all(isa_numeric(obj.B))
-                        boolv = true(size(obj));
-                    else
-                        boolv = false(size(obj));
-                    end
+                case 2
+                    val = max(numval(obj.A), numval(obj.B));
+                    
+                case 3
+                    val = max(...
+                        numval(obj.A), ...
+                        numval(obj.B), ...
+                        numval(obj.d) ...
+                        );
+                    
+                case 4
+                    val = max(...
+                        numval(obj.A), ...
+                        numval(obj.B), ...
+                        numval(obj.d), ...
+                        numval(obj.flag) ...
+                        );
             end
         end
         

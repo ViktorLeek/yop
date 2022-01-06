@@ -21,21 +21,12 @@ classdef ast_cumsum < yop.ast_expression
             end
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.expr);
+        function val = numval(obj)
             switch obj.nargs
                 case 1
-                    if all(isa_numeric(obj.A))
-                        boolv = true(size(obj));
-                    else
-                        boolv = false(size(obj));
-                    end
+                    val = cumsum(numval(obj.A));
                 case 2
-                    if all(isa_numeric(obj.A)) && all(isa_numeric(obj.d))
-                        boolv = true(size(obj));
-                    else
-                        boolv = false(size(obj));
-                    end
+                    val = cumsum(numval(obj.A), obj.d);
             end
         end
         

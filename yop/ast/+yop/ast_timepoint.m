@@ -9,14 +9,22 @@ classdef ast_timepoint < yop.ast_expression
             obj.dim = expr.dim;
             obj.timepoint = tp;
             obj.expr = expr;
+            obj.m_value = yop.cx('tp', size(expr,1), size(expr,2));
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.expr);
+        function val = numval(obj)
+            val = numval(obj.expr);
         end
         
         function [type, id] = Type(obj)
+            if ~isempty(obj.m_type)
+                type = obj.m_type.type;
+                id = obj.m_type.id;
+                return;
+            end
             [type, id] = Type(obj.expr);
+            obj.m_type.type = type;
+            obj.m_type.id = id;
         end
         
         function [bool, tp] = isa_timepoint(obj)

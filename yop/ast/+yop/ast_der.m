@@ -7,6 +7,7 @@ classdef ast_der < yop.ast_expression
             obj@yop.ast_expression(is_ival(expr));
             obj.expr = expr;
             obj.dim = size(expr);
+            obj.m_value = yop.cx('der', size(expr,1), size(expr,2));
         end
         
         function [boolv, id] = isa_der(obj)
@@ -14,12 +15,19 @@ classdef ast_der < yop.ast_expression
             id = obj.id*ones(size(obj));
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.expr);
+        function val = numval(obj)
+            val = numval(obj.expr);
         end
         
         function [type, id] = Type(obj)
+            if ~isempty(obj.m_type)
+                type = obj.m_type.type;
+                id = obj.m_type.id;
+                return;
+            end
             [type, id] = Type(obj.expr);
+            obj.m_type.type = type;
+            obj.m_type.id = id;
         end
         
         function boolv = isa_reducible(obj)

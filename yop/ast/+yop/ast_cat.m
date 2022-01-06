@@ -19,15 +19,20 @@ classdef ast_cat < yop.ast_expression
             obj.dim = size(cat(d, tmp{:}));
         end
         
-        function boolv = isa_numeric(obj)
-            tmp = {isa_numeric(obj.args{1})};
+        function val = numval(obj)
+            tmp = {numval(obj.args{1})};
             for k=2:length(obj.args)
-                tmp = {tmp{:}, isa_numeric(obj.args{k})};
+                tmp = {tmp{:}, numval(obj.args{k})};
             end
-            boolv = cat(obj.d, tmp{:});
+            val = cat(obj.d, tmp{:});
         end
         
         function [type, id] = Type(obj)
+            if ~isempty(obj.m_type)
+                type = obj.m_type.type;
+                id = obj.m_type.id;
+                return;
+            end
             [type, id] = Type(obj.args{1});
             tmp_type = {type};
             tmp_id = {id};
@@ -38,6 +43,8 @@ classdef ast_cat < yop.ast_expression
             end      
             type = cat(obj.d, tmp_type{:});
             id = cat(obj.d, tmp_id{:});
+            obj.m_type.type = type;
+            obj.m_type.id = id;
         end
         
         function [bool, id] = isa_der(obj)

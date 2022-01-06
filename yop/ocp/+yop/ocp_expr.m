@@ -2,8 +2,8 @@ classdef ocp_expr < handle
     properties        
         type
         ast
-        mx
-        sym
+        %         mx
+        %         sym
         fn
     end
     methods
@@ -12,9 +12,6 @@ classdef ocp_expr < handle
             if nargin == 2
                 obj.type = type;
             end
-            sz = size(expr);
-            obj.mx = yop.cx('expr', sz(1), sz(2));
-            obj.sym = sym('expr', sz);
         end
         
         function bool = is_ival(obj)
@@ -33,29 +30,10 @@ classdef ocp_expr < handle
             end
         end
         
-        function obj = set_sym(obj)
-            for k=1:length(obj)
-                obj(k).ast.m_value = obj(k).sym;
-            end
-        end
-
-        function obj = set_mx(obj)
-            for k=1:length(obj)
-                obj(k).ast.m_value = obj(k).mx;
-            end
-        end
-        
         function vec = mx_vec(obj)
             vec = [];
-            for k=1:length(obj)
-                vec = [vec(:); obj(k).mx(:)];
-            end
-        end
-        
-        function vec = sym_vec(obj)
-            vec = [];
-            for k=1:length(obj)
-                vec = [vec(:); obj(k).sym(:)];
+            for o=obj
+                vec = [vec(:); o.ast.m_value(:)];
             end
         end
         

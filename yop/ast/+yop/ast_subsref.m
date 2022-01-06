@@ -21,16 +21,22 @@ classdef ast_subsref < yop.ast_expression
             obj.dim = size( subsref( ones(size(node)), s ) );
         end
         
-        function bool = isa_numeric(obj)
-            bool = isa_numeric(obj.node);
-            bool = bool(get_indices(obj));            
+        function val = numval(obj)
+            val = subsref(numval(obj.node), obj.s);           
         end
         
         function [type, id] = Type(obj)
+            if ~isempty(obj.m_type)
+                type = obj.m_type.type;
+                id = obj.m_type.id;
+                return;
+            end
             [type, id] = Type(obj.node);
             idx = get_indices(obj);
             type = type(idx);
             id = id(idx);
+            obj.m_type.type = type;
+            obj.m_type.id = id;
         end
         
         function [bool, id] = isa_der(obj)

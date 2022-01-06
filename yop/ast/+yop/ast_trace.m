@@ -9,12 +9,8 @@ classdef ast_trace < yop.ast_expression
             obj.dim = size(trace(ones(size(expr))));
         end
         
-        function boolv = isa_numeric(obj)
-            if all(isa_numeric(obj.expr))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
-            end
+        function val = numval(obj)
+            val = trace(numval(obj.expr));
         end
         
         function boolv = isa_reducible(obj)

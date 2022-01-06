@@ -2,6 +2,7 @@ classdef ast_algebraic < yop.ast_variable
     methods
         function obj = ast_algebraic(name, w, os)
             obj@yop.ast_variable(name, w, os);
+            obj.m_value = yop.cx(name);
         end
         
         function boolv = isa_reducible(obj)

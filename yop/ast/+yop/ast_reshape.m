@@ -11,18 +11,21 @@ classdef ast_reshape < yop.ast_expression
             obj.dim = size(reshape(ones(size(expr)), varargin{:}));
         end
         
-        function boolv = isa_numeric(obj)
-            if all(isa_numeric(obj.expr))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
-            end
+        function val = numval(obj)
+            val = reshape(numval(obj.expr), obj.szs{:});
         end
         
         function [type, id] = Type(obj)
+            if ~isempty(obj.m_type)
+                type = obj.m_type.type;
+                id = obj.m_type.id;
+                return;
+            end
             [type, id] = Type(obj.expr);
             type = reshape(type, obj.szs{:});
             id = reshape(id, obj.szs{:});
+            obj.m_type.type = type;
+            obj.m_type.id = id;
         end
         
         function [bool, tp] = isa_timepoint(obj)

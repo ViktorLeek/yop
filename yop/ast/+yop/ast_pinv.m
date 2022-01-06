@@ -9,8 +9,8 @@ classdef ast_pinv < yop.ast_expression
             obj.dim = size(pinv(ones(size(A))));
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.A);
+        function val = numval(obj)
+            val = pinv(numval(obj.A));
         end
         
         function boolv = isa_reducible(obj)

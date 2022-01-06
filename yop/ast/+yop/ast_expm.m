@@ -9,8 +9,8 @@ classdef ast_expm < yop.ast_expression
             obj.dim = size(expm(ones(size(A))));
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.expr);
+        function val = numval(obj)
+            val = expm(numval(obj.expr));
         end
         
         function boolv = isa_reducible(obj)

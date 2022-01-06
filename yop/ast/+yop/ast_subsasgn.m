@@ -23,18 +23,25 @@ classdef ast_subsasgn < yop.ast_expression
             obj.dim = size(node);
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.node);
+        function val = numval(obj)
+            val = numval(obj.node);
             idx = get_indices(obj);
-            boolv(idx) = isa_numeric(obj.b);
+            val(idx) = numval(obj.b);
         end
         
         function [type, id] = Type(obj)
+            if ~isempty(obj.m_type)
+                type = obj.m_type.type;
+                id = obj.m_type.id;
+                return;
+            end
             [type , id ] = Type(obj.node);
             [typeb, idb] = Type(obj.b);
             idx = get_indices(obj);
             type(idx) = typeb;
             id(idx) = idb;
+            obj.m_type.type = type;
+            obj.m_type.id = id;
         end
         
         function [bool, id] = isa_der(obj)

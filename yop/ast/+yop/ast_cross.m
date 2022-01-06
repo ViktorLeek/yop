@@ -26,21 +26,16 @@ classdef ast_cross < yop.ast_expression
             end
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.A);
+        function val = numval(obj)
             switch obj.nargs
                 case 2
-                    if all(isa_numeric(obj.A)) && all(isa_numeric(obj.B))
-                        boolv = true(size(obj));
-                    else
-                        boolv = false(size(obj));
-                    end
+                    valA = numval(obj.A);
+                    valB = numval(obj.B);
+                    val = cross(valA, valB);
                 case 3
-                    if all(isa_numeric(obj.A)) && all(isa_numeric(obj.B)) && all(isa_numeric(obj.d))
-                        boolv = true(size(obj));
-                    else
-                        boolv = false(size(obj));
-                    end
+                    valA = numval(obj.A);
+                    valB = numval(obj.B);
+                    val = cross(valA, valB, obj.d);
             end
         end
         
@@ -52,12 +47,7 @@ classdef ast_cross < yop.ast_expression
                 boolv = false(size(obj));
             end
         end
-        
-        function obj = set_pred(obj)
-            add_pred(obj.A, obj);
-            add_pred(obj.B, obj);
-        end
-        
+                
         function value = evaluate(obj)
             switch obj.nargs
                 case 2

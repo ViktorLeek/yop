@@ -15,12 +15,19 @@ classdef ast_timeinterval < yop.ast_expression
             obj.expr = expr;
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.expr);
+        function val = numval(obj)
+            val = numval(obj.expr);
         end
         
         function [type, id] = Type(obj)
+            if ~isempty(obj.m_type)
+                type = obj.m_type.type;
+                id = obj.m_type.id;
+                return;
+            end
             [type, id] = Type(obj.expr);
+            obj.m_type.type = type;
+            obj.m_type.id = id;
         end
         
         function boolv = isa_reducible(obj)

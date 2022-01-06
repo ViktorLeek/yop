@@ -9,10 +9,8 @@ classdef ast_inv < yop.ast_expression
             obj.dim = size(inv(ones(size(A))));
         end
         
-        function boolv = isa_numeric(obj)
-            % Potentially very slow. If it turns out to be too slow an
-            % alternative solution, such as a DFS can be used.
-            boolv = isa_numeric(obj.A);
+        function val = numval(obj)
+            val = inv(numval(obj.A));
         end
         
         function boolv = isa_reducible(obj)

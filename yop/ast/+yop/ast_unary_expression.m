@@ -10,10 +10,6 @@ classdef ast_unary_expression < yop.ast_expression
             obj.expr = expr;
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.expr);
-        end
-        
         function boolv = isa_reducible(obj)
             boolv = isa_reducible(obj.expr);
         end

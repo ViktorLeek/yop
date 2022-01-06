@@ -8,10 +8,11 @@ classdef ast_int < yop.ast_expression
             obj@yop.ast_expression(isival);
             obj.expr = expr;
             obj.dim = size(expr);
+            obj.m_value = yop.cx('int', size(expr,1), size(expr,2));
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.expr);
+        function val = numval(obj)
+            val = numval(obj.expr);
         end
         
         function boolv = isa_reducible(obj)

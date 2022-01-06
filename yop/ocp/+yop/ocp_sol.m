@@ -106,13 +106,13 @@ classdef ocp_sol < handle
                 ints.mx_vec(), ...
                 ders.mx_vec() ...
                 };
-            obj.set_mx();
-            set_mx([tps, ints, ders]);
+            %             obj.set_mx();
+            %             set_mx([tps, ints, ders]);
             for node = [tps, ints, ders]
-                mx_expr = fw_eval(node.ast.expr);
+                mx_expr = fweval(node.ast.expr);
                 node.fn = casadi.Function('fn', args, {mx_expr});
             end
-            fn = casadi.Function('fn', args, {fw_eval(expr)});
+            fn = casadi.Function('fn', args, {fweval(expr)});
             
             % Compute the numerical values of the special nodes
             [tpv, intv, derv] = obj.comp_sn(sn, ...
@@ -377,15 +377,15 @@ classdef ocp_sol < handle
             end
         end
         
-        function set_mx(obj)
-            obj.independent0.set_mx();
-            obj.independentf.set_mx();
-            obj.independent.set_mx();
-            obj.states.set_mx();
-            obj.algebraics.set_mx();
-            obj.controls.set_mx();
-            obj.parameters.set_mx();
-        end
+        %         function set_mx(obj)
+        %             obj.independent0.set_mx();
+        %             obj.independentf.set_mx();
+        %             obj.independent.set_mx();
+        %             obj.states.set_mx();
+        %             obj.algebraics.set_mx();
+        %             obj.controls.set_mx();
+        %             obj.parameters.set_mx();
+        %         end
         
         
         function varargout = plot(obj, varargin)

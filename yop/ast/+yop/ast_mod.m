@@ -11,12 +11,8 @@ classdef ast_mod < yop.ast_expression
             obj.dim = size(mod(ones(size(a)), ones(size(m))));
         end
         
-        function boolv = isa_numeric(obj)
-            if all(isa_numeric(obj.a)) && all(isa_numeric(obj.m))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
-            end
+        function val = numval(obj)
+            val = mod(numval(obj.a), numval(obj.m));
         end
         
         function boolv = isa_reducible(obj)

@@ -11,12 +11,10 @@ classdef ast_atan2 < yop.ast_expression
             obj.dim = size(atan2(ones(size(y)), ones(size(x))));
         end
         
-        function boolv = isa_numeric(obj)
-            if all(isa_numeric(obj.y) & isa_numeric(obj.x))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
-            end
+        function val = numval(obj)
+            valy = numval(obj.y);
+            valx = numval(obj.x);
+            val = atan2(valy, valx);
         end
         
         function boolv = isa_reducible(obj)

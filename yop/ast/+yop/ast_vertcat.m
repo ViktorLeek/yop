@@ -17,20 +17,27 @@ classdef ast_vertcat < yop.ast_expression
             obj.dim = size(vertcat(tmp{:}));
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.args{1});
+        function val = numval(obj)
+            val = numval(obj.args{1});
             for k=2:length(obj.args)
-                boolv = [boolv; isa_numeric(obj.args{k})];
+                val = [val; numval(obj.args{k})];
             end
         end
         
         function [type, id] = Type(obj)
+            if ~isempty(obj.m_type)
+                type = obj.m_type.type;
+                id = obj.m_type.id;
+                return;
+            end
             [type, id] = Type(obj.args{1});
             for k=2:length(obj.args)
                 [tk, ik] = Type(obj.args{k});
                 type = [type; tk];
                 id = [id; ik];
-            end       
+            end    
+            obj.m_type.type = type;
+            obj.m_type.id = id;
         end
         
         function [bool, tp] = isa_timepoint(obj)

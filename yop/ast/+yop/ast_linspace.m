@@ -13,13 +13,12 @@ classdef ast_linspace < yop.ast_expression
             obj.dim = [1, n];
         end
         
-        function boolv = isa_numeric(obj)
-            if all(isa_numeric(obj.x1)) && all(isa_numeric(obj.x2)) ...
-                    && all(isa_numeric(obj.n))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
-            end
+        function val = numval(obj)
+            val = linspace(...
+                numval(obj.x1), ...
+                numval(obj.x2), ...
+                numval(obj.n) ...
+                );
         end
         
         function boolv = isa_reducible(obj)

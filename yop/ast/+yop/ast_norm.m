@@ -15,11 +15,11 @@ classdef ast_norm < yop.ast_expression
             end
         end
         
-        function boolv = isa_numeric(obj)
-            if all(isa_numeric(obj.expr))
-                boolv = true(size(obj));
+        function val = numval(obj)
+            if obj.nargs == 1
+                val = norm(numval(obj.expr));
             else
-                boolv = false(size(obj));
+                val = norm(numval(obj.expr), numval(obj.p));
             end
         end
         

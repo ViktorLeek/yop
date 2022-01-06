@@ -26,21 +26,12 @@ classdef ast_dot < yop.ast_expression
             end
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.expr);
+        function val = numval(obj)
             switch obj.nargs
                 case 2
-                    if all(isa_numeric(obj.A)) &&  all(isa_numeric(obj.B))
-                        boolv = true(size(obj));
-                    else
-                        boolv = false(size(obj));
-                    end
+                    val = dot(numval(obj.A), numval(obj.B));
                 case 3
-                    if all(isa_numeric(obj.A)) && all(isa_numeric(obj.B)) && all(isa_numeric(obj.d))
-                        boolv = true(size(obj));
-                    else
-                        boolv = false(size(obj));
-                    end
+                    val = dot(numval(obj.A),numval(obj.B),obj.d);
             end
         end
         

@@ -114,21 +114,20 @@ classdef simulation < handle
         end
         
         function sol = solve_casadi(obj, solver, opts)
-            obj.variables.set_mx();
             dae = struct( ...
-                't', obj.independent.mx, ...
+                't', obj.independent.mx_vec(), ...
                 'x', obj.states.mx_vec(), ...
                 'z', obj.algebraics.mx_vec(), ...
                 'p', obj.parameters.mx_vec(), ...
-                'ode', fw_eval(obj.ode.rhs), ...
-                'alg', fw_eval(obj.alg.rhs) ...
+                'ode', fweval(obj.ode.rhs), ...
+                'alg', fweval(obj.alg.rhs) ...
                 );
             
             opts = obj.opts_casadi(opts);
             F = casadi.integrator('F', solver, dae, opts);
             res = F('x0', obj.x0, 'z0', obj.z0, 'p', obj.p0);
-            sol = yop.ivp_sol(obj.variables(), obj.mx_args_sol(), ... 
-                opts.grid, full(res.xf), full(res.zf), obj.p0);
+            sol = yop.ivp_sol(opts.grid, full(res.xf), full(res.zf), obj.p0, ...
+                obj.mx_args_sol(), obj.variables().ids);
         end
         
         function sol = solve_matlab(obj, solver, opts)
@@ -142,13 +141,12 @@ classdef simulation < handle
             x_sol = res.y(1:obj.n_x,:);
             z_sol = res.y(obj.n_x+1:obj.n_x+obj.n_z, :);
             p_sol = obj.p0;
-            sol = yop.ivp_sol(obj.variables(), obj.mx_args_sol(), ...
-                t_sol, x_sol, z_sol, p_sol);
+            sol = yop.ivp_sol(t_sol, x_sol, z_sol, p_sol, ...
+                obj.mx_args_sol(), obj.variables().ids);
         end
         
         function fnh = ode_matlab(obj)
-            obj.variables.set_mx();
-            expr = [fw_eval(obj.ode.rhs); fw_eval(obj.alg.rhs)];
+            expr = [fweval(obj.ode.rhs); fweval(obj.alg.rhs)];
             rhs = casadi.Function('ode', obj.args_matlab(), {expr});
             fnh = @(t,x) full(rhs(t, x, obj.p0));
         end
@@ -244,7 +242,8 @@ classdef simulation < handle
             
             isa_eq = isa(ssr, 'yop.ast_eq');
             
-            num_lhs = isa_numeric(lhs);
+            num_lhs = numval(lhs);
+            is_num_lhs = ~isnan(num_lhs);
             der_lhs = isa_der(lhs);
             [istp_lhs, tp_lhs] = isa_timepoint(lhs);
             [type_lhs, id_lhs] = Type(lhs);
@@ -255,7 +254,8 @@ classdef simulation < handle
             algebraic_lhs = type_lhs == yop.var_type.algebraic;
             parameter_lhs = type_lhs == yop.var_type.parameter;
             
-            num_rhs = isa_numeric(rhs);
+            num_rhs = numval(rhs);
+            is_num_rhs = ~isnan(num_rhs);
             der_rhs = isa_der(rhs);
             [istp_rhs, tp_rhs] = isa_timepoint(rhs);
             [type_rhs, id_rhs] = Type(rhs);
@@ -275,45 +275,45 @@ classdef simulation < handle
                 c = get_constructor(ssr);
                 obj.ode_eqs{end+1} = c(ssr.rhs, ssr.lhs);
                 
-            elseif istp_lhs && tp_lhs==t0 && num_rhs && isa_eq && (state_lhs || control_lhs || algebraic_lhs)
+            elseif istp_lhs && tp_lhs==t0 && is_num_rhs && isa_eq && (state_lhs || control_lhs || algebraic_lhs)
                 % v(t0) == num
                 var = obj.find_variable(id_lhs);
-                var.iv = yop.prop_num(rhs);
+                var.iv = num_rhs;
                 
-            elseif num_lhs && istp_rhs && tp_rhs==t0 && isa_eq && (state_rhs || control_rhs || algebraic_rhs)
+            elseif is_num_lhs && istp_rhs && tp_rhs==t0 && isa_eq && (state_rhs || control_rhs || algebraic_rhs)
                 % num == v(t0)
                 var = obj.find_variable(id_rhs);
-                var.iv = yop.prop_num(lhs);
+                var.iv = num_lhs;
                 
-            elseif time0_lhs && num_rhs && isa_eq
+            elseif time0_lhs && is_num_rhs && isa_eq
                 % t0 == num
                 var = obj.find_variable(id_lhs);
-                var.iv = yop.prop_num(rhs);
+                var.iv = num_rhs;
                 
-            elseif time0_rhs && num_lhs && isa_eq
+            elseif time0_rhs && is_num_lhs && isa_eq
                 % num == t0
                 var = obj.find_variable(id_rhs);
-                var.iv = yop.prop_num(lhs);
+                var.iv = num_lhs;
                 
-            elseif timef_lhs && num_rhs && isa_eq
+            elseif timef_lhs && is_num_rhs && isa_eq
                 % tf == num
                 var = obj.find_variable(id_lhs);
-                var.iv = yop.prop_num(rhs);
+                var.iv = num_rhs;
                 
-            elseif timef_rhs && num_lhs && isa_eq
+            elseif timef_rhs && is_num_lhs && isa_eq
                 % num == tf
                 var = obj.find_variable(id_rhs);
-                var.iv = yop.prop_num(lhs);
+                var.iv = num_lhs;
                 
-            elseif parameter_lhs && num_rhs && isa_eq
+            elseif parameter_lhs && is_num_rhs && isa_eq
                 % p == num
                 var = obj.find_variable(id_lhs);
-                var.iv = yop.prop_num(rhs);
+                var.iv = num_rhs;
                 
-            elseif num_lhs && parameter_rhs && isa_eq
+            elseif is_num_lhs && parameter_rhs && isa_eq
                 % num == p
                 var = obj.find_variable(id_rhs);
-                var.iv = yop.prop_num(lhs);
+                var.iv = num_lhs;
                 
             elseif isa_eq
                 % Algebraic equation
@@ -406,17 +406,15 @@ classdef simulation < handle
         end
         
         function obj = set_dynamics_fn(obj)
-            args = obj.mx_args();
-            obj.variables.set_mx();
             obj.ode.fn = ...
-                casadi.Function('ode', args, {fw_eval(obj.ode.rhs)});
+                casadi.Function('ode',obj.mx_args(),{fweval(obj.ode.rhs)});
             obj.alg.fn = ...
-                casadi.Function('alg', args, {fw_eval(obj.alg.rhs)});
+                casadi.Function('alg',obj.mx_args(),{fweval(obj.alg.rhs)});
         end
         
         function args = mx_args(obj)
             args = { ...                
-                obj.independent.mx, ...
+                mx_vec(obj.independent), ...
                 mx_vec(obj.states), ...
                 mx_vec(obj.algebraics), ...
                 mx_vec(obj.parameters) ...
@@ -425,9 +423,9 @@ classdef simulation < handle
         
         function args = mx_args_sol(obj)
             args = { ...                
-                obj.independent0.mx, ...
-                obj.independentf.mx, ...
-                obj.independent.mx, ...
+                mx_vec(obj.independent0), ...
+                mx_vec(obj.independentf), ...
+                mx_vec(obj.independent), ...
                 mx_vec(obj.states), ...
                 mx_vec(obj.algebraics), ...
                 mx_vec(obj.parameters) ...

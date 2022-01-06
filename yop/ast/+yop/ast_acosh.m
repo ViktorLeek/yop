@@ -18,8 +18,8 @@ classdef ast_acosh < yop.ast_expression
             v = obj.m_value;
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.expr);
+        function val = numval(obj)
+            val = acosh(numval(obj.expr));
         end
         
         function boolv = isa_reducible(obj)

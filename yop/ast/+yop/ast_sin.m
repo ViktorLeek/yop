@@ -9,8 +9,8 @@ classdef ast_sin < yop.ast_expression
             obj.dim = size(expr);
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.expr);
+        function val = numval(obj)
+            val = sin(numval(obj.expr));
         end
         
         function boolv = isa_reducible(obj)

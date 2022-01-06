@@ -36,11 +36,25 @@ classdef ast_sum < yop.ast_expression
             end
         end
         
-        function boolv = isa_numeric(obj)
-            if all(isa_numeric(obj.expr))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
+        function val = numval(obj)
+            switch obj.nargs
+                case 1
+                    val = sum(numval(obj.expr));
+                    
+                case 2
+                    val = sum(numval(obj.expr), obj.opt1);
+                    
+                case 3
+                    val = sum(numval(obj.expr), obj.opt1, obj.opt2);
+                    
+                case 4
+                    val = sum(...
+                        numval(obj.expr), ...
+                        obj.opt1, ...
+                        obj.opt2, ...
+                        obj.opt3 ...
+                        );
+                    
             end
         end
         

@@ -12,12 +12,31 @@ classdef ast_binary_expression < yop.ast_expression
             obj.rhs = rhs;
         end
         
-        function boolv = isa_numeric(obj)
-            if all(isa_numeric(obj.lhs) & isa_numeric(obj.rhs))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
-            end
+        function val = numval(obj)
+            val_lhs = numval(obj.lhs);
+            val_rhs = numval(obj.rhs);
+            switch obj.name
+                case 'plus'
+                    val = plus(val_lhs, val_rhs);
+                case 'minus'
+                    val = minus(val_lhs, val_rhs);
+                case 'mtimes'
+                    val = mtimes(val_lhs, val_rhs);
+                case 'mpower'
+                    val = mpower(val_lhs, val_rhs);
+                case 'mrdivide'
+                    val = mrdivide(val_lhs, val_rhs);
+                case 'power'
+                    val = power(val_lhs, val_rhs);
+                case 'times'
+                    val = times(val_lhs, val_rhs);
+                case 'rdivide'
+                    val = rdivide(val_lhs, val_rhs);
+                case 'mldivide'
+                    val = mldivide(val_lhs, val_rhs);
+                case 'ldivide'
+                    val = ldivide(val_lhs, val_rhs);
+            end            
         end
         
         function boolv = isa_reducible(obj)

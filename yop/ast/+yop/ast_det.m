@@ -9,8 +9,8 @@ classdef ast_det < yop.ast_expression
             obj.dim = size(det(ones(size(A))));
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.A);
+        function val = numval(obj)
+            val = det(numval(obj.A));
         end
         
         function boolv = isa_reducible(obj)

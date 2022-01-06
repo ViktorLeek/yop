@@ -14,12 +14,8 @@ classdef ast_sumsqr < yop.ast_expression
             obj.dim = [1, 1];
         end
         
-        function boolv = isa_numeric(obj)
-            if all(isa_numeric(obj.expr))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
-            end
+        function val = numval(obj)
+            val = sumsqr(numval(obj.expr));
         end
         
         function boolv = isa_reducible(obj)

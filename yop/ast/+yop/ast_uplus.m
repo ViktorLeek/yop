@@ -11,6 +11,10 @@ classdef ast_uplus < yop.ast_unary_expression
             obj.dim = size(expr);
         end
         
+        function val = numval(obj)
+            val = uplus(numval(obj.expr));
+        end
+        
         function value = evaluate(obj)
             value = uplus(evaluate(obj.expr));
         end

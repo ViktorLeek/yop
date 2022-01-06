@@ -28,10 +28,6 @@ classdef ast_variable < yop.ast_expression
             boolv = true(size(obj));
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = false(size(obj));
-        end
-        
         function [bool, tp] = isa_timepoint(obj)
             bool = false(size(obj));
             tp = zeros(size(obj));

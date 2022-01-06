@@ -367,9 +367,7 @@ classdef ocp < handle
             tp = mx_vec(obj.tps);
             ii = mx_vec(obj.ints);
             args = {t0,tf,pp,tp,ii};
-            obj.set_mx();
-            obj.snodes.set_mx();
-            J = casadi.Function('J', args, {fw_eval(obj.objective.ast)});
+            J = casadi.Function('J', args, {fweval(obj.objective.ast)});
             
             % The nlp variables are scaled, so they must be descaled before
             % the expression can be evaluate.
@@ -381,11 +379,8 @@ classdef ocp < handle
         end 
         
         function obj = set_special_functions(obj)
-            args = obj.mx_args();
-            obj.set_mx();
-            obj.snodes.set_mx();
             for sn = obj.snodes
-                sn.fn = obj.dsfn(fw_eval(sn.ast.expr));
+                sn.fn = obj.dsfn(fweval(sn.ast.expr));
             end
         end
         
@@ -399,7 +394,6 @@ classdef ocp < handle
                 tmp_rhs{k} = obj.ode_eqs{k}.rhs;
             end
             ode_lhs = vertcat(tmp_lhs{:});
-            %ode_rhs = vertcat(tmp_rhs{:});
             
             % Test if all states are bound to an ode
             [~, ode_ids] = Type(ode_lhs);
@@ -416,7 +410,7 @@ classdef ocp < handle
             % Change order of equations so that state vector and ode
             % equation order match
             obj.ode.lhs = ode_lhs(idx);
-            obj.ode.rhs = vertcat(tmp_rhs{idx}); %ode_rhs(idx);
+            obj.ode.rhs = vertcat(tmp_rhs{idx});
             
             % Algebraic equation
             nz = length(obj.alg_eqs);
@@ -433,24 +427,19 @@ classdef ocp < handle
         end
         
         function obj = set_dynamics_fn(obj)
-            args  = obj.mx_args();
-            dargs = obj.mx_dargs();
-            obj.set_mx();
-            obj.snodes.set_mx();
-            ode_expr = fw_eval(obj.ode.rhs);
-            alg_expr = fw_eval(obj.alg.rhs);
-            f = casadi.Function('f', args, {ode_expr});
+            ode_expr = fweval(obj.ode.rhs);
+            alg_expr = fweval(obj.alg.rhs);
+            f = casadi.Function('f', obj.mx_args(), {ode_expr});
             
             % Descale input variables, evaluate ode rhs, scale derivative
+            dargs = obj.mx_dargs();
             fs = f(dargs{:}).*(1./obj.W_x);
-            obj.ode.fn = casadi.Function('ode', args, {fs});
+            obj.ode.fn = casadi.Function('ode', obj.mx_args(), {fs});
             obj.alg.fn = obj.dsfn(alg_expr, 'alg');
         end
         
-        function set_path_con(obj)            
-            obj.set_mx();
-            obj.snodes.set_mx();
-            expr = fw_eval(vertcat(obj.ec_eqs{:}, obj.iec_eqs{:}));
+        function set_path_con(obj)                       
+            expr = fweval(vertcat(obj.ec_eqs{:}, obj.iec_eqs{:}));
             obj.path.fn = obj.dsfn(expr(:), 'eq');
             n_eq  = length(obj.ec_eqs);
             n_ieq = length(obj.iec_eqs);
@@ -459,9 +448,7 @@ classdef ocp < handle
         end
         
         function set_hard_path_con(obj)
-            obj.set_mx();
-            obj.snodes.set_mx();
-            expr = fw_eval(vertcat(obj.ec_hard_eqs{:}, obj.iec_hard_eqs{:}));
+            expr = fweval(vertcat(obj.ec_hard_eqs{:}, obj.iec_hard_eqs{:}));
             obj.path_hard.fn = obj.dsfn(expr(:), 'heq');
             n_eq  = length(obj.ec_hard_eqs);
             n_ieq = length(obj.iec_hard_eqs);
@@ -470,9 +457,7 @@ classdef ocp < handle
         end
         
         function set_point_con(obj)
-            obj.set_mx();
-            obj.snodes.set_mx();
-            expr = fw_eval(vertcat(obj.ec_point_eqs{:}, obj.iec_point_eqs{:}));
+            expr = fweval(vertcat(obj.ec_point_eqs{:}, obj.iec_point_eqs{:}));
             obj.point.fn = obj.dsfn(expr(:), 'peq');
             n_eq = length(obj.ec_point_eqs);
             n_ieq = length(obj.iec_point_eqs);
@@ -481,10 +466,6 @@ classdef ocp < handle
         end
         
         function set_ival_path_con(obj)
-            args = obj.mx_args();
-            obj.set_mx();
-            obj.snodes.set_mx();
-            
             data = yop.ival.empty(1,0);
             for k=1:length(obj.ec_ival_eqs)
                 ik = obj.ec_ival_eqs{k};
@@ -494,7 +475,7 @@ classdef ocp < handle
                 data(k).ast = ik;
                 data(k).ub = 0;
                 data(k).lb = 0;
-                expr = fw_eval(ik);
+                expr = fweval(ik);
                 data(k).fn = obj.dsfn(expr(:), 'iveq');
             end
             
@@ -506,7 +487,7 @@ classdef ocp < handle
                 data(k).ast = ik;
                 data(k).ub = 0;
                 data(k).lb = -inf;
-                expr = fw_eval(ik);
+                expr = fweval(ik);
                 data(k).fn = obj.dsfn(expr(:), 'ivieq');
             end
             
@@ -538,17 +519,6 @@ classdef ocp < handle
                 mx_vec(obj.ints), ...
                 mx_vec(obj.ders) ...
                 };
-        end
-        
-        function set_mx(obj)
-            obj.independent0.set_mx();
-            obj.independentf.set_mx();
-            obj.independent.set_mx();
-            obj.states.set_mx();
-            obj.algebraics.set_mx();
-            obj.controls.set_mx();
-            obj.parameters.set_mx();
-            obj.snodes.set_mx();
         end
         
         function fn = dsfn(obj, expr, fname)
@@ -766,7 +736,8 @@ classdef ocp < handle
             invariant = isa_reducible(ssr);
             hard = is_hard(ssr);
             
-            num_lhs = isa_numeric(lhs);
+            num_lhs = numval(lhs);
+            isnum_lhs = ~isnan(num_lhs);
             ival_lhs = is_ival(lhs);
             [istp_lhs, tp_lhs] = isa_timepoint(lhs);
             [der_lhs, der_id_lhs] = isa_der(lhs);
@@ -776,7 +747,8 @@ classdef ocp < handle
             state_lhs   = type_lhs == yop.var_type.state;
             control_lhs = type_lhs == yop.var_type.control;
             
-            rhs_num = isa_numeric(rhs);
+            num_rhs = numval(rhs);
+            isnum_rhs = ~isnan(num_rhs);
             ival_rhs = is_ival(rhs);
             [istp_rhs, tp_rhs] = isa_timepoint(rhs);
             [der_rhs, der_id_rhs] = isa_der(rhs);
@@ -809,118 +781,118 @@ classdef ocp < handle
                 % alg(expr1 == expr2)
                 obj.alg_eqs{end+1} = ssr;
                 
-            elseif istp_lhs && tp_lhs==t0 && rhs_num && isa_eq && (state_lhs || control_lhs)
+            elseif istp_lhs && tp_lhs==t0 && isnum_rhs && isa_eq && (state_lhs || control_lhs)
                 % v(t0) == num
                 var = obj.find_variable(id_lhs);
-                bnd = yop.prop_num(rhs);
+                bnd = num_rhs;
                 var.ub0 = bnd;
                 var.lb0 = bnd;
                 
-            elseif istp_lhs && tp_lhs==t0 && rhs_num && isa_le && (state_lhs || control_lhs)
+            elseif istp_lhs && tp_lhs==t0 && isnum_rhs && isa_le && (state_lhs || control_lhs)
                 % v(t0) <= num
                 var = obj.find_variable(id_lhs);
-                bnd = yop.prop_num(rhs);
+                bnd = num_rhs;
                 var.ub0 = bnd;
                 
-            elseif istp_lhs && tp_lhs==t0 && rhs_num && isa_ge && (state_lhs || control_lhs)
+            elseif istp_lhs && tp_lhs==t0 && isnum_rhs && isa_ge && (state_lhs || control_lhs)
                 % v(t0) >= num
                 var = obj.find_variable(id_lhs);
-                bnd = yop.prop_num(rhs);
+                bnd = num_rhs;
                 var.lb0 = bnd;
                 
-            elseif num_lhs && istp_rhs && tp_rhs==t0 && isa_eq && (state_rhs || control_rhs)
+            elseif isnum_lhs && istp_rhs && tp_rhs==t0 && isa_eq && (state_rhs || control_rhs)
                 % num == v(t0)
                 var = obj.find_variable(id_rhs);
-                bnd = yop.prop_num(lhs);
+                bnd = num_lhs;
                 var.ub0 = bnd;
                 var.lb0 = bnd;
                 
-            elseif num_lhs && istp_rhs && tp_rhs==t0 && isa_le && (state_rhs || control_rhs)
+            elseif isnum_lhs && istp_rhs && tp_rhs==t0 && isa_le && (state_rhs || control_rhs)
                 % num <= v(t0)
                 var = obj.find_variable(id_rhs);
-                bnd = yop.prop_num(lhs);
+                bnd = num_lhs;
                 var.lb0 = bnd;
                 
-            elseif num_lhs && istp_rhs && tp_rhs==t0 && isa_ge && (state_rhs || control_rhs)
+            elseif isnum_lhs && istp_rhs && tp_rhs==t0 && isa_ge && (state_rhs || control_rhs)
                 % num >= v(t0)
                 var = obj.find_variable(id_rhs);
-                bnd = yop.prop_num(lhs);
+                bnd = num_lhs;
                 var.ub0 = bnd;
                 
-            elseif istp_lhs && tp_lhs==tf && rhs_num && isa_eq && (state_lhs || control_lhs)
+            elseif istp_lhs && tp_lhs==tf && isnum_rhs && isa_eq && (state_lhs || control_lhs)
                 % v(tf) == num
                 var = obj.find_variable(id_lhs);
-                bnd = yop.prop_num(rhs);
+                bnd = num_rhs;
                 var.ubf = bnd;
                 var.lbf = bnd;
                 
-            elseif istp_lhs && tp_lhs==tf && rhs_num && isa_le && (state_lhs || control_lhs)
+            elseif istp_lhs && tp_lhs==tf && isnum_rhs && isa_le && (state_lhs || control_lhs)
                 % v(tf) <= num
                 var = obj.find_variable(id_lhs);
-                bnd = yop.prop_num(rhs);
+                bnd = num_rhs;
                 var.ub0 = bnd;
                 
-            elseif istp_lhs && tp_lhs==tf && rhs_num && isa_ge && (state_lhs || control_lhs)
+            elseif istp_lhs && tp_lhs==tf && isnum_rhs && isa_ge && (state_lhs || control_lhs)
                 % v(tf) >= num
                 var = obj.find_variable(id_lhs);
-                bnd = yop.prop_num(rhs);
+                bnd = num_rhs;
                 var.lb0 = bnd;
                 
-            elseif num_lhs && istp_rhs && tp_rhs==tf && isa_eq && (state_rhs || control_rhs)
+            elseif isnum_lhs && istp_rhs && tp_rhs==tf && isa_eq && (state_rhs || control_rhs)
                 % num == v(tf)
                 var = obj.find_variable(id_rhs);
-                bnd = yop.prop_num(lhs);
+                bnd = num_lhs;
                 var.ub0 = bnd;
                 var.lb0 = bnd;
                 
-            elseif num_lhs && istp_rhs && tp_rhs==tf && isa_le && (state_rhs || control_rhs)
+            elseif isnum_lhs && istp_rhs && tp_rhs==tf && isa_le && (state_rhs || control_rhs)
                 % num <= v(tf)
                 var = obj.find_variable(id_rhs);
-                bnd = yop.prop_num(lhs);
+                bnd = num_lhs;
                 var.lb0 = bnd;
                 
-            elseif num_lhs && istp_rhs && tp_rhs==tf && isa_ge && (state_rhs || control_rhs)
+            elseif isnum_lhs && istp_rhs && tp_rhs==tf && isa_ge && (state_rhs || control_rhs)
                 % num >= v(tf)
                 var = obj.find_variable(id_rhs);
-                bnd = yop.prop_num(lhs);
+                bnd = num_lhs;
                 var.ub0 = bnd;
                 
-            elseif var_lhs && rhs_num && isa_eq
+            elseif var_lhs && isnum_rhs && isa_eq
                 % v == num
                 var = obj.find_variable(id_lhs);
-                bnd = yop.prop_num(rhs);
+                bnd = num_rhs;
                 var.ub = bnd;
                 var.lb = bnd;
                 
-            elseif var_lhs && rhs_num && isa_le
+            elseif var_lhs && isnum_rhs && isa_le
                 % v <= num
                 var = obj.find_variable(id_lhs);
-                bnd = yop.prop_num(rhs);
+                bnd = num_rhs;
                 var.ub = bnd;
                 
-            elseif var_lhs && rhs_num && isa_ge
+            elseif var_lhs && isnum_rhs && isa_ge
                 % v >= num
                 var = obj.find_variable(id_lhs);
-                bnd = yop.prop_num(rhs);
+                bnd = num_rhs;
                 var.lb = bnd;
                 
-            elseif num_lhs && var_rhs && isa_eq
+            elseif isnum_lhs && var_rhs && isa_eq
                 % num == v
                 var = obj.find_variable(id_rhs);
-                bnd = yop.prop_num(lhs);
+                bnd = num_lhs;
                 var.ub = bnd;
                 var.lb = bnd;
                 
-            elseif num_lhs && var_rhs && isa_le
+            elseif isnum_lhs && var_rhs && isa_le
                 % num <= v
                 var = obj.find_variable(id_rhs);
-                bnd = yop.prop_num(lhs);
+                bnd = num_lhs;
                 var.lb = bnd;
                 
-            elseif num_lhs && var_rhs && isa_ge
+            elseif isnum_lhs && var_rhs && isa_ge
                 % num >= v
                 var = obj.find_variable(id_rhs);
-                bnd = yop.prop_num(lhs);
+                bnd = num_lhs;
                 var.ub = bnd;
                 
             elseif var_lhs && fnh_rhs && isa_eq
@@ -1040,7 +1012,6 @@ classdef ocp < handle
                             if obj.snodes(n) == to_remove
                                 obj.snodes = [obj.snodes(1:n-1), ...
                                     obj.snodes(n+1:end)];
-                                to_remove.set_mx(); % evaluation for debug
                                 return;
                             end
                         end

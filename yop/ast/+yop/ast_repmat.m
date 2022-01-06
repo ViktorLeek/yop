@@ -11,18 +11,25 @@ classdef ast_repmat < yop.ast_expression
             obj.dim = repmat(ones(size(expr)), varargin{:});
         end
         
-        function boolv = isa_numeric(obj)
-            if all(isa_numeric(obj.expr))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
+        function val = numval(obj)
+            tmp = cell(size(obj.args));
+            for k=1:length(tmp)
+                tmp{k} = numval(obj.args{k});
             end
+            val = repmat(numval(obj.expr), tmp{:});
         end
         
         function [type, id] = Type(obj)
+            if ~isempty(obj.m_type)
+                type = obj.m_type.type;
+                id = obj.m_type.id;
+                return;
+            end
             [type, id] = Type(obj.expr);
             type = repmat(type, obj.args{:});
             id = repmat(id, obj.args{:});
+            obj.m_type.type = type;
+            obj.m_type.id = id;
         end
         
         function boolv = isa_reducible(obj)

@@ -1,30 +1,29 @@
 classdef ivp_sol < handle
     
     properties
-        ivp_vars
-        mx_args        
         t
         x
         z
         p
+        mx_args        
+        ids
     end
     
     methods
         
-        function obj = ivp_sol(ivp_vars, mx_args, t, x, z, p)
-            obj.ivp_vars = ivp_vars;
-            obj.mx_args = mx_args;
-            
-            % Numerical solution
+        function obj = ivp_sol(t, x, z, p, mx_args, ids)
+            % numerical solution
             obj.t = t;
             obj.x = x;
             obj.z = z;
             obj.p = p;
+            
+            % misc
+            obj.mx_args = mx_args;
+            obj.ids = ids;
         end
         
-        
         function v = value(obj, expr)
-            
             t_id = 0;
             vars = yop.ivp_sol.find_variables(expr);
             for k=1:length(vars)
@@ -36,7 +35,7 @@ classdef ivp_sol < handle
             
             % Return if the variables thats not know are in the ast
             known_vars = false;
-            IDs = [obj.ivp_vars.ids, t_id];
+            IDs = [obj.ids, t_id];
             for k=1:length(vars)
                 known_vars = known_vars || any(vars{k}.id == IDs);
             end
@@ -45,8 +44,7 @@ classdef ivp_sol < handle
                 return
             end 
             
-            obj.ivp_vars.set_mx();
-            fn = casadi.Function('fn', obj.mx_args, {fw_eval(expr)});
+            fn = casadi.Function('fn', obj.mx_args, {fweval(expr)});
             
             if isa_reducible(expr)
                 v = obj.invariant_value(fn);

@@ -29,28 +29,21 @@ classdef ast_node < handle
             node=yop.ast_expression.timed_expression(timepoint,expression);
         end
         
-        function value = fw_eval(expr)
-            % FW_EVAL - Forward evaluate
-            [sort, K] = topological_sort(expr);
+        function value = fweval(obj)
+            % Forward evaluate
+            if ~isempty(obj.m_value)
+                value = obj.m_value;
+                return
+            end
+            [sort, K] = topological_sort(obj);
             for k=1:(K-1)
                 forward(sort{k});
             end
             value = forward(sort{K});
         end
         
-        function val = propagate_value(expr)
-            [sort, K] = topological_sort(expr);
-            for k=1:K
-                switch class(sort{k})
-                    case {'yop.ast_int', 'yop.ast_timepoint', 'yop.ast_der'}
-                        % These do not propagate values, so we need a 
-                        % manual bridge here.
-                        sort{k}.m_value = value(sort{k}.expr);
-                    otherwise
-                        forward(sort{k});
-                end
-            end
-            val = value(sort{K});
+        function v = value(obj)
+            v = obj.m_value;
         end
         
         function vars = get_vars(obj)
@@ -107,10 +100,6 @@ classdef ast_node < handle
             fprintf('+-');
             obj.stream.branches(obj.stream.indent_level) = false;
             indent_more(obj);
-        end
-        
-        function v = value(obj)
-            v = obj.m_value;
         end
         
     end

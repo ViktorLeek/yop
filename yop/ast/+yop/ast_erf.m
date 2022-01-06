@@ -9,8 +9,8 @@ classdef ast_erf < yop.ast_expression
             obj.dim = size(expr);
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.expr);
+        function val = numval(obj)
+            val = erf(numval(obj.expr));
         end
         
         function boolv = isa_reducible(obj)

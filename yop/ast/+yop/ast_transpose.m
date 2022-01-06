@@ -9,14 +9,21 @@ classdef ast_transpose < yop.ast_expression
             obj.dim = size(transpose(ones(size(expr))));
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = transpose(isa_numeric(obj.expr));
+        function boolv = numval(obj)
+            boolv = transpose(numval(obj.expr));
         end
         
         function [type, id] = Type(obj)
+            if ~isempty(obj.m_type)
+                type = obj.m_type.type;
+                id = obj.m_type.id;
+                return;
+            end
             [type, id] = Type(obj.expr);
             type = transpose(type);
             id = transpose(id);
+            obj.m_type.type = type;
+            obj.m_type.id = id;
         end
         
         function [bool, tp] = isa_timepoint(obj)

@@ -9,8 +9,8 @@ classdef ast_sqrt < yop.ast_expression
             obj.dim = size(expr);
         end
         
-        function boolv = isa_numeric(obj)
-            boolv = isa_numeric(obj.expr);
+        function val = numval(obj)
+            val = sqrt(numval(obj.expr));
         end
         
         function boolv = isa_reducible(obj)
