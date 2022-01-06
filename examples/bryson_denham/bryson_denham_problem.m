@@ -20,25 +20,7 @@ sol.plot(t, x);
 subplot(312); hold on
 sol.plot(t, v);
 subplot(313); hold on
-sol.plot(t, a);
-
-%%
-ocp = yop.ocp('Bryson-Denham Problem');
-ocp.min( 1/2 * int(a^2) );
-ocp.st( t0==0, tf==1 );
-ocp.st( der(v) == a );
-ocp.st( der(x) == v );
-ocp.st( v(t0) == -v(tf) == 1 );
-ocp.st( x(t0) ==  x(tf) == 0 );
-ocp.st( x <= l == 1/9 );
-sol = ocp.solve('guess', sol);
-figure(1);
-subplot(311); hold on
-sol.plot(t, x);
-subplot(312); hold on
-sol.plot(t, v);
-subplot(313); hold on
-sol.plot(t, a);
+sol.stairs(t, a);
 
 %% State vector, minimum value and traveled distance
 %   Piecewise quadratic control input (deg == 2)

@@ -1,4 +1,4 @@
-classdef ocp_parameter < handle
+classdef ocp_independent0 < handle
     properties
         ast
         mx
@@ -8,7 +8,7 @@ classdef ocp_parameter < handle
     end
     
     methods
-        function obj = ocp_parameter(ast)
+        function obj = ocp_independent0(ast)
             obj.ast = ast;
             obj.mx = yop.cx(['ocp_', ast.name]);
             obj.sym = sym(ast.name, size(ast));

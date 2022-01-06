@@ -2,7 +2,6 @@ yopvar times: t t0 tf
 yopvar state: x size: [6,1]
 yopvar ctrl:  u size: [2,1]
 
-
 N_pop = 30000;
 x0   = [76; 1; 36; 2; 4; 1]*Npop/120;
 

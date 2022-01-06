@@ -1,31 +1,69 @@
-classdef ocp_algebraic < yop.node
+classdef ocp_algebraic < handle
     properties
-        var
+        ast
+        mx
+        sym
         ub   % upper bound
         lb   % lower bound
     end
+    
     methods
-        function obj = ocp_algebraic(var)
-            obj@yop.node();
-            obj.var = var;
-            obj.ub  = yop.defaults().algebraic_ub  * ones(size(var));
-            obj.lb  = yop.defaults().algebraic_lb  * ones(size(var));
+        function obj = ocp_algebraic(ast)
+            obj.ast = ast;
+            obj.mx = yop.cx(['ocp_', ast.name]);
+            obj.sym = sym(ast.name, size(ast));
         end
         
-        function draw(obj)
-            fprintf('ocp_algebraic(var, ub, lb)\n');
-            
-            begin_child(obj);
-            draw(obj.var);
-            end_child(obj);
-            
-            begin_child(obj);
-            draw(obj.ub);
-            end_child(obj);
-            
-            last_child(obj);
-            draw(obj.lb);
-            end_child(obj);
+        function obj = set_value(obj, value)
+            obj.ast.m_value = value;
+        end
+        
+        
+        function obj = set_sym(obj)
+            for o=obj
+                o.ast.m_value = o.sym;
+            end
+        end
+        
+        function obj = set_mx(obj)
+            for o=obj
+                o.ast.m_value = o.mx;
+            end
+        end
+        
+        function vec = mx_vec(obj)
+            vec = [];
+            for o=obj
+                vec = [vec; o.mx];
+            end
+        end
+        
+        function vec = vec(obj)
+            vec = [];
+            for o=obj
+                vec = [vec; o.ast];
+            end
+        end
+        
+        function w = weight(obj)
+            w = [];
+            for o=obj
+                w = [w; o.ast.weight];
+            end
+        end
+        
+        function os = offset(obj)
+            os = [];
+            for o=obj
+                os = [os; o.ast.offset];
+            end
+        end
+        
+        function ID = ids(obj)
+            ID = [];
+            for o = obj
+                ID = [ID, o.ast.id];
+            end
         end
     end
 end

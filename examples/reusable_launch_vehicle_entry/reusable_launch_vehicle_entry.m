@@ -18,8 +18,7 @@ u_min = [-90*d2r; -90*d2r];
 ivp = yop.simulation(t0==0, tf==2000);
 ivp.add( der(x) == launch_vehicle(x, u) );
 ivp.add(  x(t0) == x0 );
-% ivp.add( u == [17.4*d2r; 70/2000*t-70] );
-ivp.add( u == 0 );
+ivp.add(  u(t)  == 0 );
 sim = ivp.solve('points', 2000);
 
 %% Plot guess

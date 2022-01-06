@@ -1,14 +1,18 @@
-classdef ocp_parameter < handle
+classdef ocp_state_control < handle
     properties
         ast
         mx
         sym
+        ub0  % initial upper bound
+        lb0  % initial lower bound
         ub   % upper bound
         lb   % lower bound
+        ubf  % final upper bound
+        lbf  % final lower bound
     end
     
     methods
-        function obj = ocp_parameter(ast)
+        function obj = ocp_state_control(ast)
             obj.ast = ast;
             obj.mx = yop.cx(['ocp_', ast.name]);
             obj.sym = sym(ast.name, size(ast));
@@ -38,10 +42,10 @@ classdef ocp_parameter < handle
             end
         end
         
-        function vec = vec(obj)
-            vec = [];
+        function v = vec(obj)
+            v = [];
             for o=obj
-                vec = [vec; o.ast];
+                v = [v; o.ast];
             end
         end
         
