@@ -35,15 +35,15 @@ classdef ast_atan2 < yop.ast_expression
             v = obj.m_value;
         end
         
-        function draw(obj)
+        function ast(obj)
             fprintf('atan2(y, x)\n');
             
             begin_child(obj);
-            draw(obj.y);
+            ast(obj.y);
             end_child(obj);
             
             last_child(obj);
-            draw(obj.x);
+            ast(obj.x);
             end_child(obj);
         end
         

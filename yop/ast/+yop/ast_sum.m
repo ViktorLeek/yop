@@ -110,58 +110,58 @@ classdef ast_sum < yop.ast_expression
             v = obj.m_value;
         end
         
-        function draw(obj)
+        function ast(obj)
             
             switch obj.nargs
                 case 1
                     fprintf('sum(expr)\n');
                     last_child(obj);
-                    draw(obj.expr);
+                    ast(obj.expr);
                     end_child(obj);
                     
                 case 2
                     fprintf('sum(expr, opt1)\n');
                     
                     begin_child(obj);
-                    draw(obj.expr);
+                    ast(obj.expr);
                     end_child(obj);
                     
                     last_child(obj);
-                    draw(obj.opt1);
+                    ast(obj.opt1);
                     end_child(obj);
                     
                 case 3
                     fprintf('sum(expr, opt1, opt2)\n');
                     
                     begin_child(obj);
-                    draw(obj.expr);
+                    ast(obj.expr);
                     end_child(obj);
                     
                     begin_child(obj);
-                    draw(obj.opt1);
+                    ast(obj.opt1);
                     end_child(obj);
                     
                     last_child(obj);
-                    draw(obj.opt2);
+                    ast(obj.opt2);
                     end_child(obj);
                     
                 case 4
                     fprintf('sum(expr, opt1, opt2, opt3)\n');
                     
                     begin_child(obj);
-                    draw(obj.expr);
+                    ast(obj.expr);
                     end_child(obj);
                     
                     begin_child(obj);
-                    draw(obj.opt1);
+                    ast(obj.opt1);
                     end_child(obj);
                     
                     begin_child(obj);
-                    draw(obj.opt2);
+                    ast(obj.opt2);
                     end_child(obj);
                     
                     last_child(obj);
-                    draw(obj.opt3);
+                    ast(obj.opt3);
                     end_child(obj);
             end 
         end

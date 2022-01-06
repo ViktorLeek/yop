@@ -143,57 +143,57 @@ classdef ast_min < yop.ast_expression
             v = obj.m_value;
         end
         
-        function draw(obj)
+        function ast(obj)
             switch obj.nargs
                 case 1
                     fprintf('min(A)\n');
                     last_child(obj);
-                    draw(obj.A);
+                    ast(obj.A);
                     end_child(obj);
                     
                 case 2
                     fprintf('min(A, B)\n');
                     
                     begin_child(obj);
-                    draw(obj.A);
+                    ast(obj.A);
                     end_child(obj);
                     
                     last_child(obj);
-                    draw(obj.B);
+                    ast(obj.B);
                     end_child(obj);
                     
                 case 3
                     fprintf('min(A, B, dim)\n');
                     
                     begin_child(obj);
-                    draw(obj.A);
+                    ast(obj.A);
                     end_child(obj);
                     
                     begin_child(obj);
-                    draw(obj.B);
+                    ast(obj.B);
                     end_child(obj);
                     
                     last_child(obj);
-                    draw(obj.d);
+                    ast(obj.d);
                     end_child(obj);
                     
                 case 4
                     fprintf('min(A, B, dim, flag)\n');
                     
                     begin_child(obj);
-                    draw(obj.A);
+                    ast(obj.A);
                     end_child(obj);
                     
                     begin_child(obj);
-                    draw(obj.B);
+                    ast(obj.B);
                     end_child(obj);
                     
                     begin_child(obj);
-                    draw(obj.d);
+                    ast(obj.d);
                     end_child(obj);
                     
                     last_child(obj);
-                    draw(obj.flag);
+                    ast(obj.flag);
                     end_child(obj);    
             end
         end

@@ -48,15 +48,15 @@ classdef ast_binary_expression < yop.ast_expression
             end
         end
         
-        function draw(obj)
+        function ast(obj)
             fprintf([obj.name, '(lhs, rhs)\n']);
             
             begin_child(obj);
-            draw(obj.lhs);
+            ast(obj.lhs);
             end_child(obj);
             
             last_child(obj);
-            draw(obj.rhs);
+            ast(obj.rhs);
             end_child(obj);
         end
         

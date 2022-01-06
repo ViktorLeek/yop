@@ -41,7 +41,7 @@ classdef ast_variable < yop.ast_expression
             v = obj.m_value;
         end
         
-        function draw(obj)
+        function ast(obj)
             fprintf(['[', num2str(obj.id), ']:', obj.name, '\n']);
         end
         

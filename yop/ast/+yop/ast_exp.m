@@ -26,10 +26,10 @@ classdef ast_exp < yop.ast_expression
             v = obj.m_value;
         end
         
-        function draw(obj)
+        function ast(obj)
             fprintf('exp(expr)\n');
             last_child(obj);
-            draw(obj.expr);
+            ast(obj.expr);
             end_child(obj);
         end
         

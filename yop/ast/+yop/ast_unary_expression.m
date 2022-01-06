@@ -14,10 +14,10 @@ classdef ast_unary_expression < yop.ast_expression
             boolv = isa_reducible(obj.expr);
         end
         
-        function draw(obj)
+        function ast(obj)
             fprintf([obj.name, '(expr)\n']);
             last_child(obj);
-            draw(obj.expr);
+            ast(obj.expr);
             end_child(obj);
         end
         

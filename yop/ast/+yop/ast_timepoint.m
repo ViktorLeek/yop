@@ -54,16 +54,16 @@ classdef ast_timepoint < yop.ast_expression
             v = obj.m_value;
         end
         
-        function draw(obj)
+        function ast(obj)
             fprintf(['[', num2str(obj.id), ']:', ...
                 'timepoint(timepoint, expr)\n']);
             
             begin_child(obj);
-            draw(obj.timepoint);
+            ast(obj.timepoint);
             end_child(obj);
             
             last_child(obj);
-            draw(obj.expr);
+            ast(obj.expr);
             end_child(obj);
         end
         

@@ -48,19 +48,19 @@ classdef ast_norm < yop.ast_expression
             v = obj.m_value;
         end
         
-        function draw(obj)
+        function ast(obj)
             if obj.nargs == 1
                 fprintf('norm(expr)\n');
                 last_child(obj);
-                draw(obj.expr);
+                ast(obj.expr);
                 end_child(obj);
             else
                 fprintf('norm(expr, p)\n');
                 begin_child(obj);
-                draw(obj.expr);
+                ast(obj.expr);
                 end_child(obj);
                 last_child(obj);
-                draw(obj.p);
+                ast(obj.p);
                 end_child(obj);
             end
         end

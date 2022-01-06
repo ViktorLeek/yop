@@ -87,11 +87,11 @@ classdef ast_subsasgn < yop.ast_expression
             obj.node.m_value = node_val;
         end
         
-        function draw(obj)
+        function ast(obj)
             fprintf('subsasgn(node, s, b)\n');
             
             begin_child(obj);
-            draw(obj.node);
+            ast(obj.node);
             end_child(obj);
             
             % Subs are numeric
@@ -104,7 +104,7 @@ classdef ast_subsasgn < yop.ast_expression
             end_child(obj);
             
             last_child(obj);
-            draw(obj.b);
+            ast(obj.b);
             end_child(obj);
         end
         

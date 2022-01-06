@@ -26,10 +26,10 @@ classdef ast_acosh < yop.ast_expression
             boolv = isa_reducible(obj.expr);
         end
         
-        function draw(obj)
+        function ast(obj)
             fprintf('acosh(expr)\n');
             last_child(obj);
-            draw(obj.expr);
+            ast(obj.expr);
             end_child(obj);
         end
         

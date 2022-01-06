@@ -74,32 +74,32 @@ classdef ast_dot < yop.ast_expression
         end
         
         
-        function draw(obj)
+        function ast(obj)
             switch obj.nargs
                 case 2
                     fprintf('dot(A, B)\n');
                     
                     begin_child(obj);
-                    draw(obj.A);
+                    ast(obj.A);
                     end_child(obj);
                     
                     last_child(obj);
-                    draw(obj.B);
+                    ast(obj.B);
                     end_child(obj);
                     
                 case 3
                     fprintf('dot(A, B, dim)\n');
                     
                     begin_child(obj);
-                    draw(obj.A);
+                    ast(obj.A);
                     end_child(obj);
                     
                     begin_child(obj);
-                    draw(obj.B);
+                    ast(obj.B);
                     end_child(obj);
                     
                     last_child(obj);
-                    draw(obj.d);
+                    ast(obj.d);
                     end_child(obj);
                     
             end

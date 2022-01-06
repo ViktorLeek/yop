@@ -53,20 +53,20 @@ classdef ast_timeinterval < yop.ast_expression
             v = obj.m_value;
         end
         
-        function draw(obj)
+        function ast(obj)
             fprintf(['[', num2str(obj.id), ']:', ...
                 'interval(t0, tf, expr)\n']);
             
             begin_child(obj);
-            draw(obj.t0);
+            ast(obj.t0);
             end_child(obj);
             
             begin_child(obj);
-            draw(obj.tf);
+            ast(obj.tf);
             end_child(obj);
             
             last_child(obj);
-            draw(obj.expr);
+            ast(obj.expr);
             end_child(obj);
         end
         

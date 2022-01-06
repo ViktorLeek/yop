@@ -26,10 +26,10 @@ classdef ast_pinv < yop.ast_expression
             v = obj.m_value;
         end
         
-        function draw(obj)
+        function ast(obj)
             fprintf('pinv(A)\n');
             last_child(obj);
-            draw(obj.A);
+            ast(obj.A);
             end_child(obj);
         end
         

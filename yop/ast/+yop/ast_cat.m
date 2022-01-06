@@ -99,7 +99,7 @@ classdef ast_cat < yop.ast_expression
             v = obj.m_value;
         end
         
-        function draw(obj)
+        function ast(obj)
             % every vararg is enumerated: "a1, a2, ..., aN, "
             str = [];
             for k=1:length(obj.args)
@@ -108,15 +108,15 @@ classdef ast_cat < yop.ast_expression
             fprintf(['cat(dim, ', str(1:end-2), ')\n']);
             
             begin_child(obj);
-            draw(obj.d);
+            ast(obj.d);
             end_child(obj);
             for k=1:(length(obj.args)-1)
                 begin_child(obj);
-                draw(obj.args{k});
+                ast(obj.args{k});
                 end_child(obj);
             end
             last_child(obj);
-            draw(obj.args{end});
+            ast(obj.args{end});
             end_child(obj);
         end
         

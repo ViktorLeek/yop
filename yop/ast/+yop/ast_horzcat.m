@@ -82,7 +82,7 @@ classdef ast_horzcat < yop.ast_expression
             v = obj.m_value;
         end
         
-        function draw(obj)
+        function ast(obj)
             % every arg is enumerated: "a1, a2, ..., aN, "
             str = [];
             for k=1:length(obj.args)
@@ -92,11 +92,11 @@ classdef ast_horzcat < yop.ast_expression
             
             for k=1:(length(obj.args)-1)
                 begin_child(obj);
-                draw(obj.args{k});
+                ast(obj.args{k});
                 end_child(obj);
             end
             last_child(obj);
-            draw(obj.args{end});
+            ast(obj.args{end});
             end_child(obj);
             
         end

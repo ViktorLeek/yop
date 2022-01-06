@@ -78,11 +78,11 @@ classdef ast_subsref < yop.ast_expression
             v = obj.m_value;
         end
         
-        function draw(obj)
+        function ast(obj)
             fprintf('subsref(node, s)\n');
             
             begin_child(obj);
-            draw(obj.node);
+            ast(obj.node);
             end_child(obj);
             
             str = [];

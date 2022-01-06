@@ -1,4 +1,4 @@
-function draw(obj)
+function ast(obj)
 % ast - print the abstract syntax tree of a yop expression.
 
 % This file gives polymorphic behaviour to built in classes from an AST 
