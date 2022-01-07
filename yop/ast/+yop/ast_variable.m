@@ -1,48 +1,32 @@
 classdef ast_variable < yop.ast_expression
-    % The meaning of an ast_variable is a problem variable in the OCP.
-    % Variables and expressions have almost the same semantics, but they
-    % differ in a few ways:
-    %   1) Variables can represent time-varying and constant values,
-    %      whereas expressions are always considered time-varying. This
-    %      means that states for instance can be evaluated at timepoints,
-    %      whereas parameters cannot.
-    %   2) Time-varying variables can only be eval
     
     properties
-        name
-        weight = 1 % Scaling: x_s = (x + os)/w
-        offset = 0 
+        m_name
+        m_weight = 1 % Scaling: x_s = (x + os)/w
+        m_offset = 0 
     end
     
     methods
         
-        function obj = ast_variable(name, weight, offset)
-            obj@yop.ast_expression();
-            obj.name = name;
-            obj.weight = weight;
-            obj.offset = offset;
-        end
-        
-        function boolv = isa_reducible(obj)
-            % overloaded for states, algebraics and controls
-            boolv = true(size(obj));
-        end
-        
-        function [bool, tp] = isa_timepoint(obj)
-            bool = false(size(obj));
-            tp = zeros(size(obj));
-        end
-        
-        function value = evaluate(obj)
-            value = obj.m_value;
-        end
-        
-        function v = forward(obj)
-            v = obj.m_value;
+        function obj = ast_variable(name, weight, offset, isreducible, type)
+            obj@yop.ast_expression( ...
+                yop.cx(name)         , ... value
+                nan                  , ... numval
+                yop.initial_timepoint, ... t0
+                yop.final_timepoint  , ... tf
+                false                , ... isder
+                isreducible          , ... isreducible
+                type                 , ... type
+                0                     ... typeid
+                );
+            obj.m_typeid = obj.id; % 'bit of an ugly fix
+            obj.m_name = name;
+            obj.m_weight = weight;
+            obj.m_offset = offset;
         end
         
         function ast(obj)
-            fprintf(['[', num2str(obj.id), ']:', obj.name, '\n']);
+            fprintf(['[', num2str(obj.id), ']:', obj.m_name, '\n']);
         end
         
         function [topsort, n_elem, visited] = ...

@@ -1,6 +1,7 @@
 classdef var_type
     properties (Constant) % OCP
         not_var = 0
+        
         variables_start = 1
         time = 1
         time0 = 2

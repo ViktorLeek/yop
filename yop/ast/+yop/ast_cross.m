@@ -1,111 +1,66 @@
 classdef ast_cross < yop.ast_expression
     properties
-        A
-        B
-        d
-        nargs
+        m_A
+        m_B
+        m_d
+        m_nargs
     end
     methods
         function obj = ast_cross(A, B, d)
-            obj@yop.ast_expression(is_ival(A) || is_ival(B));
-            obj.nargs = nargin;
-            switch nargin
-                case 2
-                    obj.A = A;
-                    obj.B = B;
-                    obj.dim = size(cross(ones(size(A)), ones(size(B))));
-                    
-                case 3
-                    obj.A = A;
-                    obj.B = B;
-                    obj.d = d;
-                    obj.dim = size(cross(ones(size(A)), ones(size(B)), d));
-                    
-                otherwise
-                    error('Wrong number of arguments provided')
-            end
-        end
-        
-        function val = numval(obj)
-            switch obj.nargs
-                case 2
-                    valA = numval(obj.A);
-                    valB = numval(obj.B);
-                    val = cross(valA, valB);
-                case 3
-                    valA = numval(obj.A);
-                    valB = numval(obj.B);
-                    val = cross(valA, valB, obj.d);
-            end
-        end
-        
-        function boolv = isa_reducible(obj)
-            if all(isa_reducible(obj.A)) && ...
-                    all(isa_reducible(obj.B))
-                boolv = true(size(obj));
+            if nargin == 2
+                val = cross(value(A), value(B));
+                num = cross(numval(A), numval(B));
+                d = [];
             else
-                boolv = false(size(obj));
+                val = cross(value(A), value(B), d);
+                num = cross(numval(A), numval(B), d);
             end
-        end
-                
-        function value = evaluate(obj)
-            switch obj.nargs
-                case 2
-                    value = cross(evaluate(obj.A), evaluate(obj.B));
-                case 3
-                    value = cross(...
-                        evaluate(obj.A), ...
-                        evaluate(obj.B), ...
-                        evaluate(obj.d) ...
-                        );
-            end
-        end
-        
-        function v = forward(obj)
-            switch obj.nargs
-                case 2
-                    obj.m_value = cross(value(obj.A), value(obj.B));
-                    
-                case 3
-                    obj.m_value = cross(...
-                        value(obj.A), ...
-                        value(obj.B), ...
-                        value(obj.d) ...
-                        );
-            end            
-            v = obj.m_value;
+            sz  = size(num);
+            reducible = all(isa_reducible(A) & isa_reducible(B)) & true(sz);
+            
+            obj@yop.ast_expression( ...
+                val                      , ... value
+                num                      , ... numval
+                max(get_t0(A), get_t0(B)), ... t0
+                min(get_tf(A), get_tf(B)), ... tf
+                false(sz)                , ... der
+                reducible                , ... reducible
+                zeros(sz)                , ... type
+                zeros(sz)                 ... typeid
+                );
+            obj.m_A = A;
+            obj.m_B = B;
+            obj.m_d = d;
+            obj.m_nargs = nargin;
         end
         
         function ast(obj)
-            switch obj.nargs
-                case 2
-                    fprintf('cross(A, B)\n');
-                    
-                    begin_child(obj);
-                    ast(obj.A);
-                    end_child(obj);
-                    
-                    last_child(obj);
-                    ast(obj.B);
-                    end_child(obj);
-                    
-                case 3
-                    fprintf('cross(A, B, dim)\n');
-                    
-                    begin_child(obj);
-                    ast(obj.A);
-                    end_child(obj);
-                    
-                    begin_child(obj);
-                    ast(obj.B);
-                    end_child(obj);
-                    
-                    last_child(obj);
-                    ast(obj.d);
-                    end_child(obj);
-                    
+            if obj.m_nargs == 2
+                fprintf('cross(A, B)\n');
+                
+                begin_child(obj);
+                ast(obj.m_A);
+                end_child(obj);
+                
+                last_child(obj);
+                ast(obj.m_B);
+                end_child(obj);
+                
+            else
+                fprintf('cross(A, B, dim)\n');
+                
+                begin_child(obj);
+                ast(obj.m_A);
+                end_child(obj);
+                
+                begin_child(obj);
+                ast(obj.m_B);
+                end_child(obj);
+                
+                last_child(obj);
+                ast(obj.m_d);
+                end_child(obj);
             end
-            
         end
         
         function [topsort, n_elem, visited] = ...
@@ -144,16 +99,16 @@ classdef ast_cross < yop.ast_expression
             
             % Visit child
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.A, visited, topsort, n_elem);
+                topological_sort(obj.m_A, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.B, visited, topsort, n_elem);
+                topological_sort(obj.m_B, visited, topsort, n_elem);
             
             % If d is empty, this call should be dispatched to function
             % topological_sort, as opposed to the method, so it should
             % simply return the topsort and visited.
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.d, visited, topsort, n_elem);
+                topological_sort(obj.m_d, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;

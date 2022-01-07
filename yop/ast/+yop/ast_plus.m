@@ -1,22 +1,25 @@
 classdef ast_plus < yop.ast_binary_expression
     
     properties (Constant)
-        name = 'plus'
+        m_name = 'plus'
     end
     
     methods
         function obj = ast_plus(lhs, rhs)
-            obj@yop.ast_binary_expression(lhs, rhs);
-            obj.dim = size( plus(ones(size(lhs)), ones(size(rhs))) );
-        end
-        
-        function value = evaluate(obj)
-            value = plus(evaluate(obj.lhs), evaluate(obj.rhs));
-        end
-        
-        function v = forward(obj)
-            obj.m_value = plus(value(obj.lhs), value(obj.rhs));
-            v = obj.m_value;
+            num = plus(numval(lhs), numval(rhs));
+            sz = size(num);
+            obj@yop.ast_binary_expression( ...
+                plus(value(lhs), value(rhs)) , ... value
+                num                          , ... numval
+                max(get_t0(lhs), get_t0(rhs)), ... t0
+                min(get_tf(lhs), get_tf(lhs)), ... tf
+                false(sz)                    , ... der
+                isa_reducible(lhs) & isa_reducible(rhs) , ... reducible
+                zeros(sz)                    , ... type
+                zeros(sz)                    , ... typeid
+                lhs                          , ... lhs
+                rhs                           ... rhs
+                );
         end
     end
     

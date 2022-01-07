@@ -1,23 +1,20 @@
 classdef ast_unary_expression < yop.ast_expression
     
     properties
-        expr
+        m_expr
     end
     
     methods
-        function obj = ast_unary_expression(expr)
-            obj@yop.ast_expression(is_ival(expr));
-            obj.expr = expr;
-        end
-        
-        function boolv = isa_reducible(obj)
-            boolv = isa_reducible(obj.expr);
+        function obj = ast_unary_expression(value, numval, t0, tf, isder, isreducible, type, typeid, expr)
+            obj@yop.ast_expression(...
+                value, numval, t0, tf, isder, isreducible, type, typeid);
+            obj.m_expr = expr;
         end
         
         function ast(obj)
-            fprintf([obj.name, '(expr)\n']);
+            fprintf([obj.m_name, '(expr)\n']);
             last_child(obj);
-            ast(obj.expr);
+            ast(obj.m_expr);
             end_child(obj);
         end
         
@@ -57,7 +54,7 @@ classdef ast_unary_expression < yop.ast_expression
             
             % Visit child
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.expr, visited, topsort, n_elem);
+                topological_sort(obj.m_expr, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;

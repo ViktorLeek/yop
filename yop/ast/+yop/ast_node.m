@@ -1,104 +1,73 @@
 classdef ast_node < handle
     properties 
-        id
+        m_id
         m_value
     end
     
     properties (Constant)
         % reference to handle is constant, but not the value itself.
         % named stream to avoid clash with method.
-        stream = yop.stream_state() 
+        m_stream = yop.stream_state() 
     end
     
     methods
         
-        function obj = ast_node()
-            obj.id = yop.ast_node.get_uid();
-        end
-        
-        function id = get_id(obj)
-            % Has a function overload that must be on the path. This way it
-            % is possible to get the id of all expressions, including
-            % built-in type, which get id = 0
-            id = obj.id;
-        end
-        
-        function node = at(expression, timepoint)
-            % Alternative syntax for evaluating expression at a timepoint
-            %node = yop.ast_timepoint(timepoint, expression);
-            node=yop.ast_expression.timed_expression(timepoint,expression);
-        end
-        
-        function value = fweval(obj)
-            % Forward evaluate
-            if ~isempty(obj.m_value)
-                value = obj.m_value;
-                return
-            end
-            [sort, K] = topological_sort(obj);
-            for k=1:(K-1)
-                forward(sort{k});
-            end
-            value = forward(sort{K});
+        function obj = ast_node(value)
+            obj.m_id = yop.ast_node.get_uid();
+            obj.m_value = value;
         end
         
         function v = value(obj)
             v = obj.m_value;
         end
         
-        function vars = get_vars(obj)
-            [tsort, n_elem] = topological_sort(obj);
-            vars = {};
-            for k=1:n_elem
-                if isa(tsort{k}, 'yop.ast_variable')
-                    vars = {vars{:}, tsort{k}};
-                end
-            end
+        function id = ID(obj)
+            id = obj.m_id;
         end
         
         function reset_stream(obj)
-            reset(obj.stream);
+            reset(obj.m_stream);
         end
         
         function indent(obj)
             % Indents the print by implementing the behvaiour:
-            % for k=1:obj.stream.indent_level
-            %     if obj.stream.branches(k)
+            % for k=1:obj.m_stream.indent_level
+            %     if obj.m_stream.branches(k)
             %         fprintf('|');
             %     else
             %         fprintf(' ');
             %     end
             % end
             
-            str = repmat(' ', 1, obj.stream.indent_level-1);
-            str(obj.stream.branches) = '|';
+            str = repmat(' ', 1, obj.m_stream.indent_level-1);
+            str(obj.m_stream.branches) = '|';
             fprintf(str);
         end
         
         function indent_more(obj)
-            obj.stream.indent_level = obj.stream.indent_level + 2;
+            obj.m_stream.indent_level = obj.m_stream.indent_level + 2;
         end
         
         function indent_less(obj)
-            obj.stream.indent_level = obj.stream.indent_level - 2;
+            obj.m_stream.indent_level = obj.m_stream.indent_level - 2;
         end
         
         function begin_child(obj)
             indent(obj);
             fprintf('+-');
-            obj.stream.branches(obj.stream.indent_level) = true;
+            obj.m_stream.branches(obj.m_stream.indent_level) = true;
             indent_more(obj);
         end
         
         function end_child(obj)
             indent_less(obj)
-            obj.stream.branches(obj.stream.indent_level) = false;
+            obj.m_stream.branches(obj.m_stream.indent_level) = false;
         end
         
         function last_child(obj)
             indent(obj);
             fprintf('+-');
-            obj.stream.branches(obj.stream.indent_level) = false;
+            obj.m_stream.branches(obj.m_stream.indent_level) = false;
             indent_more(obj);
         end
         

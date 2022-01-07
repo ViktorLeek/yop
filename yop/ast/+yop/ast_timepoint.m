@@ -1,57 +1,23 @@
 classdef ast_timepoint < yop.ast_expression
     properties
-        timepoint
-        expr
+        m_timepoint
+        m_expr
     end
     methods
-        function obj = ast_timepoint(tp, expr)
-            obj@yop.ast_expression(false);
-            obj.dim = expr.dim;
-            obj.timepoint = tp;
-            obj.expr = expr;
-            obj.m_value = yop.cx('tp', size(expr,1), size(expr,2));
-        end
-        
-        function val = numval(obj)
-            val = numval(obj.expr);
-        end
-        
-        function [type, id] = Type(obj)
-            if ~isempty(obj.m_type)
-                type = obj.m_type.type;
-                id = obj.m_type.id;
-                return;
-            end
-            [type, id] = Type(obj.expr);
-            obj.m_type.type = type;
-            obj.m_type.id = id;
-        end
-        
-        function [bool, tp] = isa_timepoint(obj)
-            bool = true(size(obj.expr));
-            tp = obj.timepoint*ones(size(obj.expr));
-        end
-        
-        function boolv = isa_reducible(obj)
-            boolv = true(size(obj));
-        end
-        
-        function value = evaluate(obj)            
-            % Evaluates like an ast_variable. The reason is that it does
-            % not have the semantics of a timevarying expression, so it
-            % needs to be parameterized separately. Before parametrization
-            % has occured, the idea is that an MX/sym variable (of the
-            % right size) is used to represent its value.
-            value = obj.m_value;
-        end
-        
-        function v = forward(obj)
-            % Evaluates like an ast_variable. The reason is that it does
-            % not have the semantics of a timevarying expression, so it
-            % needs to be parameterized separately. Before parametrization
-            % has occured, the idea is that an MX/sym variable (of the
-            % right size) is used to represent its value.
-            v = obj.m_value;
+        function obj = ast_timepoint(timepoint, expr)
+            sz = size(expr);
+            obj@yop.ast_expression( ...
+                yop.cx('tp', sz(1), sz(2)), ... value
+                expr.m_numval             , ... numval
+                timepoint                 , ... t0
+                timepoint                 , ... tf
+                false(sz)                 , ... der
+                true(sz)                  , ... reducible
+                expr.m_type               , ... type
+                expr.m_typeid              ... typeid
+                );
+            obj.m_timepoint = timepoint;
+            obj.m_expr = expr;
         end
         
         function ast(obj)
@@ -59,11 +25,11 @@ classdef ast_timepoint < yop.ast_expression
                 'timepoint(timepoint, expr)\n']);
             
             begin_child(obj);
-            ast(obj.timepoint);
+            ast(obj.m_timepoint);
             end_child(obj);
             
             last_child(obj);
-            ast(obj.expr);
+            ast(obj.m_expr);
             end_child(obj);
         end
         
@@ -103,10 +69,10 @@ classdef ast_timepoint < yop.ast_expression
             
             % Visit child
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.timepoint, visited, topsort, n_elem);
+                topological_sort(obj.m_timepoint, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.expr, visited, topsort, n_elem);
+                topological_sort(obj.m_expr, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;

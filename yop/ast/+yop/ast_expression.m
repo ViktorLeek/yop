@@ -2,53 +2,59 @@ classdef ast_expression < yop.ast_node
     % ast_expression
     % The purpose of this class is to enable to right operator and function
     % overloads for expressions. This class is inferior to the
-    % yop.ast_relation class in order to avoid structures with unclear
+    % yop.ast_relation class in order to avoid structures with confusing
     % semantics, such as '(expr1 <= expr2) + expr3'
     
     properties
-        dim = [1, 1] % dimensions of 'size'
-        m_ival = false
+        m_numval
+        m_t0
+        m_tf
+        m_der
+        m_reducible
         m_type
+        m_typeid
     end
     
     methods
         
-        function obj = ast_expression(ival)
-            obj@yop.ast_node();
-            if nargin == 1
-                obj.m_ival = ival;
-            end
+        function obj = ast_expression(value, numval, t0, tf, isder, isreducible, type, typeid)
+            obj@yop.ast_node(value);
+            obj.m_numval    = numval;
+            obj.m_t0        = t0;
+            obj.m_tf        = tf;
+            obj.m_der       = isder;
+            obj.m_reducible = isreducible;
+            obj.m_type      = type;
+            obj.m_typeid    = typeid;
         end
         
-        function bool = is_ival(obj)
-            % Tests if a node is an interval
-            % The reason for having this implemented this way is that
-            % intervals are implicitly propagated to child nodes.
-            bool = obj.m_ival;
+        function val = numval(obj)
+            val = obj.m_numval;
         end
         
-        function [t0, tf] = get_ival(obj)
-            % This analysis is optimistic, which is bad. This does not
-            % consider the case that the interval can be in a subexpression
-            % that does not reach the final expression. A fix that tests if
-            % the found interval reaches the expression is necessary in
-            % order for correct analysis.
-            t0 = yop.initial_timepoint;
-            tf = yop.final_timepoint;
-            [tsort, N] = topological_sort(obj);
-            for n=1:N
-                if isa(tsort{n}, 'yop.ast_timeinterval')
-                    % The function returns here, so having more than one
-                    % interval in an expression is undefined behaviour.
-                    t0 = tsort{n}.t0;
-                    tf = tsort{n}.tf;
-                    return
-                end
-            end
+        function bool = isa_ival(obj)
+            bool = ~isinf(obj.m_t0) & ~isinf(obj.m_tf);
+        end
+        
+        function bool = isa_timepoint(obj)
+            bool = obj.m_t0 == obj.m_tf;
+        end
+        
+        function bool = isa_der(obj)
+            bool = obj.m_der > 0;
+        end
+        
+        function boolv = isa_reducible(obj)
+            boolv = obj.m_reducible;
+        end
+        
+        function [type, id] = Type(obj)
+            type = obj.m_type;
+            id   = obj.m_typeid;
         end
         
         function sz = size(obj, varargin)
-            sz = size(ones(obj.dim), varargin{:});
+            sz = size(obj.m_numval, varargin{:});
         end
         
         function rel = lt(lhs, rhs)
@@ -317,6 +323,12 @@ classdef ast_expression < yop.ast_node
         
         function idx = end(obj, k, n)
             idx = builtin('end', ones(size(obj)), k, n);
+        end
+        
+        function node = at(expression, timepoint)
+            % Alternative syntax for evaluating expression at a timepoint
+            %node = yop.ast_timepoint(timepoint, expression);
+            node=yop.ast_expression.timed_expression(timepoint, expression);
         end
         
         

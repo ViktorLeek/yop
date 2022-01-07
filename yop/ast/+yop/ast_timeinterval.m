@@ -1,55 +1,22 @@
-classdef ast_timeinterval < yop.ast_expression
-    
-    properties
-        t0
-        tf
-        expr
-    end
+classdef ast_timeinterval < yop.ast_unary_expression
     
     methods
         function obj = ast_timeinterval(t0, tf, expr)
-            obj@yop.ast_expression(true);
+            value = expr.m_value;
+            ival = struct('bool', true, 't0', t0, 'tf', tf);
+            obj@yop.ast_unary_expression(true, ival);
             obj.dim = expr.dim;
             obj.t0 = t0;
             obj.tf = tf;
             obj.expr = expr;
         end
         
-        function val = numval(obj)
-            val = numval(obj.expr);
-        end
-        
-        function [type, id] = Type(obj)
-            if ~isempty(obj.m_type)
-                type = obj.m_type.type;
-                id = obj.m_type.id;
-                return;
-            end
-            [type, id] = Type(obj.expr);
-            obj.m_type.type = type;
-            obj.m_type.id = id;
-        end
-        
-        function boolv = isa_reducible(obj)
-            boolv = false(size(obj));
-        end
-        
         function value = evaluate(obj)            
-            % Evaluates like an ast_variable. The reason is that it does
-            % not have the semantics of a timevarying expression, so it
-            % needs to be parameterized separately. Before parametrization
-            % has occured, the idea is that an MX/sym variable (of the
-            % right size) is used to represent its value.
             value = evaluate(obj.expr);
         end
         
         function v = forward(obj)
-            % Evaluates like an ast_variable. The reason is that it does
-            % not have the semantics of a timevarying expression, so it
-            % needs to be parameterized separately. Before parametrization
-            % has occured, the idea is that an MX/sym variable (of the
-            % right size) is used to represent its value.
-            obj.m_value = value(obj.expr);
+            obj.m_value = obj.expr.m_value;
             v = obj.m_value;
         end
         

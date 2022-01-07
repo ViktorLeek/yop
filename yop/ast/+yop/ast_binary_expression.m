@@ -1,62 +1,26 @@
 classdef ast_binary_expression < yop.ast_expression
     
     properties
-        lhs
-        rhs
+        m_lhs
+        m_rhs
     end
     
     methods
-        function obj = ast_binary_expression(lhs, rhs)
-            obj@yop.ast_expression(is_ival(lhs) || is_ival(rhs));
-            obj.lhs = lhs;
-            obj.rhs = rhs;
-        end
-        
-        function val = numval(obj)
-            val_lhs = numval(obj.lhs);
-            val_rhs = numval(obj.rhs);
-            switch obj.name
-                case 'plus'
-                    val = plus(val_lhs, val_rhs);
-                case 'minus'
-                    val = minus(val_lhs, val_rhs);
-                case 'mtimes'
-                    val = mtimes(val_lhs, val_rhs);
-                case 'mpower'
-                    val = mpower(val_lhs, val_rhs);
-                case 'mrdivide'
-                    val = mrdivide(val_lhs, val_rhs);
-                case 'power'
-                    val = power(val_lhs, val_rhs);
-                case 'times'
-                    val = times(val_lhs, val_rhs);
-                case 'rdivide'
-                    val = rdivide(val_lhs, val_rhs);
-                case 'mldivide'
-                    val = mldivide(val_lhs, val_rhs);
-                case 'ldivide'
-                    val = ldivide(val_lhs, val_rhs);
-            end            
-        end
-        
-        function boolv = isa_reducible(obj)
-            if all(isa_reducible(obj.lhs)) && ...
-                    all(isa_reducible(obj.rhs))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
-            end
+        function obj = ast_binary_expression(value, numval, t0, tf, isder, isreducible, type, typeid, lhs, rhs)
+            obj@yop.ast_expression(value, numval, t0, tf, isder, isreducible, type, typeid, lhs, rhs)
+            obj.m_lhs = lhs;
+            obj.m_rhs = rhs;
         end
         
         function ast(obj)
-            fprintf([obj.name, '(lhs, rhs)\n']);
+            fprintf([obj.m_name, '(lhs, rhs)\n']);
             
             begin_child(obj);
-            ast(obj.lhs);
+            ast(obj.m_lhs);
             end_child(obj);
             
             last_child(obj);
-            ast(obj.rhs);
+            ast(obj.m_rhs);
             end_child(obj);
         end
         
@@ -96,10 +60,10 @@ classdef ast_binary_expression < yop.ast_expression
             
             % Visit child
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.lhs, visited, topsort, n_elem);
+                topological_sort(obj.m_lhs, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.rhs, visited, topsort, n_elem);
+                topological_sort(obj.m_rhs, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;

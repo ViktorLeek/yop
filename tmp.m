@@ -1,3 +1,11 @@
+obj.expr = expr;
+obj.dim = size(expr);
+obj.m_der    = ;
+obj.m_ival   = ;
+obj.m_value  = ;
+obj.m_numval = ;
+obj.m_reducible = ;
+%%
 ocp = yop.ocp('Low-thrust orbit');
 ocp.max( w(tf) );
 ocp.st( 50e3 <= tf <= 100e3 );
