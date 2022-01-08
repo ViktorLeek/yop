@@ -1,7 +1,7 @@
 classdef ast_int < yop.ast_unary_expression
     
     properties (Constant)
-        name = 'int'
+        m_name = 'int'
     end
     
     methods

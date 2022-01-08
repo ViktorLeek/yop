@@ -9,8 +9,8 @@ classdef ast_timepoint < yop.ast_expression
             obj@yop.ast_expression( ...
                 yop.cx('tp', sz(1), sz(2)), ... value
                 expr.m_numval             , ... numval
-                timepoint                 , ... t0
-                timepoint                 , ... tf
+                timepoint*ones(sz)        , ... t0
+                timepoint*ones(sz)        , ... tf
                 false(sz)                 , ... der
                 true(sz)                  , ... reducible
                 expr.m_type               , ... type

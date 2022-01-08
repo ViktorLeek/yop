@@ -1,6 +1,6 @@
 classdef ast_asinh < yop.ast_unary_expression
     properties (Constant)
-        name = 'asinh'
+        m_name = 'asinh'
     end
     methods
         function obj = ast_asinh(expr)

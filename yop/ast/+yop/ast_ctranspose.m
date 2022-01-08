@@ -1,6 +1,6 @@
 classdef ast_ctranspose < yop.ast_unary_expression
     properties (Constant)
-        name = 'ctranspose'
+        m_name = 'ctranspose'
     end
     methods
         function obj = ast_ctranspose(expr)

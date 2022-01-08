@@ -1,7 +1,7 @@
 classdef ast_der < yop.ast_unary_expression
     
     properties (Constant)
-        name = 'der'
+        m_name = 'der'
     end
     
     methods
@@ -14,8 +14,8 @@ classdef ast_der < yop.ast_unary_expression
                 expr.m_tf                  , ... tf
                 []                         , ... isder
                 false(sz)                  , ... reducible
-                zeros(sz)                  , ... type
-                zeros(sz)                  , ... typeid
+                expr.m_type                , ... type
+                expr.m_typeid              , ... typeid
                 expr                        ... expr
                 );
             obj.m_der = obj.m_id*ones(size(obj)); % A bit ugly

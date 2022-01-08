@@ -71,8 +71,8 @@ classdef ast_expression < yop.ast_node
         
         function bool = isa_variable(obj)
             bool = ...
-                obj.type >= yop.var_type.variables_start && ...
-                obj.type <= yop.var_type.variables_stop;
+                obj.m_type >= yop.var_type.variables_start && ...
+                obj.m_type <= yop.var_type.variables_stop;
         end
         
         function sz = size(obj, varargin)

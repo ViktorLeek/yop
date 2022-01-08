@@ -1,12 +1,8 @@
 classdef ast_control < yop.ast_variable
     
-    properties (Constant)
-        m_reducible = false;
-    end
-    
     properties
         m_deg
-        m_der
+        m_du
     end
     
     methods
@@ -15,7 +11,7 @@ classdef ast_control < yop.ast_variable
                 (deg>0)*yop.var_type.state + (deg<=0)*yop.var_type.control)
             obj.m_deg = deg;
             if deg > 0
-                obj.m_der = yop.ast_control(['D', name], 1, 0, deg-1);
+                obj.m_du = yop.ast_control(['D', name], 1, 0, deg-1);
             end
         end
     end

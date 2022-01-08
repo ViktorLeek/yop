@@ -41,7 +41,7 @@ classdef ocp_expr < handle
         
         function tp = timepoint(obj)
             % Notice, error if not a timepoint.
-            tp = obj.ast.timepoint;
+            tp = obj.ast.m_timepoint;
         end
         
     end

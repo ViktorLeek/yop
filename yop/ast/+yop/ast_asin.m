@@ -1,6 +1,6 @@
 classdef ast_asin < yop.ast_unary_expression
     properties (Constant)
-        name = 'asin'
+        m_name = 'asin'
     end
     methods
         function obj = ast_asin(expr)

@@ -7,7 +7,7 @@ classdef ast_binary_expression < yop.ast_expression
     
     methods
         function obj = ast_binary_expression(value, numval, t0, tf, isder, isreducible, type, typeid, lhs, rhs)
-            obj@yop.ast_expression(value, numval, t0, tf, isder, isreducible, type, typeid, lhs, rhs)
+            obj@yop.ast_expression(value, numval, t0, tf, isder, isreducible, type, typeid)
             obj.m_lhs = lhs;
             obj.m_rhs = rhs;
         end

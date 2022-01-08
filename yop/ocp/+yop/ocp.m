@@ -171,10 +171,10 @@ classdef ocp < handle
             % Augment system based on control parametrization
             % Step 1: Account for all control inputs
             for uk=obj.controls
-                du = uk.ast.m_der;
+                du = uk.ast.m_du;
                 while ~isempty(du)
                     obj.add_unique_control(du);
-                    du = du.m_der;
+                    du = du.m_du;
                 end
             end
             
@@ -183,9 +183,9 @@ classdef ocp < handle
             keep = [];
             for k=1:length(obj.controls)
                 uk = obj.controls(k);
-                if ~isempty(uk.ast.m_der)
+                if ~isempty(uk.ast.m_du)
                     obj.states(end+1) = uk;
-                    obj.ode_eqs{end+1} = ode(der(uk.ast)==uk.ast.m_der);
+                    obj.ode_eqs{end+1} = ode(der(uk.ast)==uk.ast.m_du);
                 else
                     keep(end+1) = k;
                 end
@@ -648,59 +648,59 @@ classdef ocp < handle
         end
         
         function W = W_t0(obj)
-            W = obj.independent0.m_weight;
+            W = obj.independent0.weight;
         end
         
         function W = W_tf(obj)
-            W = obj.independentf.m_weight;
+            W = obj.independentf.weight;
         end
         
         function W = W_t(obj)
-            W = obj.independent.m_weight;
+            W = obj.independent.weight;
         end
         
         function W = W_x(obj)
-            W = obj.states.m_weight;
+            W = obj.states.weight;
         end
         
         function W = W_z(obj)
-            W = obj.algebraics.m_weight;
+            W = obj.algebraics.weight;
         end
         
         function W = W_u(obj)
-            W = obj.controls.m_weight;
+            W = obj.controls.weight;
         end
         
         function W = W_p(obj)
-            W = obj.parameters.m_weight;
+            W = obj.parameters.weight;
         end
         
         function OS = OS_t0(obj)
-            OS = obj.independent0.m_offset;
+            OS = obj.independent0.offset;
         end
         
         function OS = OS_tf(obj)
-            OS = obj.independentf.m_offset;
+            OS = obj.independentf.offset;
         end
         
         function OS = OS_t(obj)
-            OS = obj.independent.m_offset;
+            OS = obj.independent.offset;
         end
         
         function OS = OS_x(obj)
-            OS = obj.states.m_offset;
+            OS = obj.states.offset;
         end
         
         function OS = OS_z(obj)
-            OS = obj.algebraics.m_offset;
+            OS = obj.algebraics.offset;
         end
         
         function OS = OS_u(obj)
-            OS = obj.controls.m_offset;
+            OS = obj.controls.offset;
         end
         
         function OS = OS_p(obj)
-            OS = obj.parameters.m_offset;
+            OS = obj.parameters.offset;
         end
         
         function ids = get_state_ids(obj)
@@ -1004,8 +1004,7 @@ classdef ocp < handle
             % Remove the state derivative node if all elements covered by
             % the derivative are states.
             for k=1:length(obj.ders)
-                [bool, id_k] = isa_der(obj.ders(k).ast);
-                if all(bool) && all(id_k == id)
+                if all(isa_der(obj.ders(k).ast)) && all(obj.ders(k).ast.m_der == id)
                     if all(Type(obj.ders(k).ast) == yop.var_type.state)
                         to_remove = obj.ders(k);
                         obj.ders = [obj.ders(1:k-1), obj.ders(k+1:end)]; 
