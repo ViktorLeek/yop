@@ -74,6 +74,9 @@ classdef ast_reshape < yop.ast_expression
             visited = [visited, obj.m_id];
             
             % Visit child
+            [topsort, n_elem, visited] = ...
+                topological_sort(obj.m_expr, visited, topsort, n_elem);
+            
             for k=1:length(obj.m_args)
                 % probably unnecessary, as args are expected to be numerics
                 % but could change in the future.

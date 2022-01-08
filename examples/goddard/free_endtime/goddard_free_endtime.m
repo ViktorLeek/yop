@@ -66,8 +66,8 @@ sol.plot(t, u, 'mag', 5);
 yopvar times: t t0 tf weight: [1e2,1,1e2]
 yopvar states: v h m  weight: [1e3,1e5,1e2]
 yopvar controls: u    weight: 10 deg: 2
-u.der.weight = 2;
-u.der.der.weight = 0.5;
+u.m_du.m_weight = 2;
+u.m_du.m_du.m_weight = 0.5;
 
 x     = [  v;   h;   m];
 x0    = [  0;   0; 215];

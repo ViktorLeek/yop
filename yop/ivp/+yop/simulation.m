@@ -245,7 +245,7 @@ classdef simulation < handle
             is_num_lhs = isa_numeric(lhs);
             num_lhs = numval(lhs);
             der_lhs = isa_der(lhs);
-            [istp_lhs, tp_lhs] = isa_timepoint(lhs);
+            istp_lhs = isa_timepoint(lhs);
             [type_lhs, id_lhs] = Type(lhs);
             time0_lhs     = type_lhs == yop.var_type.time0;
             timef_lhs     = type_lhs == yop.var_type.timef;
@@ -257,7 +257,7 @@ classdef simulation < handle
             is_num_rhs = isa_numeric(rhs);
             num_rhs = numval(rhs);
             der_rhs = isa_der(rhs);
-            [istp_rhs, tp_rhs] = isa_timepoint(rhs);
+            istp_rhs = isa_timepoint(rhs);
             [type_rhs, id_rhs] = Type(rhs);
             time0_rhs     = type_rhs == yop.var_type.time0;
             timef_rhs     = type_rhs == yop.var_type.timef;
@@ -275,12 +275,12 @@ classdef simulation < handle
                 c = get_constructor(ssr);
                 obj.ode_eqs{end+1} = c(ssr.m_rhs, ssr.m_lhs);
                 
-            elseif istp_lhs && tp_lhs==t0 && is_num_rhs && isa_eq && (state_lhs || control_lhs || algebraic_lhs)
+            elseif istp_lhs && lhs.m_t0==t0 && is_num_rhs && isa_eq && (state_lhs || control_lhs || algebraic_lhs)
                 % v(t0) == num
                 var = obj.find_variable(id_lhs);
                 var.iv = num_rhs;
                 
-            elseif is_num_lhs && istp_rhs && tp_rhs==t0 && isa_eq && (state_rhs || control_rhs || algebraic_rhs)
+            elseif is_num_lhs && istp_rhs && rhs.m_t0==t0 && isa_eq && (state_rhs || control_rhs || algebraic_rhs)
                 % num == v(t0)
                 var = obj.find_variable(id_rhs);
                 var.iv = num_lhs;

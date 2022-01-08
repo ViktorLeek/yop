@@ -2,14 +2,6 @@ function [topsort, n_elem, visited] = ...
     topological_sort(obj, visited, topsort, n_elem)
 % Topological sort of expression graph by a dfs.
 
-% if nargin == 1
-%     % Start new sort
-%     visited = [];
-%     topsort = cell( ...
-%         yop.constants().topsort_preallocation_size, 1);
-%     n_elem = 0;
-% end
-
 switch nargin
     case 1
         % Start new sort
