@@ -23,20 +23,20 @@ end
 if isequal(sz, [1, 1])
     u = yop.ast_control(name, scaling, offset, deg);
     varargout = {u};
-    du = u.der;
+    du = u.m_der;
     while ~isempty(du)
         varargout{end+1} = du;
-        du = du.der;
+        du = du.m_der;
     end
 else
    controls = {}; 
     for k=1:nu
         u = yop.ast_control([name , '_', num2str(k)], scaling(k), offset(k), deg);
         controls{k,1} = u;
-        du = u.der;
+        du = u.m_der;
         for n=1:deg
             controls{k,n+1} = du;
-            du = du.der;
+            du = du.m_der;
         end
     end
     varargout = cell(1, 1+deg);

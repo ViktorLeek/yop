@@ -2,8 +2,6 @@ classdef ocp_expr < handle
     properties        
         type
         ast
-        %         mx
-        %         sym
         fn
     end
     methods
@@ -14,8 +12,8 @@ classdef ocp_expr < handle
             end
         end
         
-        function bool = is_ival(obj)
-            bool = is_ival(obj.ast);
+        function bool = isa_ival(obj)
+            bool = isa_ival(obj.ast);
         end
         
         

@@ -31,21 +31,21 @@ classdef ocp_var < handle
         function w = weight(obj)
             w = [];
             for o=obj
-                w = [w; o.ast.weight];
+                w = [w; o.ast.m_weight];
             end
         end
         
         function os = offset(obj)
             os = [];
             for o=obj
-                os = [os; o.ast.offset];
+                os = [os; o.ast.m_offset];
             end
         end
         
         function ID = ids(obj)
             ID = [];
             for o = obj
-                ID = [ID, o.ast.id];
+                ID = [ID, o.ast.m_id];
             end
         end
     end

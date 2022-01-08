@@ -82,7 +82,7 @@ classdef ocp_sol < handle
                     % Three is the independent variable. Hard coded, but
                     % efficient.
                     vars{k}.m_value = obj.mx_vars{3};
-                    t_id = vars{k}.id;
+                    t_id = vars{k}.m_id;
                 end
             end
             
@@ -92,7 +92,7 @@ classdef ocp_sol < handle
             known_vars = false;
             IDs = [obj.ids, t_id];
             for k=1:length(vars)
-                known_vars = known_vars || any(vars{k}.id == IDs);
+                known_vars = known_vars || any(vars{k}.m_id == IDs);
             end
             if ~known_vars
                 v = [];
@@ -109,10 +109,10 @@ classdef ocp_sol < handle
             %             obj.set_mx();
             %             set_mx([tps, ints, ders]);
             for node = [tps, ints, ders]
-                mx_expr = fweval(node.ast.expr);
+                mx_expr = value(node.ast.m_expr);
                 node.fn = casadi.Function('fn', args, {mx_expr});
             end
-            fn = casadi.Function('fn', args, {fweval(expr)});
+            fn = casadi.Function('fn', args, {value(expr)});
             
             % Compute the numerical values of the special nodes
             [tpv, intv, derv] = obj.comp_sn(sn, ...
@@ -120,7 +120,7 @@ classdef ocp_sol < handle
             
             if isa_reducible(expr)
                 v = obj.invariant_value(fn, tpv, intv, derv);
-            elseif is_ival(expr)
+            elseif isa_ival(expr)
                 v = obj.interval_value(expr, fn, tpv, intv, derv, mag);
             else
                 v = obj.variant_value(fn, tpv, intv, derv, mag);
@@ -296,7 +296,7 @@ classdef ocp_sol < handle
                             tmp_int, ders, n_der);
                         
                     otherwise
-                        error(yop.msg.unexpected_error);
+                        error(yop.error.unexpected_error());
                 end
             end
         end

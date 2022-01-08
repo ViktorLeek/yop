@@ -26,7 +26,7 @@ classdef ivp_var < handle
         function ID = ids(obj)
             ID = [];
             for o = obj
-                ID = [ID, o.ast.id];
+                ID = [ID, o.ast.m_id];
             end
         end
     end

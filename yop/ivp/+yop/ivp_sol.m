@@ -29,7 +29,7 @@ classdef ivp_sol < handle
             for k=1:length(vars)
                 if isa(vars{k}, 'yop.ast_independent')
                     vars{k}.m_value = obj.mx_args{3};
-                    t_id = vars{k}.id;
+                    t_id = vars{k}.m_id;
                 end
             end
             
@@ -37,14 +37,14 @@ classdef ivp_sol < handle
             known_vars = false;
             IDs = [obj.ids, t_id];
             for k=1:length(vars)
-                known_vars = known_vars || any(vars{k}.id == IDs);
+                known_vars = known_vars || any(vars{k}.m_id == IDs);
             end
             if ~known_vars
                 v = [];
                 return
             end 
             
-            fn = casadi.Function('fn', obj.mx_args, {fweval(expr)});
+            fn = casadi.Function('fn', obj.mx_args, {value(expr)});
             
             if isa_reducible(expr)
                 v = obj.invariant_value(fn);

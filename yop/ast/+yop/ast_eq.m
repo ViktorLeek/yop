@@ -27,7 +27,7 @@ classdef ast_eq < yop.ast_relation
             obj.m_alg = true;
         end
         
-        function bool = is_alg(obj)
+        function bool = isa_alg(obj)
             bool = obj.m_alg;
         end
         

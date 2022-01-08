@@ -19,14 +19,14 @@ classdef ast_variable < yop.ast_expression
                 type                 , ... type
                 0                     ... typeid
                 );
-            obj.m_typeid = obj.id; % 'bit of an ugly fix
+            obj.m_typeid = obj.m_id; % 'bit of an ugly fix
             obj.m_name = name;
             obj.m_weight = weight;
             obj.m_offset = offset;
         end
         
         function ast(obj)
-            fprintf(['[', num2str(obj.id), ']:', obj.m_name, '\n']);
+            fprintf(['[', num2str(obj.m_id), ']:', obj.m_name, '\n']);
         end
         
         function [topsort, n_elem, visited] = ...
@@ -56,12 +56,12 @@ classdef ast_variable < yop.ast_expression
             end
             
             % only visit every node once
-            if ~isempty( find(visited == obj.id, 1) )
+            if ~isempty( find(visited == obj.m_id, 1) )
                 return;
             end
             
             % Mark node as visited
-            visited = [visited, obj.id];
+            visited = [visited, obj.m_id];
             
             % append self to sort
             n_elem = n_elem + 1;

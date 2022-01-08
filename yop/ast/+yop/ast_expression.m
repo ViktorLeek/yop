@@ -32,6 +32,10 @@ classdef ast_expression < yop.ast_node
             val = obj.m_numval;
         end
         
+        function bool = isa_numeric(obj)
+            bool = ~isnan(obj.m_numval);
+        end
+        
         function t0 = get_t0(obj)
             t0 = obj.m_t0;
         end
@@ -63,6 +67,12 @@ classdef ast_expression < yop.ast_node
         function [type, id] = Type(obj)
             type = obj.m_type;
             id   = obj.m_typeid;
+        end
+        
+        function bool = isa_variable(obj)
+            bool = ...
+                obj.type >= yop.var_type.variables_start && ...
+                obj.type <= yop.var_type.variables_stop;
         end
         
         function sz = size(obj, varargin)
@@ -449,17 +459,17 @@ classdef ast_expression < yop.ast_node
             n = length(ssr);
             
             if isrel && n==1
-                lhs1 = ssr{1}.lhs;
-                rhs1 = ssr{1}.rhs;
+                lhs1 = ssr{1}.m_lhs;
+                rhs1 = ssr{1}.m_rhs;
                 
                 a1_eq = isa(ssr{1}, 'yop.ast_eq');
                 a1_le = isa(ssr{1}, 'yop.ast_lt') || isa(ssr{1}, 'yop.ast_le');
                 a1_ge = isa(ssr{1}, 'yop.ast_gt') || isa(ssr{1}, 'yop.ast_ge');
                 
+                a1_isnum_lhs = isa_numeric(lhs1);
+                a1_isnum_rhs = isa_numeric(rhs1);
                 a1_num_lhs = numval(lhs1);
                 a1_num_rhs = numval(rhs1);
-                a1_isnum_lhs = ~isnan(a1_num_lhs);
-                a1_isnum_rhs = ~isnan(a1_num_rhs);
                 
                 a1_type_lhs = Type(lhs1);
                 a1_type_rhs = Type(rhs1);
@@ -473,14 +483,14 @@ classdef ast_expression < yop.ast_node
                 a1_timef_rhs = a1_type_rhs == yop.var_type.timef;
                 
             elseif isrel && n==2
-                lhs1 = ssr{1}.lhs;
-                rhs1 = ssr{1}.rhs;
+                lhs1 = ssr{1}.m_lhs;
+                rhs1 = ssr{1}.m_rhs;
                 
                 a1_le = isa(ssr{1}, 'yop.ast_lt') || isa(ssr{1}, 'yop.ast_le');
                 a1_ge = isa(ssr{1}, 'yop.ast_gt') || isa(ssr{1}, 'yop.ast_ge');
                 
+                a1_isnum_rhs = isa_numeric(rhs1);
                 a1_num_rhs = numval(rhs1);
-                a1_isnum_rhs = ~isnan(a1_num_rhs);
                 
                 a1_type_lhs = Type(lhs1);
                 a1_type_rhs = Type(rhs1);
@@ -489,8 +499,8 @@ classdef ast_expression < yop.ast_node
                 a1_time0_rhs = a1_type_rhs == yop.var_type.time0;
                 a1_timef_rhs = a1_type_rhs == yop.var_type.timef;
                 
-                lhs2 = ssr{2}.lhs;
-                rhs2 = ssr{2}.rhs;
+                lhs2 = ssr{2}.m_lhs;
+                rhs2 = ssr{2}.m_rhs;
                 
                 a2_le = isa(ssr{2}, 'yop.ast_lt') || isa(ssr{2}, 'yop.ast_le');
                 a2_ge = isa(ssr{2}, 'yop.ast_gt') || isa(ssr{2}, 'yop.ast_ge');
@@ -500,8 +510,8 @@ classdef ast_expression < yop.ast_node
                 
                 a2_time0_lhs = a2_type_lhs == yop.var_type.time0;
                 a2_timef_lhs = a2_type_lhs == yop.var_type.timef;
+                a2_isnum_lhs = isa_numeric(lhs2);
                 a2_num_lhs = numval(lhs2);
-                a2_isnum_lhs = ~isnan(a2_num_lhs);
                 
                 a2_time_rhs = a2_type_rhs == yop.var_type.time;
                 

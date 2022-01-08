@@ -18,7 +18,7 @@ classdef ast_der < yop.ast_unary_expression
                 zeros(sz)                  , ... typeid
                 expr                        ... expr
                 );
-            obj.m_der = obj.id*ones(size(obj)); % A bit ugly
+            obj.m_der = obj.m_id*ones(size(obj)); % A bit ugly
         end
     end
 end

@@ -6,20 +6,20 @@ ssr = {};
 for k=1:K
     rk = relations{k};
     rel = get_constructor(rk);
-    sr = rel(rmost(rk.lhs), lmost(rk.rhs));
-    numel_lhs = prod(size(sr.lhs));
-    numel_rhs = prod(size(sr.rhs));
+    sr = rel(rmost(rk.m_lhs), lmost(rk.m_rhs));
+    numel_lhs = prod(size(sr.m_lhs));
+    numel_rhs = prod(size(sr.m_rhs));
     if numel_lhs > 1 && numel_rhs == 1
         for n=1:numel_lhs
-            ssr{end+1} = rel(sr.lhs(n), sr.rhs);
+            ssr{end+1} = rel(sr.m_lhs(n), sr.m_rhs);
         end
     elseif numel_lhs==1 && numel_rhs > 1
         for n=1:numel_rhs
-            ssr{end+1} = rel(sr.lhs, sr.rhs(n));
+            ssr{end+1} = rel(sr.m_lhs, sr.m_rhs(n));
         end
     elseif numel_lhs == numel_rhs
         for n=1:numel_lhs
-            ssr{end+1} = rel(sr.lhs(n), sr.rhs(n));
+            ssr{end+1} = rel(sr.m_lhs(n), sr.m_rhs(n));
         end
     else
         error(yop.error.incompatible_constraint_size());

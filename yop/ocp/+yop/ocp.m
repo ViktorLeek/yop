@@ -171,10 +171,10 @@ classdef ocp < handle
             % Augment system based on control parametrization
             % Step 1: Account for all control inputs
             for uk=obj.controls
-                du = uk.ast.der;
+                du = uk.ast.m_der;
                 while ~isempty(du)
                     obj.add_unique_control(du);
-                    du = du.der;
+                    du = du.m_der;
                 end
             end
             
@@ -183,9 +183,9 @@ classdef ocp < handle
             keep = [];
             for k=1:length(obj.controls)
                 uk = obj.controls(k);
-                if ~isempty(uk.ast.der)
+                if ~isempty(uk.ast.m_der)
                     obj.states(end+1) = uk;
-                    obj.ode_eqs{end+1} = ode(der(uk.ast)==uk.ast.der);
+                    obj.ode_eqs{end+1} = ode(der(uk.ast)==uk.ast.m_der);
                 else
                     keep(end+1) = k;
                 end
@@ -369,7 +369,7 @@ classdef ocp < handle
             tp = mx_vec(obj.tps);
             ii = mx_vec(obj.ints);
             args = {t0,tf,pp,tp,ii};
-            J = casadi.Function('J', args, {fweval(obj.objective.ast)});
+            J = casadi.Function('J', args, {value(obj.objective.ast)});
             
             % The nlp variables are scaled, so they must be descaled before
             % the expression can be evaluate.
@@ -382,7 +382,7 @@ classdef ocp < handle
         
         function obj = set_special_functions(obj)
             for sn = obj.snodes
-                sn.fn = obj.dsfn(fweval(sn.ast.expr));
+                sn.fn = obj.dsfn(value(sn.ast.m_expr));
             end
         end
         
@@ -392,8 +392,8 @@ classdef ocp < handle
             tmp_lhs = cell(n_ode, 1);
             tmp_rhs = cell(n_ode, 1);
             for k=1:length(obj.ode_eqs)
-                tmp_lhs{k} = obj.ode_eqs{k}.lhs;
-                tmp_rhs{k} = obj.ode_eqs{k}.rhs;
+                tmp_lhs{k} = obj.ode_eqs{k}.m_lhs;
+                tmp_rhs{k} = obj.ode_eqs{k}.m_rhs;
             end
             ode_lhs = vertcat(tmp_lhs{:});
             
@@ -411,26 +411,26 @@ classdef ocp < handle
             
             % Change order of equations so that state vector and ode
             % equation order match
-            obj.ode.lhs = ode_lhs(idx);
-            obj.ode.rhs = vertcat(tmp_rhs{idx});
+            obj.ode.m_lhs = ode_lhs(idx);
+            obj.ode.m_rhs = vertcat(tmp_rhs{idx});
             
             % Algebraic equation
             nz = length(obj.alg_eqs);
             alg_rhs = cell(nz,1);
             for k=1:nz
                 z_k = obj.alg_eqs{k};
-                alg_rhs{k} = z_k.rhs - z_k.lhs;
+                alg_rhs{k} = z_k.m_rhs - z_k.m_lhs;
             end
-            obj.alg.lhs = zeros(nz, 1);
-            obj.alg.rhs = vertcat(alg_rhs{:});
+            obj.alg.m_lhs = zeros(nz, 1);
+            obj.alg.m_rhs = vertcat(alg_rhs{:});
             
             % Compute symbolic functions of the dynamics
             obj.set_dynamics_fn();
         end
         
         function obj = set_dynamics_fn(obj)
-            ode_expr = fweval(obj.ode.rhs);
-            alg_expr = fweval(obj.alg.rhs);
+            ode_expr = value(obj.ode.m_rhs);
+            alg_expr = value(obj.alg.m_rhs);
             f = casadi.Function('f', obj.mx_args(), {ode_expr});
             
             % Descale input variables, evaluate ode rhs, scale derivative
@@ -441,7 +441,7 @@ classdef ocp < handle
         end
         
         function set_path_con(obj)                       
-            expr = fweval(vertcat(obj.ec_eqs{:}, obj.iec_eqs{:}));
+            expr = value(vertcat(obj.ec_eqs{:}, obj.iec_eqs{:}));
             obj.path.fn = obj.dsfn(expr(:), 'eq');
             n_eq  = length(obj.ec_eqs);
             n_ieq = length(obj.iec_eqs);
@@ -450,7 +450,7 @@ classdef ocp < handle
         end
         
         function set_hard_path_con(obj)
-            expr = fweval(vertcat(obj.ec_hard_eqs{:}, obj.iec_hard_eqs{:}));
+            expr = value(vertcat(obj.ec_hard_eqs{:}, obj.iec_hard_eqs{:}));
             obj.path_hard.fn = obj.dsfn(expr(:), 'heq');
             n_eq  = length(obj.ec_hard_eqs);
             n_ieq = length(obj.iec_hard_eqs);
@@ -459,7 +459,7 @@ classdef ocp < handle
         end
         
         function set_point_con(obj)
-            expr = fweval(vertcat(obj.ec_point_eqs{:}, obj.iec_point_eqs{:}));
+            expr = value(vertcat(obj.ec_point_eqs{:}, obj.iec_point_eqs{:}));
             obj.point.fn = obj.dsfn(expr(:), 'peq');
             n_eq = length(obj.ec_point_eqs);
             n_ieq = length(obj.iec_point_eqs);
@@ -477,7 +477,7 @@ classdef ocp < handle
                 data(k).ast = ik;
                 data(k).ub = 0;
                 data(k).lb = 0;
-                expr = fweval(ik);
+                expr = value(ik);
                 data(k).fn = obj.dsfn(expr(:), 'iveq');
             end
             
@@ -489,7 +489,7 @@ classdef ocp < handle
                 data(k).ast = ik;
                 data(k).ub = 0;
                 data(k).lb = -inf;
-                expr = fweval(ik);
+                expr = value(ik);
                 data(k).fn = obj.dsfn(expr(:), 'ivieq');
             end
             
@@ -648,66 +648,66 @@ classdef ocp < handle
         end
         
         function W = W_t0(obj)
-            W = obj.independent0.weight;
+            W = obj.independent0.m_weight;
         end
         
         function W = W_tf(obj)
-            W = obj.independentf.weight;
+            W = obj.independentf.m_weight;
         end
         
         function W = W_t(obj)
-            W = obj.independent.weight;
+            W = obj.independent.m_weight;
         end
         
         function W = W_x(obj)
-            W = obj.states.weight;
+            W = obj.states.m_weight;
         end
         
         function W = W_z(obj)
-            W = obj.algebraics.weight;
+            W = obj.algebraics.m_weight;
         end
         
         function W = W_u(obj)
-            W = obj.controls.weight;
+            W = obj.controls.m_weight;
         end
         
         function W = W_p(obj)
-            W = obj.parameters.weight;
+            W = obj.parameters.m_weight;
         end
         
         function OS = OS_t0(obj)
-            OS = obj.independent0.offset;
+            OS = obj.independent0.m_offset;
         end
         
         function OS = OS_tf(obj)
-            OS = obj.independentf.offset;
+            OS = obj.independentf.m_offset;
         end
         
         function OS = OS_t(obj)
-            OS = obj.independent.offset;
+            OS = obj.independent.m_offset;
         end
         
         function OS = OS_x(obj)
-            OS = obj.states.offset;
+            OS = obj.states.m_offset;
         end
         
         function OS = OS_z(obj)
-            OS = obj.algebraics.offset;
+            OS = obj.algebraics.m_offset;
         end
         
         function OS = OS_u(obj)
-            OS = obj.controls.offset;
+            OS = obj.controls.m_offset;
         end
         
         function OS = OS_p(obj)
-            OS = obj.parameters.offset;
+            OS = obj.parameters.m_offset;
         end
         
         function ids = get_state_ids(obj)
             nx = length(obj.states);
             ids = zeros(nx,1);
             for k=1:nx
-                ids(k) = obj.states(k).ast.id;
+                ids(k) = obj.states(k).ast.m_id;
             end
         end
         
@@ -727,8 +727,8 @@ classdef ocp < handle
         
         function classify_constraint(obj, ssr)
             
-            lhs = ssr.lhs;
-            rhs = ssr.rhs;
+            lhs = ssr.m_lhs;
+            rhs = ssr.m_rhs;
             t0 = yop.initial_timepoint();
             tf = yop.final_timepoint();
             
@@ -738,122 +738,122 @@ classdef ocp < handle
             invariant = isa_reducible(ssr);
             hard = is_hard(ssr);
             
-            num_lhs = numval(lhs);
-            isnum_lhs = ~isnan(num_lhs);
-            ival_lhs = is_ival(lhs);
-            [istp_lhs, tp_lhs] = isa_timepoint(lhs);
-            [der_lhs, der_id_lhs] = isa_der(lhs);
+            isnum_lhs = isa_numeric(lhs);
+            num_lhs   = numval(lhs);
+            ival_lhs  = isa_ival(lhs);
+            istp_lhs  = isa_timepoint(lhs);
+            der_lhs   = isa_der(lhs);
+            var_lhs   = isa_variable(lhs);
+            fnh_lhs   = isa(ssr.m_lhs, 'function_handle');
             [type_lhs, id_lhs] = Type(lhs);
-            var_lhs = yop.var_type.isa_variable(type_lhs);
-            fnh_lhs = isa(ssr.lhs, 'function_handle');
             state_lhs   = type_lhs == yop.var_type.state;
             control_lhs = type_lhs == yop.var_type.control;
             
-            num_rhs = numval(rhs);
-            isnum_rhs = ~isnan(num_rhs);
-            ival_rhs = is_ival(rhs);
-            [istp_rhs, tp_rhs] = isa_timepoint(rhs);
-            [der_rhs, der_id_rhs] = isa_der(rhs);
+            isnum_rhs = isa_numeric(rhs);
+            num_rhs   = numval(rhs);
+            ival_rhs  = isa_ival(rhs);
+            istp_rhs  = isa_timepoint(rhs);
+            der_rhs   = isa_der(rhs);
+            var_rhs   = isa_variable(rhs);
+            fnh_rhs   = isa(ssr.m_rhs, 'function_handle');
             [type_rhs, id_rhs] = Type(rhs);
-            var_rhs = yop.var_type.isa_variable(type_rhs);
-            fnh_rhs = isa(ssr.rhs, 'function_handle');
             state_rhs   = type_rhs == yop.var_type.state;
             control_rhs = type_rhs == yop.var_type.control;
             
             if (ival_lhs || ival_rhs) && isa_eq
                 % interval equality constraint
-                obj.ec_ival_eqs{end+1} = canonicalize(ssr).lhs;
+                obj.ec_ival_eqs{end+1} = canonicalize(ssr).m_lhs;
                 
-            elseif (is_ival(lhs) || is_ival(rhs))
+            elseif (isa_ival(lhs) || isa_ival(rhs))
                 % interval inequality constraint
-                obj.iec_ival_eqs{end+1} = canonicalize(ssr).lhs;
+                obj.iec_ival_eqs{end+1} = canonicalize(ssr).m_lhs;
                 
             elseif der_lhs && state_lhs && isa_eq
                 % der(x) == expr
                 obj.ode_eqs{end+1} = ssr;
-                obj.remove_state_der(der_id_lhs);
+                obj.remove_state_der(lhs.m_der);
                 
             elseif der_rhs && state_rhs && isa_eq
                 % expr == der(x)
                 c = get_constructor(ssr);
-                obj.ode_eqs{end+1} = c(ssr.rhs, ssr.lhs);
-                obj.remove_state_der(der_id_rhs);
+                obj.ode_eqs{end+1} = c(ssr.m_rhs, ssr.m_lhs);
+                obj.remove_state_der(rhs.m_der);
                 
-            elseif is_alg(ssr) && isa_eq
+            elseif isa_alg(ssr) && isa_eq
                 % alg(expr1 == expr2)
                 obj.alg_eqs{end+1} = ssr;
                 
-            elseif istp_lhs && tp_lhs==t0 && isnum_rhs && isa_eq && (state_lhs || control_lhs)
+            elseif istp_lhs && lhs.m_t0==t0 && isnum_rhs && isa_eq && (state_lhs || control_lhs)
                 % v(t0) == num
                 var = obj.find_variable(id_lhs);
                 bnd = num_rhs;
                 var.ub0 = bnd;
                 var.lb0 = bnd;
                 
-            elseif istp_lhs && tp_lhs==t0 && isnum_rhs && isa_le && (state_lhs || control_lhs)
+            elseif istp_lhs && lhs.m_t0==t0 && isnum_rhs && isa_le && (state_lhs || control_lhs)
                 % v(t0) <= num
                 var = obj.find_variable(id_lhs);
                 bnd = num_rhs;
                 var.ub0 = bnd;
                 
-            elseif istp_lhs && tp_lhs==t0 && isnum_rhs && isa_ge && (state_lhs || control_lhs)
+            elseif istp_lhs && lhs.m_t0==t0 && isnum_rhs && isa_ge && (state_lhs || control_lhs)
                 % v(t0) >= num
                 var = obj.find_variable(id_lhs);
                 bnd = num_rhs;
                 var.lb0 = bnd;
                 
-            elseif isnum_lhs && istp_rhs && tp_rhs==t0 && isa_eq && (state_rhs || control_rhs)
+            elseif isnum_lhs && istp_rhs && rhs.m_t0==t0 && isa_eq && (state_rhs || control_rhs)
                 % num == v(t0)
                 var = obj.find_variable(id_rhs);
                 bnd = num_lhs;
                 var.ub0 = bnd;
                 var.lb0 = bnd;
                 
-            elseif isnum_lhs && istp_rhs && tp_rhs==t0 && isa_le && (state_rhs || control_rhs)
+            elseif isnum_lhs && istp_rhs && rhs.m_t0==t0 && isa_le && (state_rhs || control_rhs)
                 % num <= v(t0)
                 var = obj.find_variable(id_rhs);
                 bnd = num_lhs;
                 var.lb0 = bnd;
                 
-            elseif isnum_lhs && istp_rhs && tp_rhs==t0 && isa_ge && (state_rhs || control_rhs)
+            elseif isnum_lhs && istp_rhs && rhs.m_t0==t0 && isa_ge && (state_rhs || control_rhs)
                 % num >= v(t0)
                 var = obj.find_variable(id_rhs);
                 bnd = num_lhs;
                 var.ub0 = bnd;
                 
-            elseif istp_lhs && tp_lhs==tf && isnum_rhs && isa_eq && (state_lhs || control_lhs)
+            elseif istp_lhs && lhs.m_tf==tf && isnum_rhs && isa_eq && (state_lhs || control_lhs)
                 % v(tf) == num
                 var = obj.find_variable(id_lhs);
                 bnd = num_rhs;
                 var.ubf = bnd;
                 var.lbf = bnd;
                 
-            elseif istp_lhs && tp_lhs==tf && isnum_rhs && isa_le && (state_lhs || control_lhs)
+            elseif istp_lhs && lhs.m_tf==tf && isnum_rhs && isa_le && (state_lhs || control_lhs)
                 % v(tf) <= num
                 var = obj.find_variable(id_lhs);
                 bnd = num_rhs;
                 var.ub0 = bnd;
                 
-            elseif istp_lhs && tp_lhs==tf && isnum_rhs && isa_ge && (state_lhs || control_lhs)
+            elseif istp_lhs && lhs.m_tf==tf && isnum_rhs && isa_ge && (state_lhs || control_lhs)
                 % v(tf) >= num
                 var = obj.find_variable(id_lhs);
                 bnd = num_rhs;
                 var.lb0 = bnd;
                 
-            elseif isnum_lhs && istp_rhs && tp_rhs==tf && isa_eq && (state_rhs || control_rhs)
+            elseif isnum_lhs && istp_rhs && rhs.m_tf==tf && isa_eq && (state_rhs || control_rhs)
                 % num == v(tf)
                 var = obj.find_variable(id_rhs);
                 bnd = num_lhs;
                 var.ub0 = bnd;
                 var.lb0 = bnd;
                 
-            elseif isnum_lhs && istp_rhs && tp_rhs==tf && isa_le && (state_rhs || control_rhs)
+            elseif isnum_lhs && istp_rhs && rhs.m_tf==tf && isa_le && (state_rhs || control_rhs)
                 % num <= v(tf)
                 var = obj.find_variable(id_rhs);
                 bnd = num_lhs;
                 var.lb0 = bnd;
                 
-            elseif isnum_lhs && istp_rhs && tp_rhs==tf && isa_ge && (state_rhs || control_rhs)
+            elseif isnum_lhs && istp_rhs && rhs.m_tf==tf && isa_ge && (state_rhs || control_rhs)
                 % num >= v(tf)
                 var = obj.find_variable(id_rhs);
                 bnd = num_lhs;
@@ -931,27 +931,27 @@ classdef ocp < handle
                 
             elseif isa_eq && invariant
                 % Transcription invariant equality constraint
-                obj.ec_point_eqs{end+1} = canonicalize(ssr).lhs;
+                obj.ec_point_eqs{end+1} = canonicalize(ssr).m_lhs;
                 
             elseif isa_eq && hard
                 % Transcription invariant equality constraint
-                obj.ec_hard_eqs{end+1} = canonicalize(ssr).lhs;
+                obj.ec_hard_eqs{end+1} = canonicalize(ssr).m_lhs;
                 
             elseif isa_eq
                 % Equality constraint
-                obj.ec_eqs{end+1} = canonicalize(ssr).lhs;
+                obj.ec_eqs{end+1} = canonicalize(ssr).m_lhs;
             
             elseif (isa_le || isa_ge) && invariant
                 % Transcription invariant inequality constraint
-                obj.iec_point_eqs{end+1} = canonicalize(ssr).lhs;
+                obj.iec_point_eqs{end+1} = canonicalize(ssr).m_lhs;
                 
             elseif (isa_le || isa_ge) && hard
                 % Hard inequality constraint
-                obj.iec_hard_eqs{end+1} = canonicalize(ssr).lhs;
+                obj.iec_hard_eqs{end+1} = canonicalize(ssr).m_lhs;
                 
             elseif isa_le || isa_ge
                 % Inequality constraint
-                obj.iec_eqs{end+1} = canonicalize(ssr).lhs;
+                obj.iec_eqs{end+1} = canonicalize(ssr).m_lhs;
                 
             else
                 % error
@@ -964,35 +964,35 @@ classdef ocp < handle
             
             % Here Matlab's short circuit of logical expressions is used to
             % avoid evaluating the id comparison if the variable is empty
-            if ~isempty(obj.independent) && obj.independent.ast.id == id
+            if ~isempty(obj.independent) && obj.independent.ast.m_id == id
                 ocp_var = obj.independent;
                 return;
             end
             
-            if ~isempty(obj.independent0) && obj.independent0.ast.id == id
+            if ~isempty(obj.independent0) && obj.independent0.ast.m_id == id
                 ocp_var = obj.independent0;
                 return;
             end
             
-            if ~isempty(obj.independentf) && obj.independentf.ast.id == id
+            if ~isempty(obj.independentf) && obj.independentf.ast.m_id == id
                 ocp_var = obj.independentf;
                 return;
             end
             
             for ocp_var = [obj.states, obj.controls]
-                if ocp_var.ast.id == id
+                if ocp_var.ast.m_id == id
                     return;
                 end
             end
             
             for ocp_var = obj.algebraics
-                if ocp_var.ast.id == id
+                if ocp_var.ast.m_id == id
                     return;
                 end
             end
             
             for ocp_var = obj.parameters
-                if ocp_var.ast.id == id
+                if ocp_var.ast.m_id == id
                     return;
                 end
             end
@@ -1115,7 +1115,7 @@ classdef ocp < handle
         
         function obj = add_unique_control(obj, u)
             for uk = obj.controls
-                if uk.ast.id == u.id
+                if uk.ast.m_id == u.m_id
                     return;
                 end
             end

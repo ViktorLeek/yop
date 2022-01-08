@@ -77,12 +77,12 @@ classdef ast_horzcat < yop.ast_expression
             end
             
             % only visit every node once
-            if ~isempty( find(visited == obj.id, 1) )
+            if ~isempty( find(visited == obj.m_id, 1) )
                 return;
             end
             
             % Mark node as visited
-            visited = [visited, obj.id];
+            visited = [visited, obj.m_id];
             
             % Visit child
             for k=1:length(obj.m_args)

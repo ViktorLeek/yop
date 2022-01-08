@@ -8,10 +8,14 @@ classdef error < handle
             m = '.';
         end
         
+        function m = unexpected_error()
+            m = [yop.error.msg_start(), 'Unexpected error', yop.error.msg_stop()];
+        end
+        
         function msg = timevarying_objective(err_vars)
             names = '';
             for k=1:length(err_vars)
-                names = [names, '''', err_vars{k}.name, '''', ', '];
+                names = [names, '''', err_vars{k}.m_name, '''', ', '];
             end
             names = names(1:end-2);
             
@@ -69,7 +73,7 @@ classdef error < handle
         function msg = missing_state_derivative(err_vars)
             names = '';
             for k=1:length(err_vars)
-                names = [names, '''', err_vars{k}.name, '''', ', '];
+                names = [names, '''', err_vars{k}.m_name, '''', ', '];
             end
             names = names(1:end-2);
             
@@ -94,13 +98,13 @@ classdef error < handle
         
         function msg = initial_value_missing(var)
             msg = [yop.error.msg_start(), ...
-                'No initial value for variable ' var.ast.name, ...
+                'No initial value for variable ' var.ast.m_name, ...
                 'was given', yop.error.msg_stop()];
         end
         
         function msg = final_value_missing(var)
             msg = [yop.error.msg_start(), ...
-                'No final value for variable ' var.ast.name, ...
+                'No final value for variable ' var.ast.m_name, ...
                 'was given', yop.error.msg_stop()];
         end
         

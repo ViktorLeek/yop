@@ -119,8 +119,8 @@ classdef simulation < handle
                 'x', obj.states.mx_vec(), ...
                 'z', obj.algebraics.mx_vec(), ...
                 'p', obj.parameters.mx_vec(), ...
-                'ode', fweval(obj.ode.rhs), ...
-                'alg', fweval(obj.alg.rhs) ...
+                'ode', value(obj.ode.m_rhs), ...
+                'alg', value(obj.alg.m_rhs) ...
                 );
             
             opts = obj.opts_casadi(opts);
@@ -146,7 +146,7 @@ classdef simulation < handle
         end
         
         function fnh = ode_matlab(obj)
-            expr = [fweval(obj.ode.rhs); fweval(obj.alg.rhs)];
+            expr = [value(obj.ode.m_rhs); value(obj.alg.m_rhs)];
             rhs = casadi.Function('ode', obj.args_matlab(), {expr});
             fnh = @(t,x) full(rhs(t, x, obj.p0));
         end
@@ -236,14 +236,14 @@ classdef simulation < handle
         
         function classify_eq(obj, ssr)
             
-            lhs = ssr.lhs;
-            rhs = ssr.rhs;
+            lhs = ssr.m_lhs;
+            rhs = ssr.m_rhs;
             t0 = yop.initial_timepoint();
             
             isa_eq = isa(ssr, 'yop.ast_eq');
             
+            is_num_lhs = isa_numeric(lhs);
             num_lhs = numval(lhs);
-            is_num_lhs = ~isnan(num_lhs);
             der_lhs = isa_der(lhs);
             [istp_lhs, tp_lhs] = isa_timepoint(lhs);
             [type_lhs, id_lhs] = Type(lhs);
@@ -254,8 +254,8 @@ classdef simulation < handle
             algebraic_lhs = type_lhs == yop.var_type.algebraic;
             parameter_lhs = type_lhs == yop.var_type.parameter;
             
+            is_num_rhs = isa_numeric(rhs);
             num_rhs = numval(rhs);
-            is_num_rhs = ~isnan(num_rhs);
             der_rhs = isa_der(rhs);
             [istp_rhs, tp_rhs] = isa_timepoint(rhs);
             [type_rhs, id_rhs] = Type(rhs);
@@ -273,7 +273,7 @@ classdef simulation < handle
             elseif der_rhs && state_rhs && isa_eq
                 % expr == der(x)
                 c = get_constructor(ssr);
-                obj.ode_eqs{end+1} = c(ssr.rhs, ssr.lhs);
+                obj.ode_eqs{end+1} = c(ssr.m_rhs, ssr.m_lhs);
                 
             elseif istp_lhs && tp_lhs==t0 && is_num_rhs && isa_eq && (state_lhs || control_lhs || algebraic_lhs)
                 % v(t0) == num
@@ -317,7 +317,7 @@ classdef simulation < handle
                 
             elseif isa_eq
                 % Algebraic equation
-                obj.alg_eqs{end+1} = canonicalize(ssr).lhs;
+                obj.alg_eqs{end+1} = canonicalize(ssr).m_lhs;
                 
             else
                 % error
@@ -328,7 +328,7 @@ classdef simulation < handle
         
         function ocp_var = find_variable(obj, id)
             for ocp_var = obj.variables()
-                if ocp_var.ast.id == id
+                if ocp_var.ast.m_id == id
                     return;
                 end
             end
@@ -354,8 +354,8 @@ classdef simulation < handle
             tmp_lhs = cell(n_ode, 1);
             tmp_rhs = cell(n_ode, 1);
             for k=1:length(obj.ode_eqs)
-                tmp_lhs{k} = obj.ode_eqs{k}.lhs;
-                tmp_rhs{k} = obj.ode_eqs{k}.rhs;
+                tmp_lhs{k} = obj.ode_eqs{k}.m_lhs;
+                tmp_rhs{k} = obj.ode_eqs{k}.m_rhs;
             end
             ode_lhs = vertcat(tmp_lhs{:});
             %ode_rhs = vertcat(tmp_rhs{:});
@@ -374,18 +374,18 @@ classdef simulation < handle
             
             % Change order of equations so that state vector and ode
             % equation order match
-            obj.ode.lhs = ode_lhs(idx);
-            obj.ode.rhs = vertcat(tmp_rhs{idx}); %ode_rhs(idx);
+            obj.ode.m_lhs = ode_lhs(idx);
+            obj.ode.m_rhs = vertcat(tmp_rhs{idx}); %ode_rhs(idx);
             
             % Algebraic equation
             nz = length(obj.alg_eqs);
             alg_rhs = cell(nz,1);
             for k=1:nz
                 z_k = obj.alg_eqs{k};
-                alg_rhs{k} = z_k.rhs - z_k.lhs;
+                alg_rhs{k} = z_k.m_rhs - z_k.m_lhs;
             end
-            obj.alg.lhs = zeros(nz, 1);
-            obj.alg.rhs = vertcat(alg_rhs{:});
+            obj.alg.m_lhs = zeros(nz, 1);
+            obj.alg.m_rhs = vertcat(alg_rhs{:});
             
             % Compute symbolic functions of the dynamics
             obj.set_dynamics_fn();
@@ -401,15 +401,15 @@ classdef simulation < handle
             nx = length(obj.states);
             ids = zeros(nx,1);
             for k=1:nx
-                ids(k) = obj.states(k).ast.id;
+                ids(k) = obj.states(k).ast.m_id;
             end
         end
         
         function obj = set_dynamics_fn(obj)
             obj.ode.fn = ...
-                casadi.Function('ode',obj.mx_args(),{fweval(obj.ode.rhs)});
+                casadi.Function('ode',obj.mx_args(),{value(obj.ode.m_rhs)});
             obj.alg.fn = ...
-                casadi.Function('alg',obj.mx_args(),{fweval(obj.alg.rhs)});
+                casadi.Function('alg',obj.mx_args(),{value(obj.alg.m_rhs)});
         end
         
         function args = mx_args(obj)
