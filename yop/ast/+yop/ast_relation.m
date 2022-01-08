@@ -4,17 +4,16 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
     % expressions and relations in illegal ways, for instance:
     % "(expr <= 4) + 2"
     properties
-        lhs
-        rhs
-        dim % dimensions of 'size'
+        m_lhs
+        m_rhs
         m_hard = false
     end
     
     methods
-        function obj = ast_relation(lhs, rhs)
-            obj@yop.ast_node();
-            obj.lhs = lhs;
-            obj.rhs = rhs;
+        function obj = ast_relation(value, lhs, rhs)
+            obj@yop.ast_node(value);
+            obj.m_lhs = lhs;
+            obj.m_rhs = rhs;
         end
         
         function obj = hard(obj)
@@ -26,12 +25,12 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
         end
         
         function boolv = isa_reducible(obj)
-            boolv = isa_reducible(obj.lhs) & ...
-                isa_reducible(obj.rhs);
+            boolv = isa_reducible(obj.m_lhs) & ...
+                isa_reducible(obj.m_rhs);
         end
         
         function sz = size(obj, varargin)
-            sz = size(ones(obj.dim), varargin{:});
+            sz = size(obj.m_value, varargin{:});
         end
         
         function rel = lt(lhs, rhs)
@@ -307,29 +306,29 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
         end
         
         function rels = get_relations(obj)
-            l = get_relations(obj.lhs);
-            r = get_relations(obj.rhs);
+            l = get_relations(obj.m_lhs);
+            r = get_relations(obj.m_rhs);
             rels = {obj, l{:}, r{:}};
             rels = rels(~cellfun('isempty', rels));
         end
         
         function r = rmost(obj)
-            r = rmost(obj.rhs);
+            r = rmost(obj.m_rhs);
         end
         
         function l = lmost(obj)
-            l = lmost(obj.lhs);
+            l = lmost(obj.m_lhs);
         end
         
         function ast(obj)
-            fprintf([obj.name, '(lhs, rhs)\n']);
+            fprintf([obj.m_name, '(lhs, rhs)\n']);
             
             begin_child(obj);
-            ast(obj.lhs);
+            ast(obj.m_lhs);
             end_child(obj);
             
             last_child(obj);
-            ast(obj.rhs);
+            ast(obj.m_rhs);
             end_child(obj);
         end
         
@@ -369,10 +368,10 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
             
             % Visit child
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.lhs, visited, topsort, n_elem);
+                topological_sort(obj.m_lhs, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.rhs, visited, topsort, n_elem);
+                topological_sort(obj.m_rhs, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;

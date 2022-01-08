@@ -6,27 +6,17 @@ classdef ast_eq < yop.ast_relation
     end
     
     properties (Constant)
-        name = 'eq'
+        m_name = 'eq'
     end
     
     methods
         function obj = ast_eq(lhs, rhs, ishard, isode, isalg)
-            obj@yop.ast_relation(lhs, rhs);
-            obj.dim = size(eq(ones(size(lhs)), ones(size(rhs))));
+            obj@yop.ast_relation(eq(value(lhs), value(rhs)), lhs, rhs);
             if nargin > 2
                 obj.m_hard = ishard;
                 obj.m_ode = isode;
                 obj.m_alg = isalg;
             end
-        end
-        
-        function value = evaluate(obj)
-            value = eq(evaluate(obj.lhs), evaluate(obj.rhs));
-        end
-        
-        function v = forward(obj)
-            obj.m_value = eq(value(obj.lhs), value(obj.rhs));
-            v = obj.m_value;
         end
         
         function obj = ode(obj)
@@ -48,7 +38,7 @@ classdef ast_eq < yop.ast_relation
         
         function ceq = canonicalize(obj)
             fn = get_constructor(obj);
-            ceq = fn(obj.lhs-obj.rhs, 0);
+            ceq = fn(obj.m_lhs-obj.m_rhs, 0);
         end
 
     end

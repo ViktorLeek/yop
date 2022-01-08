@@ -1,13 +1,13 @@
 classdef ast_subsasgn < yop.ast_expression
     
     properties
-        node
-        s
-        b
+        m_expr
+        m_s
+        m_b
     end
     
     methods
-        function obj = ast_subsasgn(node, s, b)
+        function obj = ast_subsasgn(expr, s, b)
             
             % Casadi is a bit picky, so logical indices must be converted
             % to indices.
@@ -16,95 +16,42 @@ classdef ast_subsasgn < yop.ast_expression
                     s.subs{k} = find(s.subs{k});
                 end
             end
-            obj@yop.ast_expression(is_ival(node) || is_ival(b));
-            obj.node = node;
-            obj.s = s;
-            obj.b = b;
-            obj.dim = size(node);
-        end
-        
-        function val = numval(obj)
-            val = numval(obj.node);
-            idx = get_indices(obj);
-            val(idx) = numval(obj.b);
-        end
-        
-        function [type, id] = Type(obj)
-            if ~isempty(obj.m_type)
-                type = obj.m_type.type;
-                id = obj.m_type.id;
-                return;
-            end
-            [type , id ] = Type(obj.node);
-            [typeb, idb] = Type(obj.b);
-            idx = get_indices(obj);
-            type(idx) = typeb;
-            id(idx) = idb;
-            obj.m_type.type = type;
-            obj.m_type.id = id;
-        end
-        
-        function [bool, id] = isa_der(obj)
-            [bool, id] = isa_der(obj.node);
-            [boolb, idb] = isa_der(obj.b);
-            idx = get_indices(obj);
-            bool(idx) = boolb;
-            id(idx) = idb;
-        end
-        
-        function [bool, tp] = isa_timepoint(obj)
-            [bool, tp] = isa_timepoint(obj.node);
-            idx = get_indices(obj);
-            [boolb, tpb] = isa_timepoint(obj.b);
-            bool(idx) = boolb;
-            tp(idx) = tpb;
-        end
-        
-        function boolv = isa_reducible(obj)
-            boolv = isa_reducible(obj.node);
-            idx = get_indices(obj);
-            boolv(idx) = isa_reducible(obj.b);
-        end
-        
-        function value = evaluate(obj)
-            % Subsref are only created if indices 's' are numerics, and
-            % so they can be passed as they are.
-            value = subsasgn(evaluate(obj.node), obj.s, evaluate(obj.b));
-        end
-        
-        function v = forward(obj)
-            obj.m_value = subsasgn(value(obj.node), obj.s, value(obj.b));
-            v = obj.m_value;
-        end
-        
-        function idx = get_indices(obj)
-            % Return the indices this subsasgn node refers to
-            node_val = obj.node.m_value;
-            sz = size(obj.node);
-            obj.node.m_value = reshape(1:prod(sz), sz);
-            idx = subsref(value(obj.node), obj.s); % eval as subsasgn
-            idx = idx(:);
-            obj.node.m_value = node_val;
+            
+            [type_e, tid_e] = Type(expr);
+            [type_b, tid_b] = Type(b);
+            obj@yop.ast_expression( ...
+                subsasgn(value(expr)        , s, value(b))        , ...
+                subsasgn(numval(expr)       , s, numval(b))       , ...
+                subsasgn(get_t0(expr)       , s, get_t0(b))       , ...
+                subsasgn(get_tf(expr)       , s, get_tf(b))       , ...
+                subsasgn(get_der(expr)      , s, get_det(b))      , ...
+                subsasgn(isa_reducible(expr), s, isa_reducible(b)), ...
+                subsasgn(type_e             , s, type_b)          , ...
+                subsasgn(tid_e              , s, tid_b)            ...
+                );
+            obj.m_expr = node;
+            obj.m_s = s;
+            obj.m_b = b;
         end
         
         function ast(obj)
             fprintf('subsasgn(node, s, b)\n');
             
             begin_child(obj);
-            ast(obj.node);
+            ast(obj.m_expr);
             end_child(obj);
             
             % Subs are numeric
             str = [];
-            for k=1:length(obj.s.subs)
-                str = [str, '[', num2str(obj.s.subs{k}), '], '];
+            for k=1:length(obj.m_s.subs)
+                str = [str, '[', num2str(obj.m_s.subs{k}), '], '];
             end
             begin_child(obj);
             fprintf(['{', str(1:end-2), '}\n']);
             end_child(obj);
             
             last_child(obj);
-            ast(obj.b);
+            ast(obj.m_b);
             end_child(obj);
         end
         
@@ -144,13 +91,13 @@ classdef ast_subsasgn < yop.ast_expression
             
             % Visit child
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.node, visited, topsort, n_elem);
+                topological_sort(obj.m_expr, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.s, visited, topsort, n_elem);
+                topological_sort(obj.m_s, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.b, visited, topsort, n_elem);
+                topological_sort(obj.m_b, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;

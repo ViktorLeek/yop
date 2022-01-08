@@ -5,118 +5,52 @@ classdef ast_cat < yop.ast_expression
     end
     methods
         function obj = ast_cat(d, varargin)
-            isival = false;
+            c0 = cell(size(varargin));
+            val=c0; num=c0; tt0=c0; ttf=c0; der=c0; red=c0; typ=c0; tid=c0;
             for k=1:length(varargin)
-                isival = isival || is_ival(varargin{k});
+                vk = varargin{k};
+                val{k} = value(vk);
+                num{k} = numval(vk);
+                tt0{k} = get_t0(vk);
+                ttf{k} = get_tf(vk);
+                der{k} = get_der(vk);
+                red{k} = isa_reducible(vk);
+                [typk, tidk] = Type(vk);
+                typ{k} = typk;
+                tid{k} = tidk;
             end
-            obj@yop.ast_expression(isival);
-            obj.d = d;
-            obj.args = varargin;
-            tmp = cell(size(varargin));
-            for k=1:length(varargin)
-                tmp{k} = ones(size(varargin{k}));
-            end
-            obj.dim = size(cat(d, tmp{:}));
-        end
-        
-        function val = numval(obj)
-            tmp = {numval(obj.args{1})};
-            for k=2:length(obj.args)
-                tmp = {tmp{:}, numval(obj.args{k})};
-            end
-            val = cat(obj.d, tmp{:});
-        end
-        
-        function [type, id] = Type(obj)
-            if ~isempty(obj.m_type)
-                type = obj.m_type.type;
-                id = obj.m_type.id;
-                return;
-            end
-            [type, id] = Type(obj.args{1});
-            tmp_type = {type};
-            tmp_id = {id};
-            for k=2:length(obj.args)
-                [tk, ik] = Type(obj.args{k});
-                tmp_type = {tmp_type{:}, tk};
-                tmp_id = {tmp_id{:}, ik};
-            end      
-            type = cat(obj.d, tmp_type{:});
-            id = cat(obj.d, tmp_id{:});
-            obj.m_type.type = type;
-            obj.m_type.id = id;
-        end
-        
-        function [bool, id] = isa_der(obj)
-            [bool, id] = isa_der(obj.args{1});
-            tmp_bool = {bool};
-            tmp_id = {id};
-            for k=2:length(obj.args)
-                [bk, ik] = isa_der(obj.args{k});
-                tmp_bool = {tmp_bool{:}, bk};
-                tmp_id = {tmp_id{:}, ik};
-            end      
-            bool = cat(obj.d, tmp_bool{:});
-            id = cat(obj.d, tmp_id{:});
-        end
-        
-        
-        function [bool, tp] = isa_timepoint(obj)
-            [bool, tp] = isa_timepoint(obj.args{1});
-            tmp_bool = {bool};
-            tmp_tp = {tp};
-            for k=2:length(obj.args)
-                [bk, tk] = isa_timepoint(obj.args{k});
-                tmp_bool = {tmp_bool{:}, bk};
-                tmp_tp = {tmp_tp{:}, tk};
-            end
-            bool = cat(obj.d, tmp_bool{:});
-            tp = cat(obj.d, tmp_tp{:});
-        end
-        
-        function boolv = isa_reducible(obj)
-            tmp = {isa_reducible(obj.args{1})};
-            for k=2:length(obj.args)
-                tmp = {tmp{:}, isa_reducible(obj.args{k})};
-            end
-            boolv = cat(obj.d, tmp{:});
-        end
-        
-        function value = evaluate(obj)
-            tmp = cell(size(obj.args));
-            for k=1:length(tmp)
-                tmp{k} = evaluate(obj.args{k});
-            end
-            value = cat(evaluate(obj.d), tmp{:});
-        end
-        
-        function v = forward(obj)
-            tmp = cell(size(obj.args));
-            for k=1:length(tmp)
-                tmp{k} = value(obj.args{k});
-            end
-            obj.m_value = cat(value(obj.d), tmp{:});
-            v = obj.m_value;
+            obj@yop.ast_expression( ...
+                cat(d, val{:}), ... value
+                cat(d, num{:}), ... numval
+                cat(d, tt0{:}), ... t0
+                cat(d, ttf{:}), ... tf
+                cat(d, der{:}), ... der
+                cat(d, red{:}), ... reducible
+                cat(d, typ{:}), ... type
+                cat(d, tid{:}) ... typeid
+                );
+            obj.m_d = d;
+            obj.m_args = varargin;
         end
         
         function ast(obj)
             % every vararg is enumerated: "a1, a2, ..., aN, "
             str = [];
-            for k=1:length(obj.args)
+            for k=1:length(obj.m_args)
                 str = [str, 'a', num2str(k), ', '];
             end
             fprintf(['cat(dim, ', str(1:end-2), ')\n']);
             
             begin_child(obj);
-            ast(obj.d);
+            ast(obj.m_d);
             end_child(obj);
-            for k=1:(length(obj.args)-1)
+            for k=1:(length(obj.m_args)-1)
                 begin_child(obj);
-                ast(obj.args{k});
+                ast(obj.m_args{k});
                 end_child(obj);
             end
             last_child(obj);
-            ast(obj.args{end});
+            ast(obj.m_args{end});
             end_child(obj);
         end
         
@@ -156,11 +90,11 @@ classdef ast_cat < yop.ast_expression
             
             % Visit child
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.d, visited, topsort, n_elem);
+                topological_sort(obj.m_d, visited, topsort, n_elem);
             
-            for k=1:length(obj.args)
+            for k=1:length(obj.m_args)
                 [topsort, n_elem, visited] = topological_sort(...
-                    obj.args{k}, ...
+                    obj.m_args{k}, ...
                     visited, ...
                     topsort, ...
                     n_elem ...

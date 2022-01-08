@@ -1,25 +1,15 @@
 classdef ast_le < yop.ast_relation
     
     properties (Constant)
-        name = 'le'
+        m_name = 'le'
     end
     
     methods
         function obj = ast_le(lhs, rhs, ishard)
-            obj@yop.ast_relation(lhs, rhs);
-            obj.dim = size(le(ones(size(lhs)), ones(size(rhs))));
+            obj@yop.ast_relation(le(value(lhs), value(rhs)), lhs, rhs);
             if nargin > 2
                 obj.m_hard = ishard;
             end
-        end
-        
-        function value = evaluate(obj)
-            value = le(evaluate(obj.lhs), evaluate(obj.rhs));
-        end
-        
-        function v = forward(obj)
-            obj.m_value = le(value(obj.lhs), value(obj.rhs));
-            v = obj.m_value;
         end
         
         function fn = get_constructor(obj)
@@ -28,7 +18,7 @@ classdef ast_le < yop.ast_relation
         
         function ceq = canonicalize(obj)
             fn = get_constructor(obj);
-            ceq = fn(obj.lhs-obj.rhs, 0);
+            ceq = fn(obj.m_lhs-obj.m_rhs, 0);
         end
         
     end

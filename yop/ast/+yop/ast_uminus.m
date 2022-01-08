@@ -1,29 +1,21 @@
 classdef ast_uminus < yop.ast_unary_expression
-    
     properties (Constant)
-        name = 'uminus'
+        m_name = 'uminus'
     end
-    
     methods
-        
         function obj = ast_uminus(expr)
-            obj@yop.ast_unary_expression(expr);
-            obj.dim = size(expr);
+            sz = size(expr);
+            obj@yop.ast_unary_expression( ...
+                uminus(expr.m_value) , ... value
+                uminus(expr.m_numval), ... numval
+                expr.m_t0            , ... t0
+                expr.m_tf            , ... tf
+                false(sz)            , ... isder
+                expr.m_reducible     , ... isreducible
+                zeros(sz)            , ... type
+                zeros(sz)            , ... typeid
+                expr                  ... expr
+                )
         end
-        
-        function val = numval(obj)
-            val = uminus(numval(obj.expr));
-        end
-        
-        function value = evaluate(obj)
-            value = uminus(evaluate(obj.expr));
-        end
-        
-        function v = forward(obj)
-            obj.m_value = uminus(value(obj.expr));
-            v = obj.m_value;
-        end
-        
     end
-    
 end

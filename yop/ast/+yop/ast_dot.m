@@ -1,107 +1,72 @@
 classdef ast_dot < yop.ast_expression
     properties
-        A
-        B
-        d
-        nargs
+        m_A
+        m_B
+        m_d
+        m_nargs
     end
     methods
         function obj = ast_dot(A, B, d)
-            obj@yop.ast_expression(is_ival(A) || is_ival(B));
-            obj.nargs = nargin;
-            switch nargin
-                case 2
-                    obj.A = A;
-                    obj.B = B;
-                    obj.dim = size(dot(ones(size(A)), ones(size(B))));
-                    
-                case 3
-                    obj.A = A;
-                    obj.B = B;
-                    obj.d = d;
-                    obj.dim = size(dot(ones(size(A)), ones(size(B)), d));
-                    
-                otherwise
-                    error('Wrong number of arguments provided')
-            end
-        end
-        
-        function val = numval(obj)
-            switch obj.nargs
-                case 2
-                    val = dot(numval(obj.A), numval(obj.B));
-                case 3
-                    val = dot(numval(obj.A),numval(obj.B),obj.d);
-            end
-        end
-        
-        function boolv = isa_reducible(obj)
-            if all(isa_reducible(obj.A)) && ...
-                    all(isa_reducible(obj.B))
-                boolv = true(size(obj));
+            if nargin == 2
+                val = dot(value(A), value(B));
+                num = dot(numval(A), numval(B));
+                d = [];
             else
-                boolv = false(size(obj));
+                val = dot(value(A), value(B), d);
+                num = dot(numval(A), numval(B), d);
             end
+            
+            sz  = size(num);
+            reducible = all(isa_reducible(A) & isa_reducible(B)) & true(sz);
+            t0_A = get_t0(A);
+            t0_B = get_t0(B);
+            tf_A = get_tf(A);
+            tf_B = get_tf(B);
+            t0 = max([t0_A(:); t0_B(:)]) * ones(sz);
+            tf = min([tf_A(:); tf_B(:)]) * ones(sz);
+            
+            obj@yop.ast_expression( ...
+                val      , ... value
+                num      , ... numval
+                t0       , ... t0
+                tf       , ... tf
+                false(sz), ... der
+                reducible, ... reducible
+                zeros(sz), ... type
+                zeros(sz) ... typeid
+                );
+            obj.m_A = A;
+            obj.m_B = B;
+            obj.m_d = d;
+            obj.m_nargs = nargin;
         end
-        
-        function value = evaluate(obj)
-            switch obj.nargs
-                case 2
-                    value = dot(evaluate(obj.A), evaluate(obj.B));
-                    
-                case 3
-                    value = dot(...
-                        evaluate(obj.A), ...
-                        evaluate(obj.B), ...
-                        evaluate(obj.d) ...
-                        );
-            end
-        end
-        
-        function v = forward(obj)
-            switch obj.nargs
-                case 2
-                    obj.m_value = dot(value(obj.A), value(obj.B));
-                    
-                case 3
-                    obj.m_value = dot(...
-                        value(obj.A), ...
-                        value(obj.B), ...
-                        value(obj.d) ...
-                        );
-            end            
-            v = obj.m_value;
-        end
-        
         
         function ast(obj)
-            switch obj.nargs
-                case 2
-                    fprintf('dot(A, B)\n');
-                    
-                    begin_child(obj);
-                    ast(obj.A);
-                    end_child(obj);
-                    
-                    last_child(obj);
-                    ast(obj.B);
-                    end_child(obj);
-                    
-                case 3
-                    fprintf('dot(A, B, dim)\n');
-                    
-                    begin_child(obj);
-                    ast(obj.A);
-                    end_child(obj);
-                    
-                    begin_child(obj);
-                    ast(obj.B);
-                    end_child(obj);
-                    
-                    last_child(obj);
-                    ast(obj.d);
-                    end_child(obj);
-                    
+            if obj.m_nargs == 2
+                fprintf('dot(A, B)\n');
+                
+                begin_child(obj);
+                ast(obj.m_A);
+                end_child(obj);
+                
+                last_child(obj);
+                ast(obj.m_B);
+                end_child(obj);
+                
+            else
+                fprintf('dot(A, B, dim)\n');
+                
+                begin_child(obj);
+                ast(obj.m_A);
+                end_child(obj);
+                
+                begin_child(obj);
+                ast(obj.m_B);
+                end_child(obj);
+                
+                last_child(obj);
+                ast(obj.m_d);
+                end_child(obj);
             end
         end
         
@@ -141,13 +106,13 @@ classdef ast_dot < yop.ast_expression
             
             % Visit child
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.A, visited, topsort, n_elem);
+                topological_sort(obj.m_A, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.B, visited, topsort, n_elem);
-            
+                topological_sort(obj.m_B, visited, topsort, n_elem);
+
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.d, visited, topsort, n_elem);
+                topological_sort(obj.m_d, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;

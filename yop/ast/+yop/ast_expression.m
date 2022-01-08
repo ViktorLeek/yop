@@ -32,12 +32,24 @@ classdef ast_expression < yop.ast_node
             val = obj.m_numval;
         end
         
+        function t0 = get_t0(obj)
+            t0 = obj.m_t0;
+        end
+        
+        function tf = get_tf(obj)
+            tf = obj.m_tf;
+        end
+        
         function bool = isa_ival(obj)
             bool = ~isinf(obj.m_t0) & ~isinf(obj.m_tf);
         end
         
         function bool = isa_timepoint(obj)
             bool = obj.m_t0 == obj.m_tf;
+        end
+        
+        function id = get_der(obj)
+            id = obj.m_der;
         end
         
         function bool = isa_der(obj)

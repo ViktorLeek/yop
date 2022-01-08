@@ -1,89 +1,25 @@
-classdef ast_sumsqr < yop.ast_expression
-    properties
-        expr
+classdef ast_sumsqr < yop.ast_unary_expression
+    properties (Constant)
+        name = 'sumsqr'
     end
     methods
         function obj = ast_sumsqr(expr)
-            obj@yop.ast_expression(is_ival(expr));
-            obj.expr = expr;
-            % dim is over simplified. To properly determine size it is
-            % necessary to inspect the number of outputs the user expects.
-            % Here however, the casadi approach of returning a single
-            % variable is taken.
-            % see: "doc casadi.GenericMatrixCommon.sumsqr"
-            obj.dim = [1, 1];
-        end
-        
-        function val = numval(obj)
-            val = sumsqr(numval(obj.expr));
-        end
-        
-        function boolv = isa_reducible(obj)
-            if all(isa_reducible(obj.expr))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
-            end
-        end
-        
-        function value = evaluate(obj)
-            value = sumsqr(evaluate(obj.expr));
-        end
-        
-        function v = forward(obj)
-            obj.m_value = sumsqr(value(obj.expr));
-            v = obj.m_value;
-        end
-        
-        function ast(obj)
-            fprintf('sumsqr(expr)\n');
-            last_child(obj);
-            ast(obj.expr);
-            end_child(obj);
-        end
-        
-        function [topsort, n_elem, visited] = ...
-                topological_sort(obj, visited, topsort, n_elem)
-            % Topological sort of expression graph by a dfs.
-            
-            switch nargin
-                case 1
-                    % Start new sort: topological_sort(obj)
-                    visited = [];
-                    topsort = ...
-                        cell(yop.constants().topsort_preallocation_size, 1);
-                    n_elem = 0;
-                    
-                case 2
-                    % Semi-warm start: topological_sort(obj, visited)
-                    % In semi-warm start 'visited' is already provided, but 
-                    % no elements are sorted. This is for instance useful 
-                    % for finding all variables in a number of expressions 
-                    % that are suspected to contain common subexpressions.
-                    topsort = ...
-                        cell(yop.constants().topsort_preallocation_size, 1);
-                    n_elem = 0;
-                    
-                otherwise
-                    % Pass
-            end
-            
-            % only visit every node once
-            if ~isempty( find(visited == obj.id, 1) )
-                return;
-            end
-            
-            % Mark node as visited
-            visited = [visited, obj.id];
-            
-            % Visit child
-            [topsort, n_elem, visited] = ...
-                topological_sort(obj.expr, visited, topsort, n_elem);
-            
-            % append self to sort
-            n_elem = n_elem + 1;
-            topsort{n_elem} = obj;
-
+            numval = sumsqr(expr.m_numval);
+            sz = size(numval);
+            reducible = all(expr.m_reducible) & true(sz);
+            t0 = max(expr.m_t0(:)) * ones(sz);
+            tf = min(expr.m_tf(:)) * ones(sz);
+            obj@yop.ast_unary_expression( ...
+                sumsqr(expr.m_value), ... value
+                numval           , ... numval
+                t0               , ... t0
+                tf               , ... tf
+                false(sz)        , ... isder
+                reducible        , ... isreducible
+                zeros(sz)        , ... type
+                zeros(sz)        , ... typeid
+                expr              ... expr
+                )
         end
     end
 end

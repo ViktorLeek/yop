@@ -15,18 +15,25 @@ classdef ast_cross < yop.ast_expression
                 val = cross(value(A), value(B), d);
                 num = cross(numval(A), numval(B), d);
             end
+            
             sz  = size(num);
             reducible = all(isa_reducible(A) & isa_reducible(B)) & true(sz);
+            t0_A = get_t0(A);
+            t0_B = get_t0(B);
+            tf_A = get_tf(A);
+            tf_B = get_tf(B);
+            t0 = max([t0_A(:); t0_B(:)]) * ones(sz);
+            tf = min([tf_A(:); tf_B(:)]) * ones(sz);
             
             obj@yop.ast_expression( ...
-                val                      , ... value
-                num                      , ... numval
-                max(get_t0(A), get_t0(B)), ... t0
-                min(get_tf(A), get_tf(B)), ... tf
-                false(sz)                , ... der
-                reducible                , ... reducible
-                zeros(sz)                , ... type
-                zeros(sz)                 ... typeid
+                val      , ... value
+                num      , ... numval
+                t0       , ... t0
+                tf       , ... tf
+                false(sz), ... der
+                reducible, ... reducible
+                zeros(sz), ... type
+                zeros(sz) ... typeid
                 );
             obj.m_A = A;
             obj.m_B = B;

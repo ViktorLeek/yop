@@ -1,22 +1,31 @@
 classdef ast_times < yop.ast_binary_expression
     
     properties (Constant)
-        name = 'times'
+        m_name = 'times'
     end
     
     methods
         function obj = ast_times(lhs, rhs)
-            obj@yop.ast_binary_expression(lhs, rhs);
-            obj.dim = size( times(ones(size(lhs)), ones(size(rhs))) );
-        end
-        
-        function value = evaluate(obj)
-            value = times(evaluate(obj.lhs), evaluate(obj.rhs));
-        end
-        
-        function v = forward(obj)
-            obj.m_value = times(value(obj.lhs), value(obj.rhs));
-            v = obj.m_value;
+            num = times(numval(lhs), numval(rhs));
+            sz = size(num);
+            t0_l = get_t0(lhs);
+            t0_r = get_t0(rhs);
+            tf_l = get_tf(lhs);
+            tf_r = get_tf(rhs);
+            t0 = max([t0_l(:); t0_r(:)]) * ones(sz);
+            tf = min([tf_l(:); tf_r(:)]) * ones(sz);
+            obj@yop.ast_binary_expression( ...
+                times(value(lhs), value(rhs)), ... value
+                num                          , ... numval
+                t0                           , ... t0
+                tf                           , ... tf
+                false(sz)                    , ... der
+                isa_reducible(lhs) & isa_reducible(rhs) , ... reducible
+                zeros(sz)                    , ... type
+                zeros(sz)                    , ... typeid
+                lhs                          , ... lhs
+                rhs                           ... rhs
+                );
         end
     end
     

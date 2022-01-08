@@ -1,79 +1,41 @@
 classdef ast_reshape < yop.ast_expression
     properties
-        expr
-        szs
+        m_expr
+        m_args
     end
     methods
         function obj = ast_reshape(expr, varargin)
-            obj@yop.ast_expression(is_ival(expr));
-            obj.expr = expr;
-            obj.szs = varargin;
-            obj.dim = size(reshape(ones(size(expr)), varargin{:}));
-        end
-        
-        function val = numval(obj)
-            val = reshape(numval(obj.expr), obj.szs{:});
-        end
-        
-        function [type, id] = Type(obj)
-            if ~isempty(obj.m_type)
-                type = obj.m_type.type;
-                id = obj.m_type.id;
-                return;
-            end
-            [type, id] = Type(obj.expr);
-            type = reshape(type, obj.szs{:});
-            id = reshape(id, obj.szs{:});
-            obj.m_type.type = type;
-            obj.m_type.id = id;
-        end
-        
-        function [bool, tp] = isa_timepoint(obj)
-            [bool, tp] = isa_timepoint(obj.expr);
-            bool = reshape(bool, obj.szs{:});
-            tp = reshape(tp, obj.szs{:});
-        end
-        
-        function [bool, id] = isa_der(obj)
-            [bool, id] = isa_der(obj.expr);
-            bool = reshape(bool, obj.szs{:});
-            id = reshape(id, obj.szs{:});
-        end
-        
-        function boolv = isa_reducible(obj)
-            if all(isa_reducible(obj.expr))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
-            end
-        end
-            
-        function value = evaluate(obj)
-            value = reshape(evaluate(obj.expr), obj.szs{:});
-        end
-        
-        function v = forward(obj)
-            obj.m_value = reshape(value(obj.expr), obj.szs{:});
-            v = obj.m_value;
+            obj@yop.ast_expression( ...
+                reshape(expr.m_value    , varargin{:}), ... value
+                reshape(expr.m_numval   , varargin{:}), ... numval
+                reshape(expr.m_t0       , varargin{:}), ... t0
+                reshape(expr.m_tf       , varargin{:}), ... tf
+                reshape(expr.m_der      , varargin{:}), ... der
+                reshape(expr.m_reducible, varargin{:}), ... reducible
+                reshape(expr.m_type     , varargin{:}), ... type
+                reshape(expr.m_typeid   , varargin{:}) ... typeid
+                );
+            obj.m_expr = expr;
+            obj.m_args = varargin;
         end
         
         function ast(obj)
             str = [];
-            for k=1:length(obj.szs)
+            for k=1:length(obj.m_args)
                 str = [str, 'a', num2str(k), ', '];
             end
             fprintf(['reshape(expr, ', str(1:end-2), ')\n']);
             
             begin_child(obj);
-            ast(obj.expr);
+            ast(obj.m_expr);
             end_child(obj);
-            for k=1:(length(obj.szs)-1)
+            for k=1:(length(obj.m_args)-1)
                 begin_child(obj);
-                ast(obj.szs{k});
+                ast(obj.m_args{k});
                 end_child(obj);
             end
             last_child(obj);
-            ast(obj.szs{end});
+            ast(obj.m_args{end});
             end_child(obj);
         end
         
@@ -112,8 +74,16 @@ classdef ast_reshape < yop.ast_expression
             visited = [visited, obj.id];
             
             % Visit child
-            [topsort, n_elem, visited] = ...
-                topological_sort(obj.expr, visited, topsort, n_elem);
+            for k=1:length(obj.m_args)
+                % probably unnecessary, as args are expected to be numerics
+                % but could change in the future.
+                [topsort, n_elem, visited] = topological_sort( ...
+                    obj.m_args{k}, ...
+                    visited, ...
+                    topsort, ...
+                    n_elem ...
+                    );
+            end
             
             % append self to sort
             n_elem = n_elem + 1;

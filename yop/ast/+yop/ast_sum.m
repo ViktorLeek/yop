@@ -1,10 +1,10 @@
 classdef ast_sum < yop.ast_expression
     properties
-        expr
-        opt1
-        opt2
-        opt3
-        nargs
+        m_expr
+        m_opt1
+        m_opt2
+        m_opt3
+        m_nargs
     end
     methods
         function obj = ast_sum(expr, opt1, opt2, opt3)
@@ -12,156 +12,99 @@ classdef ast_sum < yop.ast_expression
             
             % This only works for cases where the optional arguments are
             % not yop.ast_node
-            obj@yop.ast_expression(is_ival(expr));
-            obj.expr = expr;
-            obj.nargs = nargin;
             switch nargin
                 case 1
-                    obj.dim = size(sum(ones(size(expr))));
-                    
+                    val = sum(expr.m_value);
+                    num = sum(expr.m_numval);
+                    opt1=[]; opt2=[]; opt3=[];
                 case 2
-                    obj.opt1 = opt1;
-                    obj.dim = size(sum(ones(size(expr)), opt1));
+                    val = sum(expr.m_value, opt1);
+                    num = sum(expr.m_numval, opt1);
+                    opt2=[]; opt3=[];
                     
                 case 3
-                    obj.opt1 = opt1;
-                    obj.opt2 = opt2;
-                    obj.dim = size(sum(ones(size(expr)), opt1, opt2));
+                    val = sum(expr.m_value, opt1, opt2);
+                    num = sum(expr.m_numval, opt1, opt2);
+                    opt3=[];
                     
                 case 4                    
-                    obj.opt1 = opt1;
-                    obj.opt2 = opt2;
-                    obj.opt3 = opt3;
-                    obj.dim = size(sum(ones(size(expr)), opt1, opt2, opt3));
+                    val = sum(expr.m_value, opt1, opt2, opt3);
+                    num = sum(expr.m_numval, opt1, opt2, opt3);
             end
-        end
-        
-        function val = numval(obj)
-            switch obj.nargs
-                case 1
-                    val = sum(numval(obj.expr));
-                    
-                case 2
-                    val = sum(numval(obj.expr), obj.opt1);
-                    
-                case 3
-                    val = sum(numval(obj.expr), obj.opt1, obj.opt2);
-                    
-                case 4
-                    val = sum(...
-                        numval(obj.expr), ...
-                        obj.opt1, ...
-                        obj.opt2, ...
-                        obj.opt3 ...
-                        );
-                    
-            end
-        end
-        
-        function boolv = isa_reducible(obj)
-            if all(isa_reducible(obj.expr))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
-            end
-        end
-        
-        function value = evaluate(obj)
-            switch obj.nargs
-                case 1
-                    value = sum(evaluate(obj.expr));
-                    
-                case 2
-                    value = sum(evaluate(obj.expr), obj.opt1);
-                    
-                case 3
-                    value = sum(evaluate(obj.expr), obj.opt1, obj.opt2);
-                    
-                case 4
-                    value = sum(...
-                        evaluate(obj.expr), ...
-                        obj.opt1, ...
-                        obj.opt2, ...
-                        obj.opt3 ...
-                        );
-                    
-            end
-        end
-        
-        function v = forward(obj)
-            switch obj.nargs
-                case 1
-                    obj.m_value = sum(value(obj.expr));
-                    
-                case 2
-                    obj.m_value = sum(value(obj.expr), obj.opt1);
-                    
-                case 3
-                    obj.m_value = sum(value(obj.expr), obj.opt1, obj.opt2);
-                    
-                case 4
-                    obj.m_value = sum( ...
-                        value(obj.expr), ...
-                        obj.opt1, ...
-                        obj.opt2, ...
-                        obj.opt3 ...
-                        ); 
-            end
-            v = obj.m_value;
+            
+            sz = size(num);
+            reducible = all(expr.m_reducible) & true(sz);
+            t0 = max(expr.m_t0(:)) * ones(sz);
+            tf = min(expr.m_tf(:)) * ones(sz);
+            obj@yop.ast_expression( ...
+                val      , ... value
+                num      , ... numval
+                t0       , ... t0
+                tf       , ... tf
+                false(sz), ... isder
+                reducible, ... isreducible
+                zeros(sz), ... type
+                zeros(sz) ... typeid
+                )
+            obj.m_expr = expr;
+            obj.m_opt1 = opt1;
+            obj.m_opt2 = opt2;
+            obj.m_opt3 = opt3;
+            obj.m_nargs = nargin;
         end
         
         function ast(obj)
             
-            switch obj.nargs
+            switch obj.m_nargs
                 case 1
                     fprintf('sum(expr)\n');
                     last_child(obj);
-                    ast(obj.expr);
+                    ast(obj.m_expr);
                     end_child(obj);
                     
                 case 2
                     fprintf('sum(expr, opt1)\n');
                     
                     begin_child(obj);
-                    ast(obj.expr);
+                    ast(obj.m_expr);
                     end_child(obj);
                     
                     last_child(obj);
-                    ast(obj.opt1);
+                    ast(obj.m_opt1);
                     end_child(obj);
                     
                 case 3
                     fprintf('sum(expr, opt1, opt2)\n');
                     
                     begin_child(obj);
-                    ast(obj.expr);
+                    ast(obj.m_expr);
                     end_child(obj);
                     
                     begin_child(obj);
-                    ast(obj.opt1);
+                    ast(obj.m_opt1);
                     end_child(obj);
                     
                     last_child(obj);
-                    ast(obj.opt2);
+                    ast(obj.m_opt2);
                     end_child(obj);
                     
                 case 4
                     fprintf('sum(expr, opt1, opt2, opt3)\n');
                     
                     begin_child(obj);
-                    ast(obj.expr);
+                    ast(obj.m_expr);
                     end_child(obj);
                     
                     begin_child(obj);
-                    ast(obj.opt1);
+                    ast(obj.m_opt1);
                     end_child(obj);
                     
                     begin_child(obj);
-                    ast(obj.opt2);
+                    ast(obj.m_opt2);
                     end_child(obj);
                     
                     last_child(obj);
-                    ast(obj.opt3);
+                    ast(obj.m_opt3);
                     end_child(obj);
             end 
         end
@@ -202,16 +145,16 @@ classdef ast_sum < yop.ast_expression
             
             % Visit child
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.expr, visited, topsort, n_elem);
+                topological_sort(obj.m_expr, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.opt1, visited, topsort, n_elem);
+                topological_sort(obj.m_opt1, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.opt2, visited, topsort, n_elem);
+                topological_sort(obj.m_opt2, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.opt3, visited, topsort, n_elem);
+                topological_sort(obj.m_opt3, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;

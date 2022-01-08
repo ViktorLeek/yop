@@ -1,66 +1,51 @@
 classdef ast_linspace < yop.ast_expression
     properties
-        x1
-        x2
-        n
+        m_x1
+        m_x2
+        m_n
     end
     methods
         function obj = ast_linspace(x1, x2, n)
-            obj@yop.ast_expression();
-            obj.x1 = x1;
-            obj.x2 = x2;
-            obj.n = n;
+            val = linspace(value(x1), value(x2), n);
+            num = linspace(numval(x1), numval(x2), n);
+            sz  = size(num);
+            reducible = all(isa_reducible(x1) & isa_reducible(x2)) & true(sz);
+            t0_1 = get_t0(x1);
+            t0_2 = get_t0(x2);
+            tf_1 = get_tf(x1);
+            tf_2 = get_tf(x2);
+            t0 = max([t0_1(:); t0_2(:)]) * ones(sz);
+            tf = min([tf_1(:); tf_2(:)]) * ones(sz);
+            obj@yop.ast_expression( ...
+                val      , ... value
+                num      , ... numval
+                t0       , ... t0
+                tf       , ... tf
+                false(sz), ... der
+                reducible, ... reducible
+                zeros(sz), ... type
+                zeros(sz) ... typeid
+                );
+            
+            obj.m_x1 = x1;
+            obj.m_x2 = x2;
+            obj.m_n = n;
             obj.dim = [1, n];
-        end
-        
-        function val = numval(obj)
-            val = linspace(...
-                numval(obj.x1), ...
-                numval(obj.x2), ...
-                numval(obj.n) ...
-                );
-        end
-        
-        function boolv = isa_reducible(obj)
-            if all(isa_reducible(obj.x1)) ...
-                    && all(isa_reducible(obj.x2)) ...
-                    && all(isa_reducible(obj.n))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
-            end
-        end
-        
-        function value = evaluate(obj)
-            value = linspace(...
-                evaluate(obj.x1), ...
-                evaluate(obj.x2), ...
-                evaluate(obj.n) ...
-                );
-        end
-        
-        function v = forward(obj)
-            obj.m_value = linspace(... 
-                value(obj.x1), ...
-                value(obj.x2), ...
-                value(obj.n) ...
-                );
-            v = obj.m_value;
         end
         
         function ast(obj)
             fprintf('linspace(x1, x2, n)\n');
             
             begin_child(obj);
-            ast(obj.x1);
+            ast(obj.m_x1);
             end_child(obj);
             
             begin_child(obj);
-            ast(obj.x2);
+            ast(obj.m_x2);
             end_child(obj);
             
             last_child(obj);
-            ast(obj.n);
+            ast(obj.m_n);
             end_child(obj);
         end
         
@@ -100,13 +85,13 @@ classdef ast_linspace < yop.ast_expression
             
             % Visit child
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.x1, visited, topsort, n_elem);
+                topological_sort(obj.m_x1, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.x2, visited, topsort, n_elem);
+                topological_sort(obj.m_x2, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.n, visited, topsort, n_elem);
+                topological_sort(obj.m_n, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;

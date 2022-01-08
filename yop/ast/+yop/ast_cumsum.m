@@ -1,83 +1,57 @@
 classdef ast_cumsum < yop.ast_expression
     properties
-        A
-        d
-        nargs
+        m_expr
+        m_d
+        m_nargs
     end
     methods
-        function obj = ast_cumsum(A, d)
-            obj@yop.ast_expression(is_ival(A));
-            obj.nargs = nargin;
-            switch nargin
-                case 1
-                    obj.A = A;
-                    obj.dim = size(cumsum(ones(size(A))));
-                    
-                case 2
-                    obj.A = A;
-                    obj.d = d;
-                    obj.dim = size(cumsum(ones(size(A)), d));
-                    
-            end
-        end
-        
-        function val = numval(obj)
-            switch obj.nargs
-                case 1
-                    val = cumsum(numval(obj.A));
-                case 2
-                    val = cumsum(numval(obj.A), obj.d);
-            end
-        end
-        
-        function boolv = isa_reducible(obj)
-            if all(isa_reducible(obj.A))
-                boolv = true(size(obj));
+        function obj = ast_cumsum(expr, d)
+            if nargin == 1
+                val = cumsum(expr.m_value);
+                num = cumsum(expr.m_numval);
+                d = [];
             else
-                boolv = false(size(obj));
+                val = cumsum(expr.m_value, d);
+                num = cumsum(expr.m_numval, d);
+                d = [];
             end
-        end
-        
-        function value = evaluate(obj)
-            switch obj.nargs
-                case 1
-                    value = cumsum(evaluate(obj.A));
-                    
-                case 2
-                    value = cumsum(evaluate(obj.A), evaluate(obj.d));
-            end
-        end
-        
-        function v = forward(obj)
-            switch obj.nargs
-                case 1
-                    obj.m_value = cumsum(value(obj.A));
-                    
-                case 2
-                    obj.m_value = cumsum(value(obj.A), value(obj.d));
-                    
-            end
-            v = obj.m_value;
+            sz = size(num);
+            reducible = all(expr.m_reducible) & true(sz);
+            t0 = max(expr.m_t0(:)) * ones(sz);
+            tf = min(expr.m_tf(:)) * ones(sz);
+            obj@yop.ast_expression( ...
+                val      , ... value
+                num      , ... numval
+                t0       , ... t0
+                tf       , ... tf
+                false(sz), ... der
+                reducible, ... reducible
+                zeros(sz), ... type
+                zeros(sz) ... typeid
+                );
+            obj.m_expr  = expr;
+            obj.m_d     = d;
+            obj.m_nargs = nargin;
         end
         
         function ast(obj)
-            switch obj.nargs
+            switch obj.m_nargs
                 case 1
                     fprintf('cumsum(A)\n');
                     
                     last_child(obj);
-                    ast(obj.A);
+                    ast(obj.m_expr);
                     end_child(obj);
                     
                 case 2
                     fprintf('cumsum(A, dim)\n');
                     
                     begin_child(obj);
-                    ast(obj.A);
+                    ast(obj.m_expr);
                     end_child(obj);
                     
                     last_child(obj);
-                    ast(obj.d);
+                    ast(obj.m_d);
                     end_child(obj);
             end
         end
@@ -118,10 +92,10 @@ classdef ast_cumsum < yop.ast_expression
             
             % Visit child
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.A, visited, topsort, n_elem);
+                topological_sort(obj.m_expr, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.d, visited, topsort, n_elem);
+                topological_sort(obj.m_d, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;

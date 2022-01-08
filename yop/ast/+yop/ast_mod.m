@@ -1,95 +1,33 @@
-classdef ast_mod < yop.ast_expression
-    properties
-        a
-        m
+classdef ast_mod < yop.ast_binary_expression
+    
+    properties (Constant)
+        m_name = 'mod'
     end
+    
     methods
-        function obj = ast_mod(a, m)
-            obj@yop.ast_expression(is_ival(a) || is_ival(m));
-            obj.a = a;
-            obj.m = m;
-            obj.dim = size(mod(ones(size(a)), ones(size(m))));
-        end
-        
-        function val = numval(obj)
-            val = mod(numval(obj.a), numval(obj.m));
-        end
-        
-        function boolv = isa_reducible(obj)
-            if all(isa_reducible(obj.a)) && ...
-                    all(isa_reducible(obj.m))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
-            end
-        end
-        
-        function value = evaluate(obj)
-            value = mod(evaluate(obj.a), evaluate(obj.m));
-        end
-        
-        function v = forward(obj)
-            obj.m_value = mod(value(obj.a), value(obj.m));
-            v = obj.m_value;
-        end
-        
-        function ast(obj)
-            fprintf('mod(a, m)\n');
-            
-            begin_child(obj);
-            ast(obj.a);
-            end_child(obj);
-            
-            last_child(obj);
-            ast(obj.m);
-            end_child(obj);
-        end
-        
-        function [topsort, n_elem, visited] = ...
-                topological_sort(obj, visited, topsort, n_elem)
-            % Topological sort of expression graph by a dfs.
-            
-            switch nargin
-                case 1
-                    % Start new sort: topological_sort(obj)
-                    visited = [];
-                    topsort = ...
-                        cell(yop.constants().topsort_preallocation_size, 1);
-                    n_elem = 0;
-                    
-                case 2
-                    % Semi-warm start: topological_sort(obj, visited)
-                    % In semi-warm start 'visited' is already provided, but 
-                    % no elements are sorted. This is for instance useful 
-                    % for finding all variables in a number of expressions 
-                    % that are suspected to contain common subexpressions.
-                    topsort = ...
-                        cell(yop.constants().topsort_preallocation_size, 1);
-                    n_elem = 0;
-                    
-                otherwise
-                    % Pass
-            end
-            
-            % only visit every node once
-            if ~isempty( find(visited == obj.id, 1) )
-                return;
-            end
-            
-            % Mark node as visited
-            visited = [visited, obj.id];
-            
-            % Visit child
-            [topsort, n_elem, visited] = ...
-                topological_sort(obj.a, visited, topsort, n_elem);
-            
-            [topsort, n_elem, visited] = ...
-                topological_sort(obj.m, visited, topsort, n_elem);
-
-            % append self to sort
-            n_elem = n_elem + 1;
-            topsort{n_elem} = obj;
-
+        function obj = ast_mod(lhs, rhs)
+            num = mod(numval(lhs), numval(rhs));
+            sz = size(num);
+            reducible = all(isa_reducible(lhs) & isa_reducible(rhs)) & true(sz);
+            t0_l = get_t0(lhs);
+            t0_r = get_t0(rhs);
+            tf_l = get_tf(lhs);
+            tf_r = get_tf(rhs);
+            t0 = max([t0_l(:); t0_r(:)]) * ones(sz);
+            tf = min([tf_l(:); tf_r(:)]) * ones(sz);
+            obj@yop.ast_binary_expression( ...
+                mod(value(lhs), value(rhs)), ... value
+                num                        , ... numval
+                t0                         , ... t0
+                tf                         , ... tf
+                false(sz)                  , ... der
+                reducible                  , ... reducible
+                zeros(sz)                  , ... type
+                zeros(sz)                  , ... typeid
+                lhs                        , ... lhs
+                rhs                         ... rhs
+                );
         end
     end
+    
 end

@@ -1,199 +1,131 @@
 classdef ast_max < yop.ast_expression
     properties
-        A
-        B
-        d
-        flag
-        nargs
+        m_A
+        m_B
+        m_d
+        m_flag
+        m_nargs
     end
     methods
         function obj = ast_max(A, B, d, flag)
-            obj@yop.ast_expression(is_ival(A) || is_ival(B));
-            obj.A = A;
-            obj.nargs = nargin;
             switch nargin
                 case 1
-                    obj.dim = size(max(ones(size(A))));
+                    val = max(A.m_value);
+                    num = max(A.m_numval);
+                    sz  = size(num);
+                    red = all(A.m_reducible) * ones(sz);
+                    t0  = A.m_t0;
+                    tf  = A.m_tf;
+                    B=[]; d=[]; flag=[];
                     
                 case 2
-                    obj.B = B;
-                    if isa(B, 'yop.ast_node')
-                        tmp = ones(size(B));
-                    else
-                        tmp = B;
-                    end
-                    obj.dim = size(max(ones(size(A)), tmp));
+                    val = max(value(A), value(B));
+                    num = max(numval(A), numval(B));
+                    sz  = size(num);
+                    red = all(isa_reducible(A) & isa_reducible(B)) & true(sz);
+                    t0_A = get_t0(A);
+                    t0_B = get_t0(B);
+                    tf_A = get_tf(A);
+                    tf_B = get_tf(B);
+                    t0 = max([t0_A(:); t0_B(:)]) * ones(sz);
+                    tf = min([tf_A(:); tf_B(:)]) * ones(sz);
+                    d=[]; flag=[];
                     
                 case 3
-                    obj.B = B;
-                    obj.d = d;
-                    if isa(B, 'yop.ast_node')
-                        tmp = ones(size(B));
-                    else
-                        tmp = B;
-                    end
-                    obj.dim = size(max(ones(size(A)), tmp, d));
+                    val = max(value(A), value(B), d);
+                    num = max(numval(A), numval(B), d);
+                    sz  = size(num);
+                    red = all(isa_reducible(A) & isa_reducible(B)) & true(sz);
+                    t0_A = get_t0(A);
+                    t0_B = get_t0(B);
+                    tf_A = get_tf(A);
+                    tf_B = get_tf(B);
+                    t0 = max([t0_A(:); t0_B(:)]) * ones(sz);
+                    tf = min([tf_A(:); tf_B(:)]) * ones(sz);
+                    flag=[];
                     
                 case 4
-                    obj.B = B;
-                    obj.d = d;
-                    obj.flag = flag;
-                    if isa(B, 'yop.ast_node')
-                        tmp = ones(size(B));
-                    else
-                        tmp = B;
-                    end
-                    obj.dim = size(max(ones(size(A)), tmp, d, flag));     
+                    val = max(value(A), value(B), d, flag);
+                    num = max(numval(A), numval(B), d, flag);
+                    sz  = size(num);
+                    red = all(isa_reducible(A) & isa_reducible(B)) & true(sz);
+                    t0_A = get_t0(A);
+                    t0_B = get_t0(B);
+                    tf_A = get_tf(A);
+                    tf_B = get_tf(B);
+                    t0 = max([t0_A(:); t0_B(:)]) * ones(sz);
+                    tf = min([tf_A(:); tf_B(:)]) * ones(sz);
             end
             
+            obj@yop.ast_expression( ...
+                val      , ... value
+                num      , ... numval
+                t0       , ... t0
+                tf       , ... tf
+                false(sz), ... der
+                red      , ... reducible
+                zeros(sz), ... type
+                zeros(sz) ... typeid
+                );
+            obj.m_A = A;
+            obj.m_B = B;
+            obj.m_d = d;
+            obj.m_flag  = flag;
+            obj.m_nargs = nargin;
         end
-        
-        function val = numval(obj)
-            switch obj.nargs
-                case 1
-                    val = max(numval(obj.A));
-                    
-                case 2
-                    val = max(numval(obj.A), numval(obj.B));
-                    
-                case 3
-                    val = max(...
-                        numval(obj.A), ...
-                        numval(obj.B), ...
-                        numval(obj.d) ...
-                        );
-                    
-                case 4
-                    val = max(...
-                        numval(obj.A), ...
-                        numval(obj.B), ...
-                        numval(obj.d), ...
-                        numval(obj.flag) ...
-                        );
-            end
-        end
-        
-        function boolv = isa_reducible(obj)
-            switch obj.nargs
-                case 1
-                    if all(isa_reducible(obj.A))
-                        boolv = true(size(obj));
-                    else
-                        boolv = false(size(obj));
-                    end
-                    
-                case {2, 3, 4}
-                    if all(isa_reducible(obj.A)) && ...
-                            all(isa_reducible(obj.B))
-                        boolv = true(size(obj));
-                    else
-                        boolv = false(size(obj));
-                    end
-            end
-        end
-        
-        function value = evaluate(obj)
-            switch obj.nargs
-                case 1
-                    value = max(evaluate(obj.A));
-                    
-                case 2
-                    value = max(evaluate(obj.A), evaluate(obj.B));
-                    
-                case 3
-                    value = max(...
-                        evaluate(obj.A), ...
-                        evaluate(obj.B), ...
-                        evaluate(obj.d) ...
-                        );
-                    
-                case 4
-                    value = max(...
-                        evaluate(obj.A), ...
-                        evaluate(obj.B), ...
-                        evaluate(obj.d), ...
-                        evaluate(obj.flag) ...
-                        );
-            end
-        end
-        
-        function v = forward(obj)
-            switch obj.nargs
-                case 1
-                    obj.m_value = max(value(obj.A));
-                    
-                case 2
-                    obj.m_value = max(value(obj.A), value(obj.B));
-                    
-                case 3
-                    obj.m_value = max(...
-                        value(obj.A), ...
-                        value(obj.B), ...
-                        value(obj.d) ...
-                        );
-                    
-                case 4
-                    obj.m_value = max(...
-                        value(obj.A), ...
-                        value(obj.B), ...
-                        value(obj.d), ...
-                        value(obj.flag) ...
-                        );
-            end         
-            v = obj.m_value;
-        end
+
         
         function ast(obj)
-            switch obj.nargs
+            switch obj.m_nargs
                 case 1
                     fprintf('max(A)\n');
                     last_child(obj);
-                    ast(obj.A);
+                    ast(obj.m_A);
                     end_child(obj);
                     
                 case 2
                     fprintf('max(A, B)\n');
                     
                     begin_child(obj);
-                    ast(obj.A);
+                    ast(obj.m_A);
                     end_child(obj);
                     
                     last_child(obj);
-                    ast(obj.B);
+                    ast(obj.m_B);
                     end_child(obj);
                     
                 case 3
                     fprintf('max(A, B, dim)\n');
                     
                     begin_child(obj);
-                    ast(obj.A);
+                    ast(obj.m_A);
                     end_child(obj);
                     
                     begin_child(obj);
-                    ast(obj.B);
+                    ast(obj.m_B);
                     end_child(obj);
                     
                     last_child(obj);
-                    ast(obj.d);
+                    ast(obj.m_d);
                     end_child(obj);
                     
                 case 4
                     fprintf('max(A, B, dim, flag)\n');
                     
                     begin_child(obj);
-                    ast(obj.A);
+                    ast(obj.m_A);
                     end_child(obj);
                     
                     begin_child(obj);
-                    ast(obj.B);
+                    ast(obj.m_B);
                     end_child(obj);
                     
                     begin_child(obj);
-                    ast(obj.d);
+                    ast(obj.m_d);
                     end_child(obj);
                     
                     last_child(obj);
-                    ast(obj.flag);
+                    ast(obj.m_flag);
                     end_child(obj); 
             end
         end
@@ -234,16 +166,16 @@ classdef ast_max < yop.ast_expression
             
             % Visit child
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.A, visited, topsort, n_elem);
+                topological_sort(obj.m_A, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.B, visited, topsort, n_elem);
+                topological_sort(obj.m_B, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.d, visited, topsort, n_elem);
+                topological_sort(obj.m_d, visited, topsort, n_elem);
             
             [topsort, n_elem, visited] = ...
-                topological_sort(obj.flag, visited, topsort, n_elem);
+                topological_sort(obj.m_flag, visited, topsort, n_elem);
             
             % append self to sort
             n_elem = n_elem + 1;

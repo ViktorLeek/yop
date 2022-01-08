@@ -1,79 +1,41 @@
 classdef ast_repmat < yop.ast_expression
     properties
-        expr
-        args
+        m_expr
+        m_args
     end
     methods
         function obj = ast_repmat(expr, varargin)
-            obj@yop.ast_expression(is_ival(expr));
-            obj.expr = expr;
-            obj.args = varargin;
-            obj.dim = repmat(ones(size(expr)), varargin{:});
-        end
-        
-        function val = numval(obj)
-            tmp = cell(size(obj.args));
-            for k=1:length(tmp)
-                tmp{k} = numval(obj.args{k});
-            end
-            val = repmat(numval(obj.expr), tmp{:});
-        end
-        
-        function [type, id] = Type(obj)
-            if ~isempty(obj.m_type)
-                type = obj.m_type.type;
-                id = obj.m_type.id;
-                return;
-            end
-            [type, id] = Type(obj.expr);
-            type = repmat(type, obj.args{:});
-            id = repmat(id, obj.args{:});
-            obj.m_type.type = type;
-            obj.m_type.id = id;
-        end
-        
-        function boolv = isa_reducible(obj)
-            if all(isa_reducible(obj.expr))
-                boolv = true(size(obj));
-            else
-                boolv = false(size(obj));
-            end
-        end
-        
-        function value = evaluate(obj)
-            tmp = cell(size(obj.args));
-            for k=1:length(tmp)
-                tmp{k} = evaluate(obj.args{k});
-            end
-            value = repmat(evaluate(obj.expr), tmp{:});
-        end
-        
-        function v = forward(obj)
-            tmp = cell(size(obj.args));
-            for k=1:length(tmp)
-                tmp{k} = value(obj.args{k});
-            end
-            obj.m_value = repmat(value(obj.expr), tmp{:});
-            v = obj.m_value;
+            obj@yop.ast_expression( ...
+                repmat(expr.m_value    , varargin{:}), ... value
+                repmat(expr.m_numval   , varargin{:}), ... numval
+                repmat(expr.m_t0       , varargin{:}), ... t0
+                repmat(expr.m_tf       , varargin{:}), ... tf
+                repmat(expr.m_der      , varargin{:}), ... der
+                repmat(expr.m_reducible, varargin{:}), ... reducible
+                repmat(expr.m_type     , varargin{:}), ... type
+                repmat(expr.m_typeid   , varargin{:}) ... typeid
+                );
+            obj.m_expr = expr;
+            obj.m_args = varargin;
         end
         
         function ast(obj)
             str = [];
-            for k=1:length(obj.args)
+            for k=1:length(obj.m_args)
                 str = [str, 'a', num2str(k), ', '];
             end
-            fprintf(['repmat(A, ', str(1:end-2), ')\n']);
+            fprintf(['repmat(expr, ', str(1:end-2), ')\n']);
             
             begin_child(obj);
-            ast(obj.expr);
+            ast(obj.m_expr);
             end_child(obj);
-            for k=1:(length(obj.args)-1)
+            for k=1:(length(obj.m_args)-1)
                 begin_child(obj);
-                ast(obj.args{k});
+                ast(obj.m_args{k});
                 end_child(obj);
             end
             last_child(obj);
-            ast(obj.args{end});
+            ast(obj.m_args{end});
             end_child(obj);
         end
         
@@ -112,11 +74,11 @@ classdef ast_repmat < yop.ast_expression
             visited = [visited, obj.id];
             
             % Visit child
-            for k=1:length(obj.args)
+            for k=1:length(obj.m_args)
                 % probably unnecessary, as args are expected to be numerics
                 % but could change in the future.
                 [topsort, n_elem, visited] = topological_sort( ...
-                    obj.args{k}, ...
+                    obj.m_args{k}, ...
                     visited, ...
                     topsort, ...
                     n_elem ...

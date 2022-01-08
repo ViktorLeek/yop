@@ -1,102 +1,51 @@
 classdef ast_horzcat < yop.ast_expression
     properties
-        args
+        m_args
     end
     methods
         function obj = ast_horzcat(varargin)
-            isival = false;
+            c0 = cell(size(varargin));
+            val=c0; num=c0; tt0=c0; ttf=c0; der=c0; red=c0; typ=c0; tid=c0;
             for k=1:length(varargin)
-                isival = isival || is_ival(varargin{k});
+                vk = varargin{k};
+                val{k} = value(vk);
+                num{k} = numval(vk);
+                tt0{k} = get_t0(vk);
+                ttf{k} = get_tf(vk);
+                der{k} = get_der(vk);
+                red{k} = isa_reducible(vk);
+                [typk, tidk] = Type(vk);
+                typ{k} = typk;
+                tid{k} = tidk;
             end
-            obj@yop.ast_expression(isival);
-            obj.args = varargin;
-            tmp = cell(size(varargin));
-            for k=1:length(varargin)
-                tmp{k} = ones(size(varargin{k}));
-            end
-            obj.dim = size(horzcat(tmp{:}));
-        end
-        
-        function val = numval(obj)
-            val = numval(obj.args{1});
-            for k=2:length(obj.args)
-                val = [val, numval(obj.args{k})];
-            end
-        end
-        
-        function [type, id] = Type(obj)
-            if ~isempty(obj.m_type)
-                type = obj.m_type.type;
-                id = obj.m_type.id;
-                return;
-            end
-            [type, id] = Type(obj.args{1});
-            for k=2:length(obj.args)
-                [tk, ik] = Type(obj.args{k});
-                type = [type, tk];
-                id = [id, ik];
-            end       
-            obj.m_type.type = type;
-            obj.m_type.id = id;
-        end
-        
-        function [bool, id] = isa_der(obj)
-            [bool, id] = isa_der(obj.args{1});
-            for k=2:length(obj.args)
-                [bk, ik] = isa_der(obj.args{k});
-                bool = [bool, bk];
-                id = [id, ik];
-            end       
-        end
-        
-        function boolv = isa_reducible(obj)
-            boolv = isa_reducible(obj.args{1});
-            for k=2:length(obj.args)
-                boolv = [boolv, isa_reducible(obj.args{k})];
-            end
-        end
-        
-        function [bool, tp] = isa_timepoint(obj)
-            [bool, tp] = isa_timepoint(obj.args{1});
-            for k=2:length(obj.args)
-                [bk, tk] = isa_timepoint(obj.args{k});
-                bool = [bool, bk];
-                tp = [tp, tk];
-            end
-        end
-        
-        function value = evaluate(obj)
-            tmp = cell(size(obj.args));
-            for k=1:length(tmp)
-                tmp{k} = evaluate(obj.args{k});
-            end
-            value = horzcat(tmp{:});
-        end
-        
-        function v = forward(obj)
-            tmp = cell(size(obj.args));
-            for k=1:length(tmp)
-                tmp{k} = value(obj.args{k});
-            end
-            obj.m_value = horzcat(tmp{:});
-            v = obj.m_value;
+            obj@yop.ast_expression( ...
+                horzcat(val{:}), ... value
+                horzcat(num{:}), ... numval
+                horzcat(tt0{:}), ... t0
+                horzcat(ttf{:}), ... tf
+                horzcat(der{:}), ... der
+                horzcat(red{:}), ... reducible
+                horzcat(typ{:}), ... type
+                horzcat(tid{:}) ... typeid
+                );
+            obj.m_args = varargin;
         end
         
         function ast(obj)
             % every arg is enumerated: "a1, a2, ..., aN, "
             str = [];
-            for k=1:length(obj.args)
+            for k=1:length(obj.m_args)
                 str = [str, 'a', num2str(k), ', '];
             end
             fprintf(['horzcat(', str(1:end-2), ')\n']);
             
-            for k=1:(length(obj.args)-1)
+            for k=1:(length(obj.m_args)-1)
                 begin_child(obj);
-                ast(obj.args{k});
+                ast(obj.m_args{k});
                 end_child(obj);
             end
             last_child(obj);
-            ast(obj.args{end});
+            ast(obj.m_args{end});
             end_child(obj);
             
         end
@@ -136,9 +85,9 @@ classdef ast_horzcat < yop.ast_expression
             visited = [visited, obj.id];
             
             % Visit child
-            for k=1:length(obj.args)
+            for k=1:length(obj.m_args)
                 [topsort, n_elem, visited] = topological_sort(...
-                    obj.args{k}, ...
+                    obj.m_args{k}, ...
                     visited, ...
                     topsort, ...
                     n_elem ...
