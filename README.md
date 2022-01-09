@@ -3,7 +3,7 @@ A Matlab Toolbox for Optimal Control.
 
 #### Requirements
 1. [Matlab](https://se.mathworks.com)
-2. [Casadi](https://web.casadi.org)
+2. [Casadi](https://web.casadi.org/get/)
 
 ## Examples
 ### Bryson-Denham Problem
