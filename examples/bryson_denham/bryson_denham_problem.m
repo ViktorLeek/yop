@@ -120,7 +120,7 @@ yopvar states: x v
 yopvar controls: a 
 yopvar parameters: l
 
-ivp = yop.simulation( ...
+sim = yop.ivp( ...
     t0==0, tf==1, ...
     x(t0) == 0  , ...
     v(t0) == 1  , ...
@@ -129,7 +129,7 @@ ivp = yop.simulation( ...
     a == -24*(t-0.5)^2, ...
     l == 0 ...
     );
-sim = ivp.solve();
+res = sim.solve();
 
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( 1/2 * int(a^2) );
@@ -141,17 +141,17 @@ ocp.st( ...
     x(t0) ==  x(tf) == 0, ...
     x <= l == 1/9 ...
     );
-sol = ocp.solve('intervals', 40, 'guess', sim);
+sol = ocp.solve('intervals', 40, 'guess', res);
 
 figure(1);
 subplot(311); hold on
-sim.plot(t, x);
+res.plot(t, x);
 sol.plot(t, x);
 subplot(312); hold on
-sim.plot(t, v);
+res.plot(t, v);
 sol.plot(t, v);
 subplot(313); hold on
-sim.plot(t, a);
+res.plot(t, a);
 sol.stairs(t, a);
 
 

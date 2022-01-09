@@ -14,5 +14,9 @@ classdef ast_control < yop.ast_variable
                 obj.m_du = yop.ast_control(['D', name], 1, 0, deg-1);
             end
         end
+        
+        function d = du(obj)
+            d = obj.m_du;
+        end
     end
 end

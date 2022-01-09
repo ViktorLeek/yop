@@ -45,7 +45,12 @@ classdef ast_expression < yop.ast_node
         end
         
         function bool = isa_ival(obj)
-            bool = ~isinf(obj.m_t0) & ~isinf(obj.m_tf);
+            bool = ~isinf(obj.m_t0) | ~isinf(obj.m_tf);
+        end
+        
+        function [t0, tf] = get_ival(obj)
+            t0 = obj.m_t0;
+            tf = obj.m_tf;
         end
         
         function bool = isa_timepoint(obj)

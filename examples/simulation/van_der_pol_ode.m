@@ -1,10 +1,9 @@
 %% ODE Simulation - Van der Pol equations for mu=1 
 %   The van der pol model from vdp1.m
 %   https://se.mathworks.com/help/matlab/ref/ode45.html
-yop_time t t0 tf
-x = yop.state(2);
+yopvar times: t t0 tf state: x size: [2,1]
 
-sim = yop.simulation(t0==0, tf==20);
+sim = yop.ivp(t0==0, tf==20);
 sim.add(der(x) == [x(2); (1-x(1)^2)*x(2)-x(1)]);
 sim.add(x(t0)  == [2; 0]);
 % res = sim.solve('solver', 'idas', 'points', 200);

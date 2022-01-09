@@ -15,29 +15,29 @@ p_min = 0.005;
 [dx, y] = soaring(x, u, p);
 
 %% Initial guess
-ivp = yop.simulation(t0==0, tf==30);
-ivp.add( der(x) == dx );
-ivp.add(  x(t0) == [0; 0; 0; 220; 0; -1] );
-ivp.add( p == 0.08 );
-ivp.add( u == [0.5; 0] );
-sim = ivp.solve();
+sim = yop.ivp(t0==0, tf==30);
+sim.add( der(x) == dx );
+sim.add(  x(t0) == [0; 0; 0; 220; 0; -1] );
+sim.add( p == 0.08 );
+sim.add( u == [0.5; 0] );
+res = sim.solve();
 
 %% Plot initial guess
 figure(1); 
 subplot(4,2,[1,2]); hold on
-sim.plot(x(1), x(2)) 
+res.plot(x(1), x(2)) 
 subplot(423); hold on
-sim.plot(t, x(3))
+res.plot(t, x(3))
 subplot(424); hold on
-sim.plot(t, x(4))
+res.plot(t, x(4))
 subplot(425); hold on
-sim.plot(t, x(5)*180/pi)
+res.plot(t, x(5)*180/pi)
 subplot(426); hold on
-sim.plot(t, x(6)*180/pi)
+res.plot(t, x(6)*180/pi)
 subplot(427); hold on
-sim.plot(t, u(1))
+res.plot(t, u(1))
 subplot(428); hold on
-sim.plot(t, u(2)*180/pi)
+res.plot(t, u(2)*180/pi)
 
 %% Optimal control problem
 ocp = yop.ocp('Dynamic Soaring Problem');
@@ -53,7 +53,7 @@ ocp.st( ...
     x(4:5).at(t0) == x(4:5).at(tf), ...
     x(6).at(t0) == x(6).at(tf) + 2*pi ...
     );
-sol = ocp.solve('intervals', 100, 'degree', 3, 'guess', sim);
+sol = ocp.solve('intervals', 100, 'degree', 3, 'guess', res);
 
 %% Plot solution
 figure(1); 

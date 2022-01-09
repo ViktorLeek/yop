@@ -1,10 +1,8 @@
 %% ODE with parameter
 %   https://se.mathworks.com/help/matlab/ref/ode15s.html
-yop_time t t0 tf
-yop_parameter A B
-y = yop.state(2);
+yopvar times: t t0 tf state: y size: [2, 1] parameters: A B
 
-sim = yop.simulation();
+sim = yop.ivp();
 sim.add(t0==0, tf==5);
 sim.add(der(y) == [y(2); A/B*t*y(1)]);
 sim.add( y(t0) == [0; 0.01]);

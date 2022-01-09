@@ -25,6 +25,14 @@ classdef ast_variable < yop.ast_expression
             obj.m_offset = offset;
         end
         
+        function obj = weight(obj, w)
+            obj.m_weight = w;
+        end
+        
+        function obj = offset(obj, os)
+            obj.m_offset = os;
+        end
+        
         function ast(obj)
             fprintf(['[', num2str(obj.m_id), ']:', obj.m_name, '\n']);
         end

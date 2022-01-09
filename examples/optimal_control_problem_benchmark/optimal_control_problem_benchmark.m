@@ -37,7 +37,7 @@ T0 = 0.33;
 s = 90;
 P_dem = P_peak/(1 + exp(-s*(t-T0)));
 
-sim = yop.simulation(t0==0, tf==1.4);
+sim = yop.ivp(t0==0, tf==1.4);
 sim.add( der(x) == dx );
 sim.add(  x(t0) == x0 );
 sim.add( u_f == smoke_limiter(u_pi, y.u_f_max, u_min(1), u_max(1)) );

@@ -13,37 +13,37 @@ x0    = [ p0;  0;  0; h0;  0;    pi;   1];
 [dx, v, Qr, r] = spacecraft(x, u, tau);
 
 %% Initial guess
-ivp = yop.simulation( ...
+sim = yop.ivp( ...
     t0==0, tf==90e3, ...
     der(x) == dx, ...
     x(t0) == x0, ...
     u == Qr'*v/norm(v), ...
     tau == -25 ...
     );
-sim = ivp.solve('solver', 'idas', 'points', 2000);
+res = sim.solve('solver', 'idas', 'points', 2000);
 
 %% Plot guess
 figure(1);
 subplot(321); hold on
-sim.plot(t, p)
+res.plot(t, p)
 subplot(322); hold on
-sim.plot(t, f)
+res.plot(t, f)
 subplot(323); hold on
-sim.plot(t, g)
+res.plot(t, g)
 subplot(324); hold on
-sim.plot(t, h)
+res.plot(t, h)
 subplot(325); hold on
-sim.plot(t, k)
+res.plot(t, k)
 subplot(326); hold on
-sim.plot(t, L)
+res.plot(t, L)
 
 figure(2)
 subplot(311); hold on
-sim.plot(t, u(1))
+res.plot(t, u(1))
 subplot(312); hold on
-sim.plot(t, u(2))
+res.plot(t, u(2))
 subplot(313); hold on
-sim.plot(t, u(3))
+res.plot(t, u(3))
 
 %% Optimal control problem
 final = @(expr) expr(tf);
@@ -63,7 +63,7 @@ ocp.st( final( h^2 + k^2 ) == 0.61761258786099^2 );
 ocp.st( final( f*h + g*k ) == 0 );
 ocp.st( -3 <= final( g*h - k*f ) <= 0 );
 
-sol = ocp.solve('guess', sim, 'intervals', 125, 'degree', 3);
+sol = ocp.solve('guess', res, 'intervals', 125, 'degree', 3);
 
 %% Plot solution
 figure(1);

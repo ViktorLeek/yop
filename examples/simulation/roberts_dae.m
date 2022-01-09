@@ -1,8 +1,9 @@
 %% DAE Simulation - Roberts problem
 %   The Robertson problem found in hb1ode.m
 %   https://se.mathworks.com/help/matlab/ref/ode15s.html
-yopvar t t0 tf x1 x2 z
-sim = yop.simulation(t0==4e-6, tf==4e6);
+yopvar times: t t0 tf states: x1 x2 algebraic: z
+
+sim = yop.ivp(t0==4e-6, tf==4e6);
 sim.add( der(x1) == -0.04 * x1 + 1e4 * x2 * z );
 sim.add( der(x2) == +0.04 * x1 - 1e4 * x2 * z - 3e7 * x2^2 );
 sim.add(    0    == x1 + x2 + z - 1 );

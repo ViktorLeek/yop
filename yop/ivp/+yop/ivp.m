@@ -1,4 +1,4 @@
-classdef simulation < handle
+classdef ivp < handle
     properties
         name
         
@@ -24,7 +24,7 @@ classdef simulation < handle
     end
     
     methods
-        function obj = simulation(varargin)
+        function obj = ivp(varargin)
             obj.independent  = yop.ivp_var.empty(1,0);
             obj.independent0 = yop.ivp_var.empty(1,0);
             obj.independentf = yop.ivp_var.empty(1,0);
@@ -42,7 +42,7 @@ classdef simulation < handle
         
         function sol = solve(obj, varargin)
             ip = inputParser();
-            ip.FunctionName = "yop.simulation/solve";
+            ip.FunctionName = "yop.ivp/solve";
             ip.addParameter('solver', yop.defaults.ivp_solver);
             ip.addParameter('opts', []);
             ip.addParameter('points', []);
@@ -50,7 +50,7 @@ classdef simulation < handle
             ip.addParameter('abstol', []);
             ip.parse(varargin{:});
             solver = ip.Results.solver;
-            opts = yop.simulation.parse_options(...
+            opts = yop.ivp.parse_options(...
                 ip.Results.opts, ...
                 ip.Results.points, ...
                 ip.Results.reltol, ...
@@ -131,7 +131,7 @@ classdef simulation < handle
         end
         
         function sol = solve_matlab(obj, solver, opts)
-            opts = yop.simulation.opts_matlab(opts);
+            opts = yop.ivp.opts_matlab(opts);
             opts.Mass = obj.mass_matrix();
             res = solver(obj.ode_matlab(), ...
                 [obj.t0, obj.tf], ...

@@ -30,7 +30,8 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
         end
         
         function sz = size(obj, varargin)
-            sz = size(obj.m_value, varargin{:});
+            sz = [1, 1];
+%             sz = size(obj.m_value, varargin{:});
         end
         
         function rel = lt(lhs, rhs)

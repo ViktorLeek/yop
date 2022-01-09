@@ -7,16 +7,13 @@ yopvar controls: u weight: 10
 
 ocp = yop.ocp('Goddard''s Rocket Problem');
 ocp.max( y.rocket.height(tf)*1e-5 );
-ocp.st( ...
-    t0==0, ...
-    der(x) == dx, ...
-    y.rocket.height(t0)   == 0    , ...
-    y.rocket.velocity(t0) == 0    , ...
-    y.rocket.mass(t0)     == 215  , ...
-    68 <= y.rocket.mass <= 215 , ...
-    0 <= y.rocket.fuel_mass_flow <= 9.5 ...
-    );
-
+ocp.st( t0==0 );
+ocp.st( der(x) == dx );
+ocp.st( y.rocket.height(t0)   == 0 );
+ocp.st( y.rocket.velocity(t0) == 0 );
+ocp.st( y.rocket.mass(t0)     == 215 );
+ocp.st( 68 <= y.rocket.mass <= 215 );
+ocp.st( 0 <= y.rocket.fuel_mass_flow <= 9.5 );
 sol = ocp.solve('intervals', 50);
 
 figure(1);
@@ -66,8 +63,7 @@ sol.plot(t, u, 'mag', 5);
 yopvar times: t t0 tf weight: [1e2,1,1e2]
 yopvar states: v h m  weight: [1e3,1e5,1e2]
 yopvar controls: u    weight: 10 deg: 2
-u.m_du.m_weight = 2;
-u.m_du.m_du.m_weight = 0.5;
+u.du.weight(2).du.weight(0.5); % First der has weight 2, second has 0.5
 
 x     = [  v;   h;   m];
 x0    = [  0;   0; 215];
