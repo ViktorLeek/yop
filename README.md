@@ -5,7 +5,7 @@ A Matlab Toolbox for Optimal Control.
 1. [Matlab](https://se.mathworks.com)
 2. [Casadi](https://web.casadi.org)
 
-## Example use
+## Examples
 ### Bryson-Denham Problem
 ```matlab
 yops times: t t0 tf % Parsed by position: t, t0, tf
