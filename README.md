@@ -18,8 +18,8 @@ ocp.min( 1/2 * int(a^2) ); % int: integrate expression over problem horizon
 ocp.st( t0==0, tf==1 );
 ocp.st( der(v) == a );
 ocp.st( der(x) == v );
-ocp.st( v(t0) == -v(tf) == 1 );
-ocp.st( x(t0) ==  x(tf) == 0 );
+ocp.st(  v(t0) == -v(tf) == 1 );
+ocp.st(  x(t0) ==  x(tf) == 0 );
 ocp.st( x <= l == 1/9 );
 sol = ocp.solve();
 
