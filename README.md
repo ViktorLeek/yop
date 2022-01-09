@@ -33,7 +33,7 @@ sol.stairs(t, a);
 ```
 ### Goddard's Rocket Problem
 ```matlab
-yops times: t t0 tf states: v h m ctrls: Wf
+yops times: t t0 tf states: v h m controls: Wf
 
 % Parameters
 D0 = 0.01227; beta = 0.145e-3; c = 2060;
