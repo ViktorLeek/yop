@@ -1,6 +1,6 @@
-yopvar times: t t0 tf 
-yopvar states: p q scaling: [1e3, 1e3] offset: [-8e3, -2e3]
-yopvar controls: u scaling: 10
+yops times: t t0 tf 
+yops states: p q scaling: [1e3, 1e3] offset: [-8e3, -2e3]
+yops controls: u scaling: 10
 
 zeta = 0.084; % per day
 b = 5.85;     % per day

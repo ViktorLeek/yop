@@ -6,8 +6,15 @@ classdef ast_lt < yop.ast_relation
     
     methods
         function obj = ast_lt(lhs, rhs, ishard)
-            obj@yop.ast_relation(lt(value(lhs), value(rhs)), lhs, rhs);
-            if nargin > 2
+            if isa(lhs, 'function_handle')
+                val = lt(lhs(1), rhs);
+            elseif isa(rhs, 'function_handle')
+                val = lt(lhs, rhs(1));
+            else
+                val = lt(value(lhs), value(rhs));
+            end
+            obj@yop.ast_relation(val, lhs, rhs);
+            if nargin == 3
                 obj.m_hard = ishard;
             end
         end

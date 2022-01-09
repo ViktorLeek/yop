@@ -1,4 +1,4 @@
-function yopvar(varargin)
+function yops(varargin)
 decl = {};
 t_flag     = {'-independent', '-time' , '-t', 'time:'};
 t0_flag    = {'-independent_initial', '-independent0', '-time0', '-t0', 'time0:', 'time_0:'};
@@ -53,7 +53,7 @@ while k <= length(varargin)
             parameter();
             
         otherwise
-            error(yop.error.cannot_parse_yopvar());
+            error(yop.error.cannot_parse_yops());
     end
     
 end

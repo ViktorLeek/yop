@@ -6,7 +6,14 @@ classdef ast_gt < yop.ast_relation
     
     methods
         function obj = ast_gt(lhs, rhs, ishard)
-            obj@yop.ast_relation(gt(value(lhs), value(rhs)), lhs, rhs);
+            if isa(lhs, 'function_handle')
+                val = gt(lhs(1), rhs);
+            elseif isa(rhs, 'function_handle')
+                val = gt(lhs, rhs(1));
+            else
+                val = gt(value(lhs), value(rhs));
+            end
+            obj@yop.ast_relation(val, lhs, rhs);
             if nargin == 3
                 obj.m_hard = ishard;
             end

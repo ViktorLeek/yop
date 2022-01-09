@@ -1,3 +1,7 @@
 function bool = isa_numeric(obj)
-bool = ~isnan(obj);
+if isa(obj, 'function_handle')
+    bool = false;
+else
+    bool = ~isnan(obj);
+end
 end

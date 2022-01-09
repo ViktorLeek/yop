@@ -6,8 +6,14 @@ classdef ast_le < yop.ast_relation
     
     methods
         function obj = ast_le(lhs, rhs, ishard)
-            %             obj@yop.ast_relation(le(value(lhs), value(rhs)), lhs, rhs);
-            obj@yop.ast_relation([], lhs, rhs);
+            if isa(lhs, 'function_handle')
+                val = le(lhs(1), rhs);
+            elseif isa(rhs, 'function_handle')
+                val = le(lhs, rhs(1));
+            else
+                val = le(value(lhs), value(rhs));
+            end
+            obj@yop.ast_relation(val, lhs, rhs);
             if nargin > 2
                 obj.m_hard = ishard;
             end

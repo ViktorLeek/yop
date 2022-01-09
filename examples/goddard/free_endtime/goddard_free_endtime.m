@@ -1,7 +1,7 @@
-%% Formulation 1
-yopvar times: t t0 tf
-yopvar states: x size: [3, 1] weight: [1e3,1e5,1e2]
-yopvar controls: u weight: 10
+%% Implementation 1
+yops times: t t0 tf
+yops states: x size: [3, 1] weight: [1e3,1e5,1e2]
+yops controls: u weight: 10
 
 [dx, y] = rocket_model(x, u);
 
@@ -29,10 +29,10 @@ sol.stairs(t, u);
 % sol.save('Goddard.mat');
 % sol = yop.load('Goddard', t, t0, tf, x, u, p);
 
-%% Formulation 1 - variation 1: PW quadratic control, integration of velocity
-yopvar times: t t0 
-yopvar states: x1 x2 x3 weight: [1e3,1e5,1e2] 
-yopvar ctrls: u deg: 2
+%% Implementation 1 - variation 1: PW quadratic control, integration of velocity
+yops times: t t0 
+yops states: x1 x2 x3 weight: [1e3,1e5,1e2] 
+yops ctrls: u deg: 2
 x = [x1; x2; x3];
 
 [~, y] = rocket_model(x, u);
@@ -59,10 +59,10 @@ sol.plot(t, x(3));
 subplot(414); hold on
 sol.plot(t, u, 'mag', 5);
 
-%% Formulation 2
-yopvar times: t t0 tf weight: [1e2,1,1e2]
-yopvar states: v h m  weight: [1e3,1e5,1e2]
-yopvar controls: u    weight: 10 deg: 2
+%% Implementation 2
+yops times: t t0 tf weight: [1e2,1e0,1e2]
+yops states: v h m  weight: [1e3,1e5,1e2]
+yops controls: u    weight: 10 deg: 2
 u.du.weight(2).du.weight(0.5); % First der has weight 2, second has 0.5
 
 x     = [  v;   h;   m];
@@ -79,7 +79,6 @@ ocp.st( der(x) == rocket_model(x, u) );
 ocp.st(  x(t0) == x0 );
 ocp.st( x_min <= x <= x_max );
 ocp.st( u_min <= u <= u_max );
-
 sol = ocp.solve('intervals', 50);
 
 figure(1);
@@ -100,10 +99,10 @@ sol.plot(t, der(u));
 subplot(313); hold on
 sol.stairs(t, der(der(u)));
 
-%% Formulation 3
-yopvar times: t t0 tf
-yopvar states: v h m
-yopvar ctrls: Wf
+%% Implementation 3
+yops times: t t0 tf
+yops states: v h m
+yops ctrls: Wf
 
 % Parameters
 D0 = 0.01227; beta = 0.145e-3; c = 2060;

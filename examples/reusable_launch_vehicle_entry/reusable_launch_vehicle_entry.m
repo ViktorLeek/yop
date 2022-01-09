@@ -1,6 +1,6 @@
-yopvar times: t t0 tf
-yopvar states: rad lon lat v fpa azi scaling: [1e6,1,1,1e4,1,1]
-yopvar ctrls: aoa bank
+yops times: t t0 tf
+yops states: rad lon lat v fpa azi scaling: [1e6,1,1,1e4,1,1]
+yops ctrls: aoa bank
 
 x = [rad; lon; lat; v; fpa; azi]; 
 u = [aoa; bank]; 

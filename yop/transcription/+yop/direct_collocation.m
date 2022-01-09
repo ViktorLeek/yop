@@ -64,7 +64,7 @@ nlp.p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
         [~, T0, Tf] = ocp.fixed_horizon();
         t0 = yop.cx('t0');
         tf = yop.cx('tf');
-        dt = (tf - t0)/N;
+        dt = (ocp.descale_tf(tf) - ocp.descale_t0(t0))/N;
         if ocp.n_p > 0
             p  = yop.cx('p');
         else
@@ -386,7 +386,7 @@ nlp.p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
         
         u_ub = ocp.u0_ub(T0);
         u_lb = ocp.u0_lb(T0);
-        tt = yop.IF(isnumeric(T0), T0, 1);
+        tt = yop.IF(isnumeric(T0), T0, 1) + h;
         for n=2:N-1
             u_ub = [u_ub; ocp.u_ub(tt)];
             u_lb = [u_lb; ocp.u_lb(tt)];

@@ -1,8 +1,8 @@
 %% Original formulation
-yopvar times: t t0 tf % Parsed by position: t, t0, tf
-yopvar states: x v    % position, speed
-yopvar ctrls: a       % acceleration
-yopvar params: l      % maximum cart position
+yops times: t t0 tf % Parsed by position: t, t0, tf
+yops states: x v    % position, speed
+yops ctrls: a       % acceleration
+yops params: l      % maximum cart position
 
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( 1/2 * int(a^2) );
@@ -24,9 +24,9 @@ sol.stairs(t, a);
 
 %% State vector, minimum value and traveled distance
 %   Piecewise quadratic control input (deg == 2)
-yopvar times: t t0 tf 
-yopvar states: x size: [2,1]
-yopvar ctrls: u deg: 2 % picewise quadratic control input
+yops times: t t0 tf 
+yops states: x size: [2,1]
+yops ctrls: u deg: 2 % picewise quadratic control input
 
 J = 1/2 * int(u^2);
 ocp = yop.ocp('Bryson-Denham Problem');
@@ -51,7 +51,7 @@ subplot(212); hold on
 sol.plot(t, u);
 
 %% Guaranteed box constraints for boundary conditions
-yopvar times: t t0 tf states: x size: [2,1] controls: u
+yops times: t t0 tf states: x size: [2,1] controls: u
 
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( 1/2 * int(u^2) );
@@ -90,7 +90,7 @@ yop.ocp().min(1/2*int(u^2)).st(tf==1, der(x)==[x(2);u], x(t0)==[0; 1], ...
     x(tf)==[0;-1], x(1)<=1/9).solve().plot(t, [x;u]);
 
 %% Trade-off between control effort and traveled distance
-yopvar times: t t0 tf states: x v ctrls: a params: l
+yops times: t t0 tf states: x v ctrls: a params: l
 
 beta = 30; % trade-off factor
 
@@ -114,11 +114,11 @@ sol.plot(t, v, 'mag', 5);
 subplot(313); hold on
 sol.stairs(t, a, 'mag', 5);
 
-%% Simulation
-yopvar times: t t0 tf 
-yopvar states: x v 
-yopvar controls: a 
-yopvar parameters: l
+%% Simulated initial guess
+yops times: t t0 tf 
+yops states: x v 
+yops controls: a 
+yops parameters: l
 
 sim = yop.ivp( ...
     t0==0, tf==1, ...

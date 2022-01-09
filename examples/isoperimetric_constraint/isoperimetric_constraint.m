@@ -1,4 +1,4 @@
-yopvar times: t t0 tf states: x ctrls: u
+yops times: t t0 tf states: x ctrls: u
 
 ocp = yop.ocp('Isopermetric Constraint');
 ocp.min( int(x) );

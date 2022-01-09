@@ -1,7 +1,7 @@
-yopvar times: t t0 tf
-yopvar states: p f g h k L w scaling: [1e7,0.1,1,1,0.1,10,1]
-yopvar control: u size: [3,1]
-yopvar param: tau
+yops times: t t0 tf
+yops states: p f g h k L w scaling: [1e7,0.1,1,1,0.1,10,1]
+yops control: u size: [3,1]
+yops param: tau
 
 p0 = 21837080.052835;
 h0 = -0.25396764647494;
