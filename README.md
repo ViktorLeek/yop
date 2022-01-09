@@ -14,7 +14,7 @@ yops ctrls: a       % acceleration
 yops params: l      % maximum cart position
 
 ocp = yop.ocp('Bryson-Denham Problem');
-ocp.min( 1/2 * int(a^2) );
+ocp.min( 1/2 * int(a^2) ); % int: integrate control over problem horizon
 ocp.st( t0==0, tf==1 );
 ocp.st( der(v) == a );
 ocp.st( der(x) == v );
