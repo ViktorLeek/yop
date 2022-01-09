@@ -9,6 +9,14 @@ classdef progress
             fprintf("[Yop]: Optimal control problem parsed.\n");
         end
         
+        function ocp_solved(solved)
+            if solved
+                fprintf("[Yop]: Yet another yoptimal control problem solved.\n");
+            else
+                fprintf("[Yop]: Optimal control problem failed to converge.\n");
+            end
+        end
+        
         function msg = nlp_building_msg()
             msg = "[Yop]: Building NLP: [________]";
         end

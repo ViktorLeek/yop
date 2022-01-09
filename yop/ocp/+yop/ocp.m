@@ -155,6 +155,7 @@ classdef ocp < handle
             w_opt.p = obj.descale_p(nlp.p(nlp_sol.x));
             
             sol = yop.ocp_sol(obj.mx_vars(), obj.ids, w_opt, N, d, cp);
+            yop.progress.ocp_solved(solver.stats.success);
         end
         
         function augment_system(obj)
@@ -240,16 +241,16 @@ classdef ocp < handle
                 t_min = obj.independent.lb;
                 obj.independent0.lb = max(obj.independent0.lb, t_min);
                 obj.independent0.ub = max(obj.independent0.ub, t_min);
-                obj.independentf.fb = max(obj.independentf.lb, t_min);
-                obj.independentf.fb = max(obj.independentf.ub, t_min);
+                obj.independentf.lb = max(obj.independentf.lb, t_min);
+                obj.independentf.ub = max(obj.independentf.ub, t_min);
             end
             
             if ~isempty(obj.independent.lb)
                 t_max = obj.independent.ub;
                 obj.independent0.lb = min(obj.independent0.lb, t_max);
                 obj.independent0.ub = min(obj.independent0.ub, t_max);
-                obj.independentf.fb = min(obj.independentf.lb, t_max);
-                obj.independentf.fb = min(obj.independentf.ub, t_max);
+                obj.independentf.lb = min(obj.independentf.lb, t_max);
+                obj.independentf.ub = min(obj.independentf.ub, t_max);
             end
             
             % State

@@ -28,3 +28,5 @@
 % guess.phase.state   = [SGuess, TGuess, L1Guess, L2Guess, I1Guess, I2Guess];
 % guess.phase.control = [u1Guess, u2Guess];
 % guess.phase.integral = 6000;
+
+ig = yop.guess(t, tval, x, xval, z, zval, u, uval, p, pval);
