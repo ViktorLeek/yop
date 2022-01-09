@@ -21,7 +21,7 @@ ocp.st( der(x) == v );
 ocp.st( v(t0) == -v(tf) == 1 );
 ocp.st( x(t0) ==  x(tf) == 0 );
 ocp.st( x <= l == 1/9 );
-sol = ocp.solve('intervals', 10, 'degree', 2);
+sol = ocp.solve();
 
 figure(1);
 subplot(311); hold on
