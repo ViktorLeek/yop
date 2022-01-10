@@ -13,13 +13,11 @@ x0    = [ p0;  0;  0; h0;  0;    pi;   1];
 [dx, v, Qr, r] = spacecraft(x, u, tau);
 
 %% Initial guess
-sim = yop.ivp( ...
-    t0==0, tf==90e3, ...
-    der(x) == dx, ...
-    x(t0) == x0, ...
-    u == Qr'*v/norm(v), ...
-    tau == -25 ...
-    );
+sim = yop.ivp(t0==0, tf==90e3);
+sim.add( der(x) == dx );
+sim.add(  x(t0) == x0 );
+sim.add(  u(t)  == Qr'*v/norm(v) );
+sim.add(  tau   == -25 );
 res = sim.solve('solver', 'idas', 'points', 2000);
 
 %% Plot guess
@@ -113,14 +111,13 @@ sol.plot(t/3600, u(3))
 xlabel('t [h]')
 ylabel('u_h')
 
-rv = sol.value(r);
 [ex,ey,ez] = sphere();
 er = 20902000; % Earth radius [ft]
 
 figure(3); hold on; grid on
 sol.plot3(r(1), r(2), r(3), 'b', 'LineWidth', 2) 
-sol.plot3(rv(1,1)  , rv(2,1)  , rv(3,1)  , 'o', 'LineWidth', 3)
-sol.plot3(rv(1,end), rv(2,end), rv(3,end), 'o', 'LineWidth', 3)
+sol.plot3(r(1).at(t0), r(2).at(t0), r(3).at(t0), 'o', 'LineWidth', 3)
+sol.plot3(r(1).at(tf), r(2).at(tf), r(3).at(tf), 'o', 'LineWidth', 3)
 surf(ex*er, ey*er, ez*er, 'FaceAlpha', 0.5, 'linestyle', 'none')
 title('Trajectory')
 xlabel('x [ft]')
