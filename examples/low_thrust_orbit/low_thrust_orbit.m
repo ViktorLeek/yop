@@ -51,7 +51,7 @@ ocp.max( w(tf) );
 ocp.st( 50e3 <= tf <= 100e3 );
 ocp.st( der(x) == dx );
 ocp.st(  x(t0) == x0 );
-ocp.st( norm(u)^2 == 1 );
+ocp.st(   u'*u == 1 );
 ocp.st( x_min <=  x  <= x_max );
 ocp.st(   -1  <=  u  <= 1 );
 ocp.st(  -50  <= tau <= 0 );
@@ -111,6 +111,7 @@ sol.plot(t/3600, u(3))
 xlabel('t [h]')
 ylabel('u_h')
 
+rv = sol.value(r);
 [ex,ey,ez] = sphere();
 er = 20902000; % Earth radius [ft]
 
