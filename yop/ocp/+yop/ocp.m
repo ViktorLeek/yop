@@ -108,13 +108,16 @@ classdef ocp < handle
             ip.addParameter('degree', yop.defaults.polynomial_degree);
             ip.addParameter('points', yop.defaults.collocation_points);
             ip.addParameter('guess', []);
+            ip.addParameter('solver', 'ipopt');
+            ip.addParameter('opts', struct());
             ip.parse(varargin{:});
-            opts = ip.Results;
             
-            N  = opts.intervals;
-            d  = opts.degree;
-            cp = opts.points;
-            obj.guess = opts.guess;
+            N  = ip.Results.intervals;
+            d  = ip.Results.degree;
+            cp = ip.Results.points;
+            opts = ip.Results.opts;
+            solver = ip.Results.solver;
+            obj.guess = ip.Results.guess;
             
             % The system is augmented before box bounds are set in order to
             % use the correct default value for the augemented variables.
@@ -133,10 +136,8 @@ classdef ocp < handle
             
             nlp = yop.direct_collocation(obj, N, d, cp);
             
-            nlp_opts = struct;
-            nlp_opts.ipopt.acceptable_tol = 1e-6;
-            solver = casadi.nlpsol('solver', 'ipopt', ...
-                struct('f', nlp.J, 'x', nlp.w, 'g', nlp.g), nlp_opts);
+            solver = casadi.nlpsol('solver', solver, ...
+                struct('f', nlp.J, 'x', nlp.w, 'g', nlp.g), opts);
             nlp_sol = solver( ...
                 'x0', nlp.w0, ...
                 'lbx', nlp.w_lb, ...
@@ -953,43 +954,18 @@ classdef ocp < handle
         end
         
         function ocp_var = find_variable(obj, id)
-            
-            % Here Matlab's short circuit of logical expressions is used to
-            % avoid evaluating the id comparison if the variable is empty
-            if ~isempty(obj.independent) && obj.independent.ast.m_id == id
-                ocp_var = obj.independent;
-                return;
-            end
-            
-            if ~isempty(obj.independent0) && obj.independent0.ast.m_id == id
-                ocp_var = obj.independent0;
-                return;
-            end
-            
-            if ~isempty(obj.independentf) && obj.independentf.ast.m_id == id
-                ocp_var = obj.independentf;
-                return;
-            end
-            
-            for ocp_var = [obj.states, obj.controls]
-                if ocp_var.ast.m_id == id
-                    return;
-                end
-            end
-            
-            for ocp_var = obj.algebraics
-                if ocp_var.ast.m_id == id
-                    return;
-                end
-            end
-            
-            for ocp_var = obj.parameters
+            for ocp_var = obj.variables()
                 if ocp_var.ast.m_id == id
                     return;
                 end
             end
             
             error(yop.error.failed_to_find_variable(id));
+        end
+        
+        function v = variables(obj)
+            v = [obj.independent, obj.independent0, obj.independentf, ...
+                obj.states, obj.algebraics, obj.controls, obj.parameters];
         end
         
         function remove_state_der(obj, id)

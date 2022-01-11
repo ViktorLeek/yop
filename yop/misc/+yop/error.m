@@ -193,5 +193,19 @@ classdef error < handle
                 'Consider offsetting t0 or tf instead', yop.error.msg_stop()];
         end
         
+        function msg = guess_missing_independent()
+            msg = [yop.error.msg_start(), ...
+                'An initial guess needs to specify a value for t ', ...
+                'and/or [t0, tf]', yop.error.msg_stop()];
+        end
+        
+        function msg = guess_improper_grid()
+            msg = [yop.error.msg_start(), ...
+                'The initial guess must have as many columns as the ', ...
+                'variable has elements and the the number of rows is ', ...
+                'either one, two, or as many rows as the time vector has',...
+                yop.error.msg_stop()];
+        end
+        
     end
 end

@@ -64,14 +64,21 @@ classdef ocp_sol < handle
             
             % Ensure that the independent variable always can be plotted by
             % setting its mx value to that of the ocp.
-            mx_vars = obj.mx_vars;
+            mxv = obj.mx_vars;
             t_id = 0;
             for k=1:length(vars)
-                if isa(vars{k}, 'yop.ast_independent')
-                    % Three is the independent variable. Hard coded, but
-                    % efficient.
-                    mx_vars{3} = vars{k}.m_value;
-                    t_id = vars{k}.m_id;
+                if isa(vars{k}, 'yop.ast_independent_initial')
+                    mxv{1} = vars{k}.m_value;
+                    t_id(end+1) = vars{k}.m_id;
+                    
+                elseif isa(vars{k}, 'yop.ast_independent_final')
+                    mxv{2} = vars{k}.m_value;
+                    t_id(end+1) = vars{k}.m_id;
+                    
+                elseif isa(vars{k}, 'yop.ast_independent')
+                    mxv{3} = vars{k}.m_value;
+                    t_id(end+1) = vars{k}.m_id;
+                    
                 end
             end
             
@@ -90,7 +97,7 @@ classdef ocp_sol < handle
             
             % Create functions for the special nodes and expression
             args = { ...
-                mx_vars{:}, ...
+                mxv{:}, ...
                 tps.mx_vec(), ...
                 ints.mx_vec(), ...
                 ders.mx_vec() ...

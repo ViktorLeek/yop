@@ -1,4 +1,17 @@
-%% Optimal Control Benchmark
+%% Optimal Control Benchmark - with bootstrapping
+% Sometimes it is difficult to obtain a good initial guess. For such cases
+% a "bootstrapping" strategy can be a good option. In such a scenario the
+% problem is relaxed and solved using without an initial guess or a very
+% crude one. That solution can then be fed into a less relaxed formulation
+% until eventually a guess for the full problem is obtained, and the
+% problem can be solved. 
+% 
+% Here this principle is demonstrated by first using a static guess and a
+% relaxed problem (stationarity is the final bound is omitted) and then
+% that solution is used to initialize the full problem. This problem is a
+% little too simple for this method to be really useful as it is solvable
+% without it, but it demonstrates the method.
+%% Variables, bounds, dynamics 
 yops times: t t0 tf
 yops states: w_ice p_im p_em w_tc scaling: [1e3, 1e5, 1e5, 1e3]
 yops controls: u_f u_wg P_gen scaling: [1, 1, 1e5]
@@ -17,58 +30,18 @@ u_max = [        150;                   1;   100e3];
 % Dynamics and outputs
 [dx, y] = genset_model(x, u);
 
-%% Initial guess
-yops state: I % PID integral state
+%% Initial guess 
+% Notice that x is a [4,1] vector. yop.guess assumes a [length(t_guess),4] 
+% vector. Here t is not specified, so yop expectes the guess for x to have 
+% size [1, 4] (constant) or [2, 4] (boundary values).
+guess = yop.guess( ...
+    t0, 0, ...
+    tf, 1, ...
+    x, [rpm2rad(1500), 1.3e5, 1.3e5, rpm2rad(50e3)], ...
+    u, [50, 0, 1e3] ...
+    );
 
-% Desired engine speed
-wd = rpm2rad(1500);
-
-% PI Engine Speed Controller - with back calculation anti-windup
-K  = 10.0; 
-Ti =  0.5; 
-Tt =  1.0;
-e = wd - w_ice;
-u_pi = K*e + I;
-es = u_f - u_pi; % Non-zero when control is saturated
-
-% Power outtake based on logistic function
-P_peak = 100e3; 
-T0 = 0.33; 
-s = 90;
-P_dem = P_peak/(1 + exp(-s*(t-T0)));
-
-sim = yop.ivp(t0==0, tf==1.4);
-sim.add( der(x) == dx );
-sim.add(  x(t0) == x0 );
-sim.add( u_f == smoke_limiter(u_pi, y.u_f_max, u_min(1), u_max(1)) );
-sim.add( u_wg == 0 );
-sim.add( P_gen == P_dem );
-sim.add( der(I) == K/Ti*e + es/Tt ); % PID controller dynamics
-sim.add( I(t0)  == 0 );
-res = sim.solve('solver', 'ode15s'); 
-% res = sim.solve('solver', 'idas', 'points', 100);
-
-%% Plot simulation results
-figure(1)
-subplot(411); hold on
-res.plot(t, rad2rpm(w_ice))
-subplot(412); hold on
-res.plot(t, p_im)
-subplot(413); hold on
-res.plot(t, p_em)
-subplot(414); hold on
-res.plot(t, w_tc)
-
-figure(2)
-subplot(311); hold on
-res.plot(t, u_f)
-res.plot(t, y.u_f_max, '--', 'LineWidth', 2);
-subplot(312); hold on
-res.stairs(t, u_wg)
-subplot(313); hold on
-res.plot(t, P_gen)
-
-%% Optimal control problem
+%% Optimal control problem - Relaxed problem
 ocp = yop.ocp('Optimal Control Problem Benchmark');
 ocp.min( 1e3*int(y.cylinder.fuel_massflow) ); % Min fuel mass
 % Problem horizon
@@ -81,13 +54,15 @@ ocp.st( x_min <= x <= x_max );
 ocp.st( u_min <= u <= u_max );
 % Path constraints
 ocp.st( y.engine.torque >= 0 );
-ocp.hard( y.phi <= y.phi_max ); % Constraint applies to all collocation points
-ocp.st( int(P_gen) >= 100e3 ); % [J]
+ocp.hard( y.phi <= y.phi_max );
+ocp.st( int(P_gen) == 100e3 ); % [J]
 % Terminal conditions
 ocp.st(  P_gen(tf) == 100e3 ); % [W]
-ocp.st(     dx(tf) == 0 );     % Stationarity
-    
-sol = ocp.solve('intervals', 75, 'degree', 3,'guess', res);
+sol = ocp.solve('intervals', 25, 'degree', 3,'guess', guess);
+
+%% Full problem - include stationarity constraint
+ocp.st( dx(tf) == 0 ); % Stationarity
+sol = ocp.solve('intervals', 75, 'degree', 3,'guess', sol);
 
 %% Plot the optimal control and trajectory
 figure(1)
