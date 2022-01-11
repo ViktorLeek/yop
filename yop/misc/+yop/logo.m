@@ -7,12 +7,12 @@ fprintf('MMMMMMMMMM\\     \\MMMMMM/     /MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
 fprintf('MMMMMMMMMMM\\     \\MMMM/     /MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\n');
 fprintf('MMMMMMMMMMMM\\     \\MM/     /MMMMMMMM/-´´´-\\MMMMMMMM        W/        \\MMMMMMMMMM\n');
 fprintf('MMMMMMMMMMMMM\\     \\/     /MMMMM/`           `\\MMMM                   \\MMMMMMMMM\n');
-fprintf('MMMMMMMMMMMMMM\\          /MMMMM`     -+o+-     `MMMMMM       /oo\\      \\MMMMMMMM\n');
+fprintf('MMMMMMMMMMMMMM\\          /MMMMM`     -+o+-     `MMMMMM       -++-      \\MMMMMMMM\n');
 fprintf('MMMMMMMMMMMMMMM\\        /MMMMM`     oMMMMMo     `MMMMM      oMMMMo      MMMMMMMM\n');
 fprintf('MMMMMMMMMMMMMMMM|      |MMMMMM      MMMMMMM      MMMMM     +MMMMMM+     MMMMMMMM\n');
 fprintf('MMMMMMMMMMMMMMMM|      |MMMMMM      MMMMMMM      MMMMM     +MMMMMM+     MMMMMMMM\n');
 fprintf('MMMMMMMMMMMMMMMM|      |MMMMMM.     oMMMMMo     .MMMMM      oMMMMo     /MMMMMMMM\n');
-fprintf('MMMMMMMMMMMMM              MMMM.     -+o+-     .MMMMMM       \\oo/     /MMMMMMMMM\n');
+fprintf('MMMMMMMMMMMMM              MMMM.     -+o+-     .MMMMMM       -++-     /MMMMMMMMM\n');
 fprintf('MMMMMMMMMMMMM              MMMMMo.           .oMMMMMMM     A         /MMMMMMMMMM\n');
 fprintf('MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMho\\-...-/sdMMMMMMMMM     M\\----/MMMMMMMMMMMMMM\n');
 fprintf('MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM     MMMMMMMMMMMMMMMMMMMMM\n');
