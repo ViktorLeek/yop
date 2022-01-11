@@ -19,7 +19,6 @@ ig = yop.guess(t0, 0, tf, 5, x, x0', u, [0.95, 0.95]);
 
 sol = ocp.solve('intervals', 100, 'guess', ig);
 
-%%
 figure(1)
 subplot(321); hold on
 sol.plot(t, x(1))
