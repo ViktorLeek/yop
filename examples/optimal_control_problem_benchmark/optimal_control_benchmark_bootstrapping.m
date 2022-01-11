@@ -58,9 +58,9 @@ ocp.hard( y.phi <= y.phi_max );
 ocp.st( int(P_gen) == 100e3 ); % [J]
 % Terminal conditions
 ocp.st(  P_gen(tf) == 100e3 ); % [W]
-sol = ocp.solve('intervals', 25, 'degree', 3,'guess', guess);
+sol = ocp.solve('intervals', 25, 'degree', 2,'guess', guess);
 
-%% Full problem - include stationarity constraint
+%% Full problem - include stationarity constraint and solution refinement
 ocp.st( dx(tf) == 0 ); % Stationarity
 sol = ocp.solve('intervals', 75, 'degree', 3,'guess', sol);
 
