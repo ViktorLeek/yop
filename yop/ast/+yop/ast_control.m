@@ -18,5 +18,13 @@ classdef ast_control < yop.ast_variable
         function d = du(obj)
             d = obj.m_du;
         end
+        
+        function du = der(obj)
+            if isempty(obj.m_du)
+                du = der@yop.ast_variable(obj);
+            else
+                du = obj.m_du;
+            end
+        end
     end
 end

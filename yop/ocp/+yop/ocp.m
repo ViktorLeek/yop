@@ -37,6 +37,9 @@ classdef ocp < handle
         iec_point_eqs
         guess
         
+        % NLP
+        m_nlp
+        
     end
     
     properties (Hidden) % internal properties
@@ -47,7 +50,8 @@ classdef ocp < handle
         visited = [] % special nodes that has been visited - speedup
     end
     
-    methods
+    %% User interface
+    methods 
         function obj = ocp(name)
             if nargin == 1
                 obj.name = name;
@@ -119,21 +123,7 @@ classdef ocp < handle
             solver = ip.Results.solver;
             obj.guess = ip.Results.guess;
             
-            % The system is augmented before box bounds are set in order to
-            % use the correct default value for the augemented variables.
-            yop.progress.ocp_parsing();
-            obj.augment_system();
-            obj.sort_states();
-            obj.set_box_bounds();
-            obj.set_objective_fn();
-            obj.vectorize_dynamics();
-            obj.set_point_con();
-            obj.set_path_con();
-            obj.set_hard_path_con();
-            obj.set_ival_path_con();
-            obj.set_special_functions();
-            yop.progress.ocp_parsed();
-            
+            obj.to_canonical();
             nlp = yop.direct_collocation(obj, N, d, cp);
             
             solver = casadi.nlpsol('solver', solver, ...
@@ -147,177 +137,26 @@ classdef ocp < handle
                 );
             
             w_opt = struct;
-            w_opt.t0 = obj.descale_t0(nlp.t0(nlp_sol.x));
-            w_opt.tf = obj.descale_tf(nlp.tf(nlp_sol.x));
-            w_opt.t = obj.descale_t(nlp.t(nlp_sol.x));
-            w_opt.x = obj.descale_x(nlp.x(nlp_sol.x));
-            w_opt.z = obj.descale_z(nlp.z(nlp_sol.x));
-            w_opt.u = obj.descale_u(nlp.u(nlp_sol.x));
-            w_opt.p = obj.descale_p(nlp.p(nlp_sol.x));
+            w_opt.t0 = obj.descale_t0(nlp.ocp_t0(nlp_sol.x));
+            w_opt.tf = obj.descale_tf(nlp.ocp_tf(nlp_sol.x));
+            w_opt.t  = obj.descale_t (nlp.ocp_t (nlp_sol.x));
+            w_opt.x  = obj.descale_x (nlp.ocp_x (nlp_sol.x));
+            w_opt.z  = obj.descale_z (nlp.ocp_z (nlp_sol.x));
+            w_opt.u  = obj.descale_u (nlp.ocp_u (nlp_sol.x));
+            w_opt.p  = obj.descale_p (nlp.ocp_p (nlp_sol.x));
             
             sol = yop.ocp_sol(obj.mx_vars(), obj.ids, w_opt, N, d, cp);
             yop.progress.ocp_solved(solver.stats.success);
         end
         
-        function augment_system(obj)
-            
-            % Augment system based on control parametrization
-            % Step 1: Account for all control inputs
-            for uk=obj.controls
-                du = uk.ast.m_du;
-                while ~isempty(du)
-                    obj.add_unique_control(du);
-                    du = du.m_du;
-                end
-            end
-            
-            % Step 2: Promote integrated controls to states and add
-            %         augmenting equations
-            keep = [];
-            for k=1:length(obj.controls)
-                uk = obj.controls(k);
-                if ~isempty(uk.ast.m_du)
-                    obj.states(end+1) = uk;
-                    obj.ode_eqs{end+1} = ode(der(uk.ast)==uk.ast.m_du);
-                else
-                    keep(end+1) = k;
-                end
-            end
-            obj.controls = obj.controls(keep);
-
-            % Fill in blanks
-            if isempty(obj.independent)
-                obj.add_independent(yop.independent());
-            end
-            
-            if isempty(obj.independent0)
-                obj.add_independent0(yop.independent0());
-            end
-            
-            if isempty(obj.independentf)
-                obj.add_independentf(yop.independentf());
-            end
-            
-        end
         
-        function set_box_bounds(obj)
-            
-            % Time0
-            if isempty(obj.independent0.ub) && isempty(obj.independent0.lb)
-                obj.independent0.ub = yop.defaults.independent0_ub;
-                obj.independent0.lb = yop.defaults.independent0_lb;
-            end
-                
-            if isempty(obj.independent0.ub)
-                obj.independent0.ub = inf;
-            end
-                
-            if isempty(obj.independent0.lb)
-                obj.independent0.lb = -inf;
-            end
-            
-            % Timef
-            if isempty(obj.independentf.ub) && isempty(obj.independentf.lb)
-                obj.independentf.ub = yop.defaults.independentf_ub;
-                obj.independentf.lb = yop.defaults.independentf_lb; 
-            end
-            
-            if isempty(obj.independentf.ub)
-                obj.independentf.ub = inf;
-            end
-            
-            if isempty(obj.independentf.lb)
-                % User should introduce t0 <= tf
-                warning(['[Yop] Final time is unbounded from below. ', ...
-                    'If this is intentional, consider introducing ''t0 <= tf''. ', ...
-                    'If this was unintentional, set a lower bound for tf ' ...
-                    '(''tf >= value'') and consider introduction the above mentioned ' ...
-                    'constraint if t0 and tf can overlap.']);
-                obj.independentf.lb = -inf; 
-            end
-            
-            % Time
-            % Enables constraints such as 't > 0, t < 10'
-            if ~isempty(obj.independent.lb)
-                t_min = obj.independent.lb;
-                obj.independent0.lb = max(obj.independent0.lb, t_min);
-                obj.independent0.ub = max(obj.independent0.ub, t_min);
-                obj.independentf.lb = max(obj.independentf.lb, t_min);
-                obj.independentf.ub = max(obj.independentf.ub, t_min);
-            end
-            
-            if ~isempty(obj.independent.lb)
-                t_max = obj.independent.ub;
-                obj.independent0.lb = min(obj.independent0.lb, t_max);
-                obj.independent0.ub = min(obj.independent0.ub, t_max);
-                obj.independentf.lb = min(obj.independentf.lb, t_max);
-                obj.independentf.ub = min(obj.independentf.ub, t_max);
-            end
-            
-            % State
-            for x=obj.states
-                if isempty(x.ub)
-                    x.ub = yop.defaults.state_ub;
-                end
-                if isempty(x.lb)
-                    x.lb = yop.defaults.state_lb;
-                end
-                if isempty(x.ub0)
-                    x.ub0 = x.ub;
-                end
-                if isempty(x.lb0)
-                    x.lb0 = x.lb; 
-                end
-                if isempty(x.ubf)
-                    x.ubf = x.ub;
-                end
-                if isempty(x.lbf)
-                    x.lbf = x.lb;
-                end
-            end
-            
-            % Algebraics 
-            for z=obj.algebraics
-                if isempty(z.ub)
-                    z.ub = yop.defaults.algebraic_ub;
-                end
-                if isempty(z.lb)
-                    z.lb = yop.defaults.algebraic_lb;
-                end
-            end
-            
-            % Controls
-            for u=obj.controls
-                if isempty(u.ub)
-                    u.ub = yop.defaults.control_ub;
-                end
-                if isempty(u.lb)
-                    u.lb = yop.defaults.control_lb;
-                end
-                if isempty(u.ub0)
-                    u.ub0 = u.ub;
-                end
-                if isempty(u.lb0)
-                    u.lb0 = u.lb; 
-                end
-                if isempty(u.ubf)
-                    u.ubf = u.ub;
-                end
-                if isempty(u.lbf)
-                    u.lbf = u.lb;
-                end
-            end
-            
-            % Parameters
-            for p=obj.parameters
-                if isempty(p.ub)
-                    p.ub = yop.defaults.parameter_ub;
-                end
-                if isempty(p.lb)
-                    p.lb = yop.defaults.parameter_lb;
-                end
-            end
+        function obj = set_guess(obj, guess)
+           obj.guess = guess; 
         end
+    end
+    
+    %% Parsing
+    methods 
         
         function set_objective(obj, expr)
             % Topological sort of expression in order to find variables,
@@ -353,361 +192,6 @@ classdef ocp < handle
             
             % Passed error check - assign value
             obj.objective.ast = expr;
-        end
-        
-        function obj = set_objective_fn(obj)
-            t0 = mx_vec(obj.independent0);
-            tf = mx_vec(obj.independentf);
-            pp = mx_vec(obj.parameters);
-            tp = mx_vec(obj.tps);
-            ii = mx_vec(obj.ints);
-            args = {t0,tf,pp,tp,ii};
-            J = casadi.Function('J', args, {value(obj.objective.ast)});
-            
-            % The nlp variables are scaled, so they must be descaled before
-            % the expression can be evaluate.
-            t0s = t0 .* obj.W_t0 - obj.OS_t0;
-            tfs = tf .* obj.W_tf - obj.OS_tf;
-            pps = pp .* obj.W_p  - obj.OS_p;
-            Js  = J(t0s, tfs, pps, tp, ii);
-            obj.objective.fn = casadi.Function('Js', args, {Js});
-        end 
-        
-        function obj = set_special_functions(obj)
-            for sn = obj.snodes
-                sn.fn = obj.dsfn(value(sn.ast.m_expr));
-            end
-        end
-        
-        function vectorize_dynamics(obj)
-            % Vectorize the equation
-            n_ode = length(obj.ode_eqs);
-            tmp_lhs = cell(n_ode, 1);
-            tmp_rhs = cell(n_ode, 1);
-            for k=1:length(obj.ode_eqs)
-                tmp_lhs{k} = obj.ode_eqs{k}.m_lhs;
-                tmp_rhs{k} = obj.ode_eqs{k}.m_rhs;
-            end
-            ode_lhs = vertcat(tmp_lhs{:});
-            
-            % Test if all states are bound to an ode
-            [~, ode_ids] = Type(ode_lhs);
-            [ode_ids, idx] = sort(ode_ids);
-            x_ids = obj.get_state_ids();
-            if ~isequal(x_ids, ode_ids)
-                state_ast = {};
-                for id = setdiff(ode_ids, x_ids)
-                    state_ast{end+1} = obj.find_variable(id);
-                end
-                error(yop.error.missing_state_derivative(state_ast));
-            end
-            
-            % Change order of equations so that state vector and ode
-            % equation order match
-            obj.ode.m_lhs = ode_lhs(idx);
-            obj.ode.m_rhs = vertcat(tmp_rhs{idx});
-            
-            % Algebraic equation
-            nz = length(obj.alg_eqs);
-            alg_rhs = cell(nz,1);
-            for k=1:nz
-                z_k = obj.alg_eqs{k};
-                alg_rhs{k} = z_k.m_rhs - z_k.m_lhs;
-            end
-            obj.alg.m_lhs = zeros(nz, 1);
-            obj.alg.m_rhs = vertcat(alg_rhs{:});
-            
-            % Compute symbolic functions of the dynamics
-            obj.set_dynamics_fn();
-        end
-        
-        function obj = set_dynamics_fn(obj)
-            ode_expr = value(obj.ode.m_rhs);
-            alg_expr = value(obj.alg.m_rhs);
-            f = casadi.Function('f', obj.mx_args(), {ode_expr});
-            
-            % Descale input variables, evaluate ode rhs, scale derivative
-            dargs = obj.mx_dargs();
-            fs = f(dargs{:}).*(1./obj.W_x);
-            obj.ode.fn = casadi.Function('ode', obj.mx_args(), {fs});
-            obj.alg.fn = obj.dsfn(alg_expr, 'alg');
-        end
-        
-        function set_path_con(obj)                       
-            expr = value(vertcat(obj.ec_eqs{:}, obj.iec_eqs{:}));
-            obj.path.fn = obj.dsfn(expr(:), 'eq');
-            n_eq  = length(obj.ec_eqs);
-            n_ieq = length(obj.iec_eqs);
-            obj.path.ub = zeros(n_eq+n_ieq, 1);
-            obj.path.lb = [zeros(n_eq,1); -inf(n_ieq,1)];
-        end
-        
-        function set_hard_path_con(obj)
-            expr = value(vertcat(obj.ec_hard_eqs{:}, obj.iec_hard_eqs{:}));
-            obj.path_hard.fn = obj.dsfn(expr(:), 'heq');
-            n_eq  = length(obj.ec_hard_eqs);
-            n_ieq = length(obj.iec_hard_eqs);
-            obj.path_hard.ub = zeros(n_eq+n_ieq, 1);
-            obj.path_hard.lb = [zeros(n_eq,1); -inf(n_ieq,1)];
-        end
-        
-        function set_point_con(obj)
-            expr = value(vertcat(obj.ec_point_eqs{:}, obj.iec_point_eqs{:}));
-            obj.point.fn = obj.dsfn(expr(:), 'peq');
-            n_eq = length(obj.ec_point_eqs);
-            n_ieq = length(obj.iec_point_eqs);
-            obj.point.ub = zeros(n_eq+n_ieq, 1);
-            obj.point.lb = [zeros(n_eq,1); -inf(n_ieq,1)];
-        end
-        
-        function set_ival_path_con(obj)
-            data = yop.ival.empty(1,0);
-            for k=1:length(obj.ec_ival_eqs)
-                ik = obj.ec_ival_eqs{k};
-                [t0, tf] = get_ival(ik);
-                data(k).t0 = t0;
-                data(k).tf = tf;
-                data(k).ast = ik;
-                data(k).ub = 0;
-                data(k).lb = 0;
-                expr = value(ik);
-                data(k).fn = obj.dsfn(expr(:), 'iveq');
-            end
-            
-            for k=1:length(obj.iec_ival_eqs)
-                ik = obj.iec_ival_eqs{k};
-                [t0, tf] = get_ival(ik);
-                data(k).t0 = t0;
-                data(k).tf = tf;
-                data(k).ast = ik;
-                data(k).ub = 0;
-                data(k).lb = -inf;
-                expr = value(ik);
-                data(k).fn = obj.dsfn(expr(:), 'ivieq');
-            end
-            
-            obj.path_ival = data;
-        end
-        
-        function args = mx_vars(obj)
-            args = { ...
-                mx_vec(obj.independent0), ...
-                mx_vec(obj.independentf), ...
-                mx_vec(obj.independent), ...
-                mx_vec(obj.states), ...
-                mx_vec(obj.algebraics), ...
-                mx_vec(obj.controls), ...
-                mx_vec(obj.parameters) ...
-                };
-        end
-        
-        function args = mx_args(obj)
-            args = { ...
-                mx_vec(obj.independent0), ...
-                mx_vec(obj.independentf), ...
-                mx_vec(obj.independent), ...
-                mx_vec(obj.states), ...
-                mx_vec(obj.algebraics), ...
-                mx_vec(obj.controls), ...
-                mx_vec(obj.parameters), ...
-                mx_vec(obj.tps), ...
-                mx_vec(obj.ints), ...
-                mx_vec(obj.ders) ...
-                };
-        end
-        
-        function fn = dsfn(obj, expr, fname)
-            % descaled function
-            if nargin == 2
-                fname = 'f';
-            end
-            args  = obj.mx_args();
-            dargs = obj.mx_dargs();
-            tmp = casadi.Function(fname, args, {expr});
-            fn  = casadi.Function(fname, args, {tmp(dargs{:})});
-        end
-        
-        function args = mx_dargs(obj)
-            % Descale
-            t0 = obj.descale_t0(mx_vec(obj.independent0));
-            tf = obj.descale_tf(mx_vec(obj.independentf));
-            tt = obj.descale_t (mx_vec(obj.independent));
-            xx = obj.descale_x (mx_vec(obj.states));
-            zz = obj.descale_z (mx_vec(obj.algebraics));
-            uu = obj.descale_u (mx_vec(obj.controls));
-            pp = obj.descale_p (mx_vec(obj.parameters));
-            tp = mx_vec(obj.tps);
-            ii = mx_vec(obj.ints);
-            dd = mx_vec(obj.ders);
-            args = {t0, tf, tt, xx, zz, uu, pp, tp, ii, dd};
-        end
-        
-        function vs = scale_t0(obj, v)
-            % scale t0
-            vs = (v + obj.OS_t0).*(1./obj.W_t0);
-        end
-        
-        function vs = scale_tf(obj, v)
-            % scale tf
-            vs = (v + obj.OS_tf).*(1./obj.W_tf);
-        end
-        
-        function vs = scale_t(obj, v)
-            % scale t
-            vs = (v + obj.OS_t).*(1./obj.W_t);
-        end
-        
-        function vs = scale_x(obj, v)
-            % scale x
-            vs = (v + obj.OS_x).*(1./obj.W_x);
-        end
-        
-        function vs = scale_z(obj, v)
-            % scale z
-            vs = (v + obj.OS_z).*(1./obj.W_z);
-        end
-        
-        function vs = scale_u(obj, v)
-            % scale u
-            vs = (v + obj.OS_u).*(1./obj.W_u);
-        end
-        
-        function vs = scale_p(obj, v)
-            % scale p
-            vs = (v + obj.OS_p).*(1./obj.W_p);
-        end
-        
-        function v = descale_t0(obj, vs)
-            % descale t0
-            if isempty(vs)
-                v = vs;
-            else
-                v = vs.*obj.W_t0 - obj.OS_t0;
-            end
-        end
-        
-        function v = descale_tf(obj, vs)
-            % descale tf
-            if isempty(vs)
-                v = vs;
-            else
-                v = vs.*obj.W_tf - obj.OS_tf;
-            end
-        end
-        
-        function v = descale_t(obj, vs)
-            % descale t
-            if isempty(vs)
-                v = vs;
-            else
-                v = vs.*obj.W_t - obj.OS_t;
-            end
-        end
-        
-        function v = descale_x(obj, vs)
-            % descale x
-            if isempty(vs)
-                v = vs;
-            else
-                v = vs.*obj.W_x - obj.OS_x;
-            end
-        end
-        
-        function v = descale_z(obj, vs)
-            % descale z
-            if isempty(vs)
-                v = vs;
-            else
-                v = vs.*obj.W_z - obj.OS_z;
-            end
-        end
-        
-        function v = descale_u(obj, vs)
-            % descale u
-            if isempty(vs)
-                v = vs;
-            else
-                v = vs.*obj.W_u - obj.OS_u;
-            end
-        end
-        
-        function v = descale_p(obj, vs)
-            % descale p
-            if isempty(vs)
-                v = vs;
-            else
-                v = vs.*obj.W_p - obj.OS_p;
-            end
-        end
-        
-        function W = W_t0(obj)
-            W = obj.independent0.weight;
-        end
-        
-        function W = W_tf(obj)
-            W = obj.independentf.weight;
-        end
-        
-        function W = W_t(obj)
-            W = obj.independent.weight;
-        end
-        
-        function W = W_x(obj)
-            W = obj.states.weight;
-        end
-        
-        function W = W_z(obj)
-            W = obj.algebraics.weight;
-        end
-        
-        function W = W_u(obj)
-            W = obj.controls.weight;
-        end
-        
-        function W = W_p(obj)
-            W = obj.parameters.weight;
-        end
-        
-        function OS = OS_t0(obj)
-            OS = obj.independent0.offset;
-        end
-        
-        function OS = OS_tf(obj)
-            OS = obj.independentf.offset;
-        end
-        
-        function OS = OS_t(obj)
-            OS = obj.independent.offset;
-        end
-        
-        function OS = OS_x(obj)
-            OS = obj.states.offset;
-        end
-        
-        function OS = OS_z(obj)
-            OS = obj.algebraics.offset;
-        end
-        
-        function OS = OS_u(obj)
-            OS = obj.controls.offset;
-        end
-        
-        function OS = OS_p(obj)
-            OS = obj.parameters.offset;
-        end
-        
-        function ids = get_state_ids(obj)
-            nx = length(obj.states);
-            ids = zeros(nx,1);
-            for k=1:nx
-                ids(k) = obj.states(k).ast.m_id;
-            end
-        end
-        
-        function ids = sort_states(obj)
-            % Change state order so that they come in id order
-            [ids, idx] = sort(obj.get_state_ids());
-            obj.states = obj.states(idx);
         end
         
         function parse_constraint(obj, c)
@@ -959,34 +443,7 @@ classdef ocp < handle
                     return;
                 end
             end
-            
             error(yop.error.failed_to_find_variable(id));
-        end
-        
-        function v = variables(obj)
-            v = [obj.independent, obj.independent0, obj.independentf, ...
-                obj.states, obj.algebraics, obj.controls, obj.parameters];
-        end
-        
-        function remove_state_der(obj, id)
-            % Remove the state derivative node if all elements covered by
-            % the derivative are states.
-            for k=1:length(obj.ders)
-                if all(isa_der(obj.ders(k).ast)) && all(obj.ders(k).ast.m_der == id)
-                    if all(Type(obj.ders(k).ast) == yop.var_type.state)
-                        to_remove = obj.ders(k);
-                        obj.ders = [obj.ders(1:k-1), obj.ders(k+1:end)]; 
-                        % Also need to remove it from special nodes vector
-                        for n=1:length(obj.snodes)
-                            if obj.snodes(n) == to_remove
-                                obj.snodes = [obj.snodes(1:n-1), ...
-                                    obj.snodes(n+1:end)];
-                                return;
-                            end
-                        end
-                    end
-                end
-            end
         end
         
         function tp_int = find_special_nodes(obj, expression)
@@ -1025,6 +482,581 @@ classdef ocp < handle
             end
         end
         
+    end
+    
+    %% Canonical form
+    methods
+        
+        function obj = to_canonical(obj)
+            yop.progress.ocp_parsing();
+            % The system is augmented before box bounds are set in order to
+            % use the correct default value for the augemented variables.
+            obj.augment_system();
+            obj.sort_states();
+            obj.set_box_bounds();
+            obj.set_objective_fn();
+            obj.vectorize_dynamics();
+            obj.set_point_con();
+            obj.set_path_con();
+            obj.set_hard_path_con();
+            obj.set_ival_path_con();
+            obj.set_special_functions();
+            yop.progress.ocp_parsed();
+        end
+        
+        function obj = augment_system(obj)
+            
+            % Augment system based on control parametrization
+            % Step 1: Account for all control inputs
+            for uk=obj.controls
+                du = uk.ast.m_du;
+                while ~isempty(du)
+                    obj.add_unique_control(du);
+                    du = du.m_du;
+                end
+            end
+            
+            % Step 2: Promote integrated controls to states and add
+            %         augmenting equations
+            keep = [];
+            for k=1:length(obj.controls)
+                uk = obj.controls(k);
+                if ~isempty(uk.ast.m_du)
+                    obj.states(end+1) = uk;
+                    obj.ode_eqs{end+1} = ode(yop.ast_der(uk.ast)==uk.ast.m_du);
+                else
+                    keep(end+1) = k;
+                end
+            end
+            obj.controls = obj.controls(keep);
+
+            % Fill in blanks
+            if isempty(obj.independent)
+                obj.add_independent(yop.independent());
+            end
+            
+            if isempty(obj.independent0)
+                obj.add_independent0(yop.independent0());
+            end
+            
+            if isempty(obj.independentf)
+                obj.add_independentf(yop.independentf());
+            end
+            
+        end
+        
+        function obj = set_box_bounds(obj)
+            
+            % Time0
+            if isempty(obj.independent0.ub) && isempty(obj.independent0.lb)
+                obj.independent0.ub = yop.defaults.independent0_ub;
+                obj.independent0.lb = yop.defaults.independent0_lb;
+            end
+                
+            if isempty(obj.independent0.ub)
+                obj.independent0.ub = inf;
+            end
+                
+            if isempty(obj.independent0.lb)
+                obj.independent0.lb = -inf;
+            end
+            
+            % Timef
+            if isempty(obj.independentf.ub) && isempty(obj.independentf.lb)
+                obj.independentf.ub = yop.defaults.independentf_ub;
+                obj.independentf.lb = yop.defaults.independentf_lb; 
+            end
+            
+            if isempty(obj.independentf.ub)
+                obj.independentf.ub = inf;
+            end
+            
+            if isempty(obj.independentf.lb)
+                % User should introduce t0 <= tf
+                warning(['[Yop] Final time is unbounded from below. ', ...
+                    'If this is intentional, consider introducing ''t0 <= tf''. ', ...
+                    'If this was unintentional, set a lower bound for tf ' ...
+                    '(''tf >= value'') and consider introduction the above mentioned ' ...
+                    'constraint if t0 and tf can overlap.']);
+                obj.independentf.lb = -inf; 
+            end
+            
+            % Time
+            % Enables constraints such as 't > 0, t < 10'
+            if ~isempty(obj.independent.lb)
+                t_min = obj.independent.lb;
+                obj.independent0.lb = max(obj.independent0.lb, t_min);
+                obj.independent0.ub = max(obj.independent0.ub, t_min);
+                obj.independentf.lb = max(obj.independentf.lb, t_min);
+                obj.independentf.ub = max(obj.independentf.ub, t_min);
+            end
+            
+            if ~isempty(obj.independent.lb)
+                t_max = obj.independent.ub;
+                obj.independent0.lb = min(obj.independent0.lb, t_max);
+                obj.independent0.ub = min(obj.independent0.ub, t_max);
+                obj.independentf.lb = min(obj.independentf.lb, t_max);
+                obj.independentf.ub = min(obj.independentf.ub, t_max);
+            end
+            
+            % State
+            for x=obj.states
+                if isempty(x.ub)
+                    x.ub = yop.defaults.state_ub;
+                end
+                if isempty(x.lb)
+                    x.lb = yop.defaults.state_lb;
+                end
+                if isempty(x.ub0)
+                    x.ub0 = x.ub;
+                end
+                if isempty(x.lb0)
+                    x.lb0 = x.lb; 
+                end
+                if isempty(x.ubf)
+                    x.ubf = x.ub;
+                end
+                if isempty(x.lbf)
+                    x.lbf = x.lb;
+                end
+            end
+            
+            % Algebraics 
+            for z=obj.algebraics
+                if isempty(z.ub)
+                    z.ub = yop.defaults.algebraic_ub;
+                end
+                if isempty(z.lb)
+                    z.lb = yop.defaults.algebraic_lb;
+                end
+            end
+            
+            % Controls
+            for u=obj.controls
+                if isempty(u.ub)
+                    u.ub = yop.defaults.control_ub;
+                end
+                if isempty(u.lb)
+                    u.lb = yop.defaults.control_lb;
+                end
+                if isempty(u.ub0)
+                    u.ub0 = u.ub;
+                end
+                if isempty(u.lb0)
+                    u.lb0 = u.lb; 
+                end
+                if isempty(u.ubf)
+                    u.ubf = u.ub;
+                end
+                if isempty(u.lbf)
+                    u.lbf = u.lb;
+                end
+            end
+            
+            % Parameters
+            for p=obj.parameters
+                if isempty(p.ub)
+                    p.ub = yop.defaults.parameter_ub;
+                end
+                if isempty(p.lb)
+                    p.lb = yop.defaults.parameter_lb;
+                end
+            end
+        end
+        
+        function obj = set_objective_fn(obj)
+            t0 = mx_vec(obj.independent0);
+            tf = mx_vec(obj.independentf);
+            pp = mx_vec(obj.parameters);
+            tp = mx_vec(obj.tps);
+            ii = mx_vec(obj.ints);
+            args = {t0,tf,pp,tp,ii};
+            J = casadi.Function('J', args, {value(obj.objective.ast)});
+            
+            % The nlp variables are scaled, so they must be descaled before
+            % the expression can be evaluate.
+            t0s = t0 .* obj.W_t0 - obj.OS_t0;
+            tfs = tf .* obj.W_tf - obj.OS_tf;
+            pps = pp .* obj.W_p  - obj.OS_p;
+            Js  = J(t0s, tfs, pps, tp, ii);
+            obj.objective.fn = casadi.Function('Js', args, {Js});
+        end 
+        
+        function obj = set_special_functions(obj)
+            for sn = obj.snodes
+                sn.fn = obj.dsfn(value(sn.ast.m_expr));
+            end
+        end
+        
+        function obj = vectorize_dynamics(obj)
+            % Vectorize the equation
+            n_ode = length(obj.ode_eqs);
+            tmp_lhs = cell(n_ode, 1);
+            tmp_rhs = cell(n_ode, 1);
+            for k=1:length(obj.ode_eqs)
+                tmp_lhs{k} = obj.ode_eqs{k}.m_lhs;
+                tmp_rhs{k} = obj.ode_eqs{k}.m_rhs;
+            end
+            ode_lhs = vertcat(tmp_lhs{:});
+            
+            % Test if all states are bound to an ode
+            [~, ode_ids] = Type(ode_lhs);
+            [ode_ids, idx] = sort(ode_ids);
+            x_ids = obj.get_state_ids();
+            if ~isequal(x_ids, ode_ids)
+                state_ast = {};
+                for id = setdiff(ode_ids, x_ids)
+                    state_ast{end+1} = obj.find_variable(id);
+                end
+                error(yop.error.missing_state_derivative(state_ast));
+            end
+            
+            % Change order of equations so that state vector and ode
+            % equation order match
+            obj.ode.m_lhs = ode_lhs(idx);
+            obj.ode.m_rhs = vertcat(tmp_rhs{idx});
+            
+            % Algebraic equation
+            nz = length(obj.alg_eqs);
+            alg_rhs = cell(nz,1);
+            for k=1:nz
+                z_k = obj.alg_eqs{k};
+                alg_rhs{k} = z_k.m_rhs - z_k.m_lhs;
+            end
+            obj.alg.m_lhs = zeros(nz, 1);
+            obj.alg.m_rhs = vertcat(alg_rhs{:});
+            
+            % Compute symbolic functions of the dynamics
+            obj.set_dynamics_fn();
+        end
+        
+        function obj = set_dynamics_fn(obj)
+            ode_expr = value(obj.ode.m_rhs);
+            alg_expr = value(obj.alg.m_rhs);
+            f = casadi.Function('f', obj.mx_args(), {ode_expr});
+            
+            % Descale input variables, evaluate ode rhs, scale derivative
+            dargs = obj.mx_dargs();
+            fs = f(dargs{:}).*(1./obj.W_x);
+            obj.ode.fn = casadi.Function('ode', obj.mx_args(), {fs});
+            obj.alg.fn = obj.dsfn(alg_expr, 'alg');
+        end
+        
+        function obj = set_path_con(obj)                       
+            expr = value(vertcat(obj.ec_eqs{:}, obj.iec_eqs{:}));
+            obj.path.fn = obj.dsfn(expr(:), 'eq');
+            n_eq  = length(obj.ec_eqs);
+            n_ieq = length(obj.iec_eqs);
+            obj.path.ub = zeros(n_eq+n_ieq, 1);
+            obj.path.lb = [zeros(n_eq,1); -inf(n_ieq,1)];
+        end
+        
+        function obj = set_hard_path_con(obj)
+            expr = value(vertcat(obj.ec_hard_eqs{:}, obj.iec_hard_eqs{:}));
+            obj.path_hard.fn = obj.dsfn(expr(:), 'heq');
+            n_eq  = length(obj.ec_hard_eqs);
+            n_ieq = length(obj.iec_hard_eqs);
+            obj.path_hard.ub = zeros(n_eq+n_ieq, 1);
+            obj.path_hard.lb = [zeros(n_eq,1); -inf(n_ieq,1)];
+        end
+        
+        function obj = set_point_con(obj)
+            expr = value(vertcat(obj.ec_point_eqs{:}, obj.iec_point_eqs{:}));
+            obj.point.fn = obj.dsfn(expr(:), 'peq');
+            n_eq = length(obj.ec_point_eqs);
+            n_ieq = length(obj.iec_point_eqs);
+            obj.point.ub = zeros(n_eq+n_ieq, 1);
+            obj.point.lb = [zeros(n_eq,1); -inf(n_ieq,1)];
+        end
+        
+        function obj = set_ival_path_con(obj)
+            data = yop.ival.empty(1,0);
+            for k=1:length(obj.ec_ival_eqs)
+                ik = obj.ec_ival_eqs{k};
+                [t0, tf] = get_ival(ik);
+                data(k).t0 = t0;
+                data(k).tf = tf;
+                data(k).ast = ik;
+                data(k).ub = 0;
+                data(k).lb = 0;
+                expr = value(ik);
+                data(k).fn = obj.dsfn(expr(:), 'iveq');
+            end
+            
+            for k=1:length(obj.iec_ival_eqs)
+                ik = obj.iec_ival_eqs{k};
+                [t0, tf] = get_ival(ik);
+                data(k).t0 = t0;
+                data(k).tf = tf;
+                data(k).ast = ik;
+                data(k).ub = 0;
+                data(k).lb = -inf;
+                expr = value(ik);
+                data(k).fn = obj.dsfn(expr(:), 'ivieq');
+            end
+            
+            obj.path_ival = data;
+        end
+        
+        function args = mx_vars(obj)
+            args = { ...
+                mx_vec(obj.independent0), ...
+                mx_vec(obj.independentf), ...
+                mx_vec(obj.independent), ...
+                mx_vec(obj.states), ...
+                mx_vec(obj.algebraics), ...
+                mx_vec(obj.controls), ...
+                mx_vec(obj.parameters) ...
+                };
+        end
+        
+        function args = mx_args(obj)
+            args = { ...
+                mx_vec(obj.independent0), ...
+                mx_vec(obj.independentf), ...
+                mx_vec(obj.independent), ...
+                mx_vec(obj.states), ...
+                mx_vec(obj.algebraics), ...
+                mx_vec(obj.controls), ...
+                mx_vec(obj.parameters), ...
+                mx_vec(obj.tps), ...
+                mx_vec(obj.ints), ...
+                mx_vec(obj.ders) ...
+                };
+        end
+        
+        function fn = dsfn(obj, expr, fname)
+            % descaled function
+            if nargin == 2
+                fname = 'f';
+            end
+            args  = obj.mx_args();
+            dargs = obj.mx_dargs();
+            tmp = casadi.Function(fname, args, {expr});
+            fn  = casadi.Function(fname, args, {tmp(dargs{:})});
+        end
+        
+        function args = mx_dargs(obj)
+            % Descale
+            t0 = obj.descale_t0(mx_vec(obj.independent0));
+            tf = obj.descale_tf(mx_vec(obj.independentf));
+            tt = obj.descale_t (mx_vec(obj.independent));
+            xx = obj.descale_x (mx_vec(obj.states));
+            zz = obj.descale_z (mx_vec(obj.algebraics));
+            uu = obj.descale_u (mx_vec(obj.controls));
+            pp = obj.descale_p (mx_vec(obj.parameters));
+            tp = mx_vec(obj.tps);
+            ii = mx_vec(obj.ints);
+            dd = mx_vec(obj.ders);
+            args = {t0, tf, tt, xx, zz, uu, pp, tp, ii, dd};
+        end
+        
+        function vs = scale_t0(obj, v)
+            % scale t0
+            vs = (v + obj.OS_t0).*(1./obj.W_t0);
+        end
+        
+        function vs = scale_tf(obj, v)
+            % scale tf
+            vs = (v + obj.OS_tf).*(1./obj.W_tf);
+        end
+        
+        function vs = scale_t(obj, v)
+            % scale t
+            vs = (v + obj.OS_t).*(1./obj.W_t);
+        end
+        
+        function vs = scale_x(obj, v)
+            % scale x
+            vs = (v + obj.OS_x).*(1./obj.W_x);
+        end
+        
+        function vs = scale_z(obj, v)
+            % scale z
+            vs = (v + obj.OS_z).*(1./obj.W_z);
+        end
+        
+        function vs = scale_u(obj, v)
+            % scale u
+            vs = (v + obj.OS_u).*(1./obj.W_u);
+        end
+        
+        function vs = scale_p(obj, v)
+            % scale p
+            vs = (v + obj.OS_p).*(1./obj.W_p);
+        end
+        
+        function v = descale_t0(obj, vs)
+            % descale t0
+            if isempty(vs)
+                v = vs;
+            else
+                v = vs.*obj.W_t0 - obj.OS_t0;
+            end
+        end
+        
+        function v = descale_tf(obj, vs)
+            % descale tf
+            if isempty(vs)
+                v = vs;
+            else
+                v = vs.*obj.W_tf - obj.OS_tf;
+            end
+        end
+        
+        function v = descale_t(obj, vs)
+            % descale t
+            if isempty(vs)
+                v = vs;
+            else
+                v = vs.*obj.W_t - obj.OS_t;
+            end
+        end
+        
+        function v = descale_x(obj, vs)
+            % descale x
+            if isempty(vs)
+                v = vs;
+            else
+                v = vs.*obj.W_x - obj.OS_x;
+            end
+        end
+        
+        function v = descale_z(obj, vs)
+            % descale z
+            if isempty(vs)
+                v = vs;
+            else
+                v = vs.*obj.W_z - obj.OS_z;
+            end
+        end
+        
+        function v = descale_u(obj, vs)
+            % descale u
+            if isempty(vs)
+                v = vs;
+            else
+                v = vs.*obj.W_u - obj.OS_u;
+            end
+        end
+        
+        function v = descale_p(obj, vs)
+            % descale p
+            if isempty(vs)
+                v = vs;
+            else
+                v = vs.*obj.W_p - obj.OS_p;
+            end
+        end
+        
+        function W = W_t0(obj)
+            W = obj.independent0.weight;
+        end
+        
+        function W = W_tf(obj)
+            W = obj.independentf.weight;
+        end
+        
+        function W = W_t(obj)
+            W = obj.independent.weight;
+        end
+        
+        function W = W_x(obj)
+            W = obj.states.weight;
+        end
+        
+        function W = W_z(obj)
+            W = obj.algebraics.weight;
+        end
+        
+        function W = W_u(obj)
+            W = obj.controls.weight;
+        end
+        
+        function W = W_p(obj)
+            W = obj.parameters.weight;
+        end
+        
+        function OS = OS_t0(obj)
+            OS = obj.independent0.offset;
+        end
+        
+        function OS = OS_tf(obj)
+            OS = obj.independentf.offset;
+        end
+        
+        function OS = OS_t(obj)
+            OS = obj.independent.offset;
+        end
+        
+        function OS = OS_x(obj)
+            OS = obj.states.offset;
+        end
+        
+        function OS = OS_z(obj)
+            OS = obj.algebraics.offset;
+        end
+        
+        function OS = OS_u(obj)
+            OS = obj.controls.offset;
+        end
+        
+        function OS = OS_p(obj)
+            OS = obj.parameters.offset;
+        end
+        
+        function IDs = ids(obj)
+            IDs = [obj.independent0.ids, obj.independentf.ids, ...
+                obj.independent.ids, obj.states.ids, obj.algebraics.ids, ...
+                obj.controls.ids, obj.parameters.ids];
+        end
+        
+        function ids = get_state_ids(obj)
+            nx = length(obj.states);
+            ids = zeros(nx,1);
+            for k=1:nx
+                ids(k) = obj.states(k).ast.m_id;
+            end
+        end
+        
+        function ids = sort_states(obj)
+            % Change state order so that they come in id order
+            [ids, idx] = sort(obj.get_state_ids());
+            obj.states = obj.states(idx);
+        end
+        
+        
+        
+        function v = variables(obj)
+            v = [obj.independent, obj.independent0, obj.independentf, ...
+                obj.states, obj.algebraics, obj.controls, obj.parameters];
+        end
+        
+        function remove_state_der(obj, id)
+            % Remove the state derivative node if all elements covered by
+            % the derivative are states.
+            for k=1:length(obj.ders)
+                if all(isa_der(obj.ders(k).ast)) && all(obj.ders(k).ast.m_der == id)
+                    if all(Type(obj.ders(k).ast) == yop.var_type.state)
+                        to_remove = obj.ders(k);
+                        obj.ders = [obj.ders(1:k-1), obj.ders(k+1:end)]; 
+                        % Also need to remove it from special nodes vector
+                        for n=1:length(obj.snodes)
+                            if obj.snodes(n) == to_remove
+                                obj.snodes = [obj.snodes(1:n-1), ...
+                                    obj.snodes(n+1:end)];
+                                return;
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        
+    end
+       
+    %% Helper functions / Misc
+    methods
         function add_variable(obj, v)
             switch class(v)
                 case 'yop.ast_independent'
@@ -1092,6 +1124,10 @@ classdef ocp < handle
         function obj = add_parameter(obj, p)
             obj.parameters(end+1) = yop.ocp_var(p);
         end
+    end
+    
+    %% NLP Interface
+    methods
         
         function n = n_x(obj)
             n = length(obj.states);
@@ -1119,6 +1155,18 @@ classdef ocp < handle
         
         function n = n_der(obj)
             n = n_elem(obj.ders);
+        end
+        
+        function bool = has_initial_guess(obj)
+            bool = ~isempty(obj.guess);
+        end
+        
+        function bool = has_path(obj)
+            bool = ~isempty(obj.path.ub);
+        end
+        
+        function bool = has_hard_path(obj)
+            bool = ~isempty(obj.path_hard.ub);
         end
         
         function bd = t0_ub(obj, t)
@@ -1229,6 +1277,30 @@ classdef ocp < handle
             bd = obj.scale_x(bd(:));
         end
         
+        function bd = z_ub(obj, t)
+            bd = [];
+            if ~isempty(obj.algebraics)
+                if isa(obj.algebraics.ub, 'function_handle')
+                    bd = obj.algebraics.ub(t);
+                else
+                    bd = obj.algebraics.ub;
+                end
+            end
+            bd = obj.scale_z(bd(:));
+        end
+        
+        function bd = z_lb(obj, t)
+            bd = [];
+            if ~isempty(obj.algebraics)
+                if isa(obj.algebraics.lb, 'function_handle')
+                    bd = obj.algebraics.lb(t);
+                else
+                    bd = obj.algebraics.lb;
+                end
+            end
+            bd = obj.scale_z(bd(:));
+        end
+        
         function bd = u0_ub(obj, t)
             bd = [];
             for v = obj.controls
@@ -1325,30 +1397,6 @@ classdef ocp < handle
             bd = obj.scale_p(bd(:));
         end
         
-        function bd = z_ub(obj, t)
-            bd = [];
-            if ~isempty(obj.algebraics)
-                if isa(obj.algebraics.ub, 'function_handle')
-                    bd = obj.algebraics.ub(t);
-                else
-                    bd = obj.algebraics.ub;
-                end
-            end
-            bd = obj.scale_z(bd(:));
-        end
-        
-        function bd = z_lb(obj, t)
-            bd = [];
-            if ~isempty(obj.algebraics)
-                if isa(obj.algebraics.lb, 'function_handle')
-                    bd = obj.algebraics.lb(t);
-                else
-                    bd = obj.algebraics.lb;
-                end
-            end
-            bd = obj.scale_z(bd(:));
-        end
-        
         function [bool, t0, tf] = fixed_horizon(obj)
             t0_ub = obj.independent0.ub;
             t0_lb = obj.independent0.lb;
@@ -1360,10 +1408,6 @@ classdef ocp < handle
             
             t0 = t0_lb;
             tf = tf_lb;
-        end
-        
-        function bool = has_initial_guess(obj)
-            bool = ~isempty(obj.guess);
         end
         
         function [t00, tf0, t0, x0, z0, u0, p0] = initial_guess(obj)
@@ -1414,18 +1458,19 @@ classdef ocp < handle
             u0 = (u0 + obj.OS_u').*(1./obj.W_u');
         end
         
-        function bool = has_path(obj)
-            bool = ~isempty(obj.path.ub);
-        end
-        
-        function bool = has_hard_path(obj)
-            bool = ~isempty(obj.path_hard.ub);
-        end
-        
-        function IDs = ids(obj)
-            IDs = [obj.independent0.ids, obj.independentf.ids, ...
-                obj.independent.ids, obj.states.ids, obj.algebraics.ids, ...
-                obj.controls.ids, obj.parameters.ids];
+    end
+    
+    
+    %% Multi-phase - Overloading for multiple phase problems
+    methods
+        function sum = plus(lhs, rhs)
+            if isempty(lhs.m_nlp)
+                lhs.build();
+            end
+            if isempty(rhs.m_nlp)
+                rhs.build();
+            end
+            
         end
     end
 end

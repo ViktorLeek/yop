@@ -29,6 +29,10 @@ classdef ast_variable < yop.ast_expression
             obj.m_weight = w;
         end
         
+        function obj = scaling(obj, w)
+            obj.weight(w);
+        end
+        
         function obj = offset(obj, os)
             obj.m_offset = os;
         end

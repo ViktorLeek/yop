@@ -1,9 +1,9 @@
 classdef defaults
     properties (Constant) % OCP
-        independent0_ub = 0;
-        independent0_lb = 0;
+        independent0_ub = inf;
+        independent0_lb = -inf;
         independentf_ub = inf;
-        independentf_lb = 0;
+        independentf_lb = -inf;
         
         state_ub0 = inf;
         state_ubf = inf;

@@ -1,16 +1,33 @@
-% Yop - A MATLAB Toolbox for Numerical Optimal Control
+%MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+%MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+%MMMM           MMMM           MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+%MMMM           MMMM           MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+%MMMMMMM\     \MMMMMM/     /MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+%MMMMMMMM\     \MMMM/     /MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+%MMMMMMMMM\     \MM/     /MMMMMMMM/-´´´-\MMMMMMMM        W/        \MMMMMMM
+%MMMMMMMMMM\     \/     /MMMMM/`           `\MMMM                   \MMMMMM
+%MMMMMMMMMMM\          /MMMMM`     -+o+-     `MMMMMM       -++-      \MMMMM
+%MMMMMMMMMMMM\        /MMMMM`     oMMMMMo     `MMMMM      oMMMMo      MMMMM
+%MMMMMMMMMMMMM|      |MMMMMM      MMMMMMM      MMMMM     +MMMMMM+     MMMMM
+%MMMMMMMMMMMMM|      |MMMMMM      MMMMMMM      MMMMM     +MMMMMM+     MMMMM
+%MMMMMMMMMMMMM|      |MMMMMM.     oMMMMMo     .MMMMM      oMMMMo     /MMMMM
+%MMMMMMMMMM              MMMM.     -+o+-     .MMMMMM       -++-     /MMMMMM
+%MMMMMMMMMM              MMMMMo.           .oMMMMMMM     A         /MMMMMMM
+%MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMho\-...-/sdMMMMMMMMM     M\----/MMMMMMMMMMM
+%MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM     MMMMMMMMMMMMMMMMMM
+%MMMMM A MATLAB TOOLBOX FOR OPTIMAL CONTROL MMMMMMMM     MMMMMMMMMMMMMMMMMM
+%MMMMM © (2022) Viktor Leek, Lars Eriksson  MMMM             MMMMMMMMMMMMMM
+%MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM             MMMMMMMMMMMMMM
+%MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+%MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
 % 
 % - Getting started -
+% installation
 % 
 % - Basic usage -
-% [t, t0, tf] = yop.time(name, rows, cols) % Independent variable
-% x = yop.state(name, rows, cols)          % State variable
-% z = yop.algebraic(name, rows, cols)      % Algebraic variable
-% u = yop.control(name, rows, cols)        % Control input
-% p = yop.parameter(name, rows, cols)      % Free parameter
-% 
+% yops ...
 % ocp ...
-% 
+% ivp ...
 % 
 % More details and contact information is found at
 % https://www.yoptimalcontrol.com/
@@ -22,3 +39,4 @@
 % 
 % Best regards,
 % Viktor Leek and Lars Eriksson
+yop.logo

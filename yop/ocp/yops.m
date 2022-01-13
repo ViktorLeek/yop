@@ -1,14 +1,14 @@
 function yops(varargin)
 decl = {};
-t_flag     = {'-independent', '-time' , '-t', 'time:'};
-t0_flag    = {'-independent_initial', '-independent0', '-time0', '-t0', 'time0:', 'time_0:'};
-tf_flag    = {'-independent_final', '-independentf', '-timef', '-tf', 'timef:', 'time_f:'};
-ts_flag    = {'times:'};
-state_flag = {'-state', 'states:', 'state:'};
-alg_flag   = {'-algebraic', '-alg', 'algs:', 'algebraics:', 'algebraic:'};
-ctrl_flag  = {'-control'  , '-ctrl', 'ctrl:', 'ctrls:', 'controls:', 'control:'};
-param_flag = {'-parameter', '-param', 'param:', 'params:', 'parameters:', 'parameter:'};
-var_flag = [t_flag(:)', t0_flag(:)', tf_flag(:)', ts_flag(:), ...
+t_flag     = {'-independent', '-time' , '-t', 'time:', 'Time:'};
+t0_flag    = {'-independent_initial', '-independent0', '-time0', '-t0', 'time0:', 'time_0:', 'Time0:'};
+tf_flag    = {'-independent_final', '-independentf', '-timef', '-tf', 'timef:', 'time_f:', 'Timef:'};
+ts_flag    = {'times:', 'Times:'};
+state_flag = {'-state', 'states:', 'state:', 'State:', 'States:'};
+alg_flag   = {'-algebraic', '-alg', 'algs:', 'algebraics:', 'algebraic:', 'Algebraic:', 'Algebraics:', 'Algs:'};
+ctrl_flag  = {'-control'  , '-ctrl', 'ctrl:', 'ctrls:', 'controls:', 'control:', 'Control:', 'Controls:', 'Ctrl:', 'Ctrls:'};
+param_flag = {'-parameter', '-param', 'param:', 'params:', 'parameters:', 'parameter:', 'Parameter:', 'Parameters:', 'Param:'};
+var_flag = [t_flag(:)', t0_flag(:)', tf_flag(:)', ts_flag(:)', ...
     state_flag(:)', alg_flag(:)', ctrl_flag(:)', param_flag(:)'];
 
 size_flag  = {'size:', 'sz:'};

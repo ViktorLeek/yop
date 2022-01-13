@@ -26,7 +26,27 @@ classdef ivp_sol < handle
         function v = value(obj, expr)
             mxa = obj.mx_args;
             t_id = 0;
-            vars = yop.ivp_sol.find_variables(expr);
+            %             vars = yop.ivp_sol.find_variables(expr);
+            [vars, tps, ints, ders] = yop.find_special_nodes(expr);
+            
+            if ~isempty(ints)
+                error(yop.error.ivp_integral());
+            end
+            
+            if ~isempty(ders)
+                error(yop.error.ivp_derivative());
+            end
+            
+            if ~isempty(tps)
+                for tt = tps
+                    cond = ~(tt.timepoint == yop.initial_timepoint || ...
+                        tt.timepoint == yop.final_timepoint);
+                    if cond
+                        error(yop.error.ivp_timepoint());
+                    end
+                end
+            end
+            
             for k=1:length(vars)
                 if isa(vars{k}, 'yop.ast_independent_initial')
                     mxa{1} = vars{k}.m_value;
@@ -54,23 +74,49 @@ classdef ivp_sol < handle
                 return
             end 
             
-            fn = casadi.Function('fn', mxa, {value(expr)});
+            args = {mxa{:}, tps.mx_vec()};
+            tpv = obj.compute_timepoints(tps, args);
+            fn = casadi.Function('fn', args, {value(expr)});
             
             if isa_reducible(expr)
-                v = obj.invariant_value(fn);
+                v = obj.invariant_value(fn, tpv);
             else
-                v = obj.variant_value(fn);
+                v = obj.variant_value(fn, tpv);
             end
             
         end
         
-        function v = invariant_value(obj, expr)
-            v = full(expr(obj.t(1), obj.t(end), obj.t(1), ...
-                obj.x(:,1), obj.z(:,1), obj.p));
+        function tpv = compute_timepoints(obj, tps, args)
+            tpv  = [];
+            for tp_k=tps
+                mx_expr = value(tp_k.ast.m_expr);
+                tp_k.fn = casadi.Function('fn', args, {mx_expr});
+                pad = zeros(n_elem(tps)-length(tpv), 1);
+                tpv = [tpv; obj.timepoint_value(tp_k, [tpv; pad])];
+            end
         end
         
-        function v = variant_value(obj, expr)
-            v = full(expr(obj.t(1),obj.t(end),obj.t,obj.x,obj.z,obj.p));
+        function v = timepoint_value(obj, expr, tpv)
+            if expr.timepoint == yop.initial_timepoint
+                v = full(expr.fn(obj.t(1), obj.t(end), obj.t(1), ...
+                obj.x(:,1), obj.z(:,1), obj.p, tpv));
+            
+            elseif expr.timepoint == yop.final_timepoint
+                v = full(expr.fn(obj.t(1), obj.t(end), obj.t(end), ...
+                obj.x(:,end), obj.z(:,end), obj.p, tpv));                
+            
+            else
+                error(yop.error.ivp_timepoint());
+            end
+        end
+        
+        function v = invariant_value(obj, expr, tpv)
+            v = full(expr(obj.t(1), obj.t(end), obj.t(1), ...
+                obj.x(:,1), obj.z(:,1), obj.p, tpv));
+        end
+        
+        function v = variant_value(obj, expr, tpv)
+            v = full(expr(obj.t(1),obj.t(end),obj.t,obj.x,obj.z,obj.p,tpv));
         end
         
         function args = filter(obj, args)
