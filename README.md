@@ -8,10 +8,10 @@ A Matlab Toolbox for Optimal Control.
 ## A Few Examples
 ### Bryson-Denham Problem
 ```matlab
-yops times: t t0 tf % Parsed by position: t, t0, tf
-yops states: x v    % position, speed
-yops ctrls: a       % acceleration
-yops params: l      % maximum cart position
+yops Times: t t0 tf % Parsed by position: t, t0, tf
+yops States: x v    % position, speed
+yops Control: a     % acceleration
+yops Param: l       % maximum cart position
 
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( 1/2 * int(a^2) ); % int: integrate expression over problem horizon
@@ -76,10 +76,10 @@ sol.stairs(t, Wf);
 ```
 ### Low Thrust Orbit
 ```matlab
-yops times: t t0 tf
-yops states: p f g h k L w scaling: [1e7,0.1,1,1,0.1,10,1]
-yops control: u size: [3,1]
-yops param: tau
+yops Times: t t0 tf
+yops States: p f g h k L w scaling: [1e7,0.1,1,1,0.1,10,1]
+yops Control: u size: [3,1]
+yops Parameter: tau
 
 p0 = 21837080.052835;
 h0 = -0.25396764647494;
