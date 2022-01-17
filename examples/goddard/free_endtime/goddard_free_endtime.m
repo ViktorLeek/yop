@@ -40,6 +40,7 @@ rocket = y.rocket;
 
 ocp = yop.ocp('Goddard''s Rocket Problem');
 ocp.max( int(rocket.velocity)*1e-5 );
+ocp.st( t0==0 );
 ocp.st( der(x) == rocket_model(x, u) );
 ocp.st( rocket.height(t0) == 0 );
 ocp.st( rocket.velocity(t0) == 0 );
@@ -75,6 +76,7 @@ u_min = 0.0;
 
 ocp = yop.ocp('Goddard''s Rocket Problem');
 ocp.max( h(tf)*1e-5 );
+ocp.st( t0==0 );
 ocp.st( der(x) == rocket_model(x, u) );
 ocp.st(  x(t0) == x0 );
 ocp.st( x_min <= x <= x_max );
@@ -123,6 +125,7 @@ Wfmin = 0; Wfmax = 9.5;
 % Optimal control problem
 ocp = yop.ocp();
 ocp.max( h(tf) );
+ocp.st( t0==0 );
 ocp.st( h(t0)==0, v(t0)==0, m(t0)==m_max );
 ocp.st( der(v) == (Wf*c-F_D)/m-g );
 ocp.st( der(h) == v );

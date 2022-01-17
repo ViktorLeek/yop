@@ -9,7 +9,8 @@ classdef ast_linspace < yop.ast_expression
             val = linspace(value(x1), value(x2), n);
             num = linspace(numval(x1), numval(x2), n);
             sz  = size(num);
-            reducible = all(isa_reducible(x1) & isa_reducible(x2)) & true(sz);
+            tmp = isa_reducible(x1) & isa_reducible(x2);
+            reducible = all(tmp(:)) & true(sz);
             t0_1 = get_t0(x1);
             t0_2 = get_t0(x2);
             tf_1 = get_tf(x1);

@@ -1,7 +1,7 @@
-yops times: t t0 tf
-yops states: p f g h k L w scaling: [1e7,0.1,1,1,0.1,10,1]
-yops control: u size: [3,1]
-yops param: tau
+yops Times: t t0 tf
+yops States: p f g h k L w scaling: [1e7,0.1,1,1,0.1,10,1]
+yops Control: u size: [3,1]
+yops Param: tau
 
 p0 = 21837080.052835;
 h0 = -0.25396764647494;
@@ -48,6 +48,7 @@ final = @(expr) expr(tf);
 
 ocp = yop.ocp('Low-thrust orbit');
 ocp.max( w(tf) );
+ocp.st( t0 == 0 );
 ocp.st( 50e3 <= tf <= 100e3 );
 ocp.st( der(x) == dx );
 ocp.st(  x(t0) == x0 );

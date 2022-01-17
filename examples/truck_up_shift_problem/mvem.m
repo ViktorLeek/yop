@@ -129,8 +129,8 @@ dx = [dwice; dpim; dpem; dwtc];
 %% Constraints
 c = {};
 c{end+1} = P_ice <= P_ice_max;
-c{end+1} = P_ice <= cPice(1)*w_ice^2 + cPice(2)*w_ice + cPice(3);
-c{end+1} = P_ice <= cPice(4)*w_ice^2 + cPice(5)*w_ice + cPice(6);
+% c{end+1} = P_ice <= cPice(1)*w_ice^2 + cPice(2)*w_ice + cPice(3);
+% c{end+1} = P_ice <= cPice(4)*w_ice^2 + cPice(5)*w_ice + cPice(6);
 c{end+1} = phi <= 1/lambda_min;
 c{end+1} = BSR_min <= BSR <= BSR_max;
 c{end+1} = Pi_c <= c_mc_surge(1)*dot_m_c_corr + c_mc_surge(2);

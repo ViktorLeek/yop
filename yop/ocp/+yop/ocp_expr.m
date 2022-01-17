@@ -36,7 +36,8 @@ classdef ocp_expr < handle
         end
         
         function bool = isa_reducible(obj)
-            bool = all(isa_reducible(obj.ast));
+            tmp = isa_reducible(obj.ast);
+            bool = all(tmp(:));
         end
         
         function tp = timepoint(obj)

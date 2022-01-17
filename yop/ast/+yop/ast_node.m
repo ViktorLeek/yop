@@ -13,7 +13,7 @@ classdef ast_node < handle
     methods
         
         function obj = ast_node(value)
-            obj.m_id = yop.ast_node.get_uid();
+            obj.m_id = yop.ast_node.get_id();
             obj.m_value = value;
         end
         
@@ -74,7 +74,7 @@ classdef ast_node < handle
     end
     
     methods (Static)
-        function id = get_uid()
+        function id = get_id()
             persistent ID
             if isempty(ID)
                 ID = 1;

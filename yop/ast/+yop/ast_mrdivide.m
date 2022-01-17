@@ -8,7 +8,8 @@ classdef ast_mrdivide < yop.ast_binary_expression
         function obj = ast_mrdivide(lhs, rhs)
             num = mrdivide(numval(lhs), numval(rhs));
             sz = size(num);
-            reducible = all(isa_reducible(lhs) & isa_reducible(rhs)) & true(sz);
+            tmp = isa_reducible(lhs) & isa_reducible(rhs);
+            reducible = all(tmp(:)) & true(sz);
             t0_l = get_t0(lhs);
             t0_r = get_t0(rhs);
             tf_l = get_tf(lhs);

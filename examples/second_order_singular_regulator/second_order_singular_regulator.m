@@ -1,12 +1,12 @@
 %% Second order singular regulator
 %   From: https://www.bocop.org/regulator/
-yops times: t t0 tf 
-yops states: x size: [2,1]
-yops control: u
+yops Times: t t0 tf 
+yops States: x size: [2,1]
+yops Control: u
 
 ocp = yop.ocp('Fuller Problem');
 ocp.min( int( x(1)^2 + der(x(1))^2 ) );
-ocp.st( tf == 5 );
+ocp.st( t0==0, tf==5 );
 ocp.st( der(x) == [x(2); u] );
 ocp.st(  x(t0) == [   0; 1] );
 ocp.st( -1 <= u <= 1  );

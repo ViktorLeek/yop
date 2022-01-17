@@ -1,6 +1,6 @@
-yops times: t t0 tf
-yops state: x size: [6,1] weight: [1e4,1e4,1e4,1e3,1e3,1e3]
-yops ctrl:  u size: [2,1]
+yops Times: t t0 tf
+yops State: x size: [6,1] weight: [1e4,1e4,1e4,1e3,1e3,1e3]
+yops Ctrl:  u size: [2,1]
 
 Npop = 30000;
 x0   = [76; 1; 36; 2; 4; 1]*Npop/120;
@@ -8,7 +8,7 @@ x0   = [76; 1; 36; 2; 4; 1]*Npop/120;
 R = diag([25; 250]);
 ocp = yop.ocp('Two-Strain Tuberculosis');
 ocp.min( 1e-3*int(x(4) + x(6) + u'*R*u) );
-ocp.st( tf == 5 );
+ocp.st( t0==0, tf==5 );
 ocp.st( der(x) == tuberculosis(x, u) );
 ocp.st(  x(t0) == x0 );
 ocp.st( 0.00 <= x <= 30e3 );

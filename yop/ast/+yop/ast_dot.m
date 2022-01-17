@@ -17,7 +17,8 @@ classdef ast_dot < yop.ast_expression
             end
             
             sz  = size(num);
-            reducible = all(isa_reducible(A) & isa_reducible(B)) & true(sz);
+            tmp = isa_reducible(A) & isa_reducible(B);
+            reducible = all(tmp(:)) & true(sz);
             t0_A = get_t0(A);
             t0_B = get_t0(B);
             tf_A = get_tf(A);

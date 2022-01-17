@@ -13,7 +13,7 @@ classdef ast_max < yop.ast_expression
                     val = max(A.m_value);
                     num = max(A.m_numval);
                     sz  = size(num);
-                    red = all(A.m_reducible) * ones(sz);
+                    red = all(A.m_reducible(:)) * ones(sz);
                     t0  = A.m_t0;
                     tf  = A.m_tf;
                     B=[]; d=[]; flag=[];
@@ -22,7 +22,8 @@ classdef ast_max < yop.ast_expression
                     val = max(value(A), value(B));
                     num = max(numval(A), numval(B));
                     sz  = size(num);
-                    red = all(isa_reducible(A) & isa_reducible(B)) & true(sz);
+                    tmp = isa_reducible(A) & isa_reducible(B);
+                    red = all(tmp(:)) & true(sz);
                     t0_A = get_t0(A);
                     t0_B = get_t0(B);
                     tf_A = get_tf(A);
@@ -35,7 +36,8 @@ classdef ast_max < yop.ast_expression
                     val = max(value(A), value(B), d);
                     num = max(numval(A), numval(B), d);
                     sz  = size(num);
-                    red = all(isa_reducible(A) & isa_reducible(B)) & true(sz);
+                    tmp = isa_reducible(A) & isa_reducible(B);
+                    red = all(tmp(:)) & true(sz);
                     t0_A = get_t0(A);
                     t0_B = get_t0(B);
                     tf_A = get_tf(A);
@@ -48,7 +50,8 @@ classdef ast_max < yop.ast_expression
                     val = max(value(A), value(B), d, flag);
                     num = max(numval(A), numval(B), d, flag);
                     sz  = size(num);
-                    red = all(isa_reducible(A) & isa_reducible(B)) & true(sz);
+                    tmp = isa_reducible(A) & isa_reducible(B);
+                    red = all(tmp(:)) & true(sz);
                     t0_A = get_t0(A);
                     t0_B = get_t0(B);
                     tf_A = get_tf(A);

@@ -6,6 +6,7 @@ yops control: u scaling: 1e-2
 
 ocp = yop.ocp('Fuller Problem');
 ocp.min( int(x(1)^2) );
+ocp.st( t0 == 0 );
 ocp.st( tf == 300 );
 ocp.st( der(x) == [x(2); u] );
 ocp.st(  x(t0) == [   0; 1] );

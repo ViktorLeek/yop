@@ -14,6 +14,7 @@ xf    = [300;    0];
 
 ocp = yop.ocp('Bang-bang');
 ocp.min( 0.1*tf );
+ocp.st( t0 == 0 );
 ocp.st( der(x) == A*x + B*u );
 ocp.st(  x(t0) ==  0 );
 ocp.st(  x(tf) == xf );

@@ -1,7 +1,7 @@
 %% Optimal Control Benchmark
-yops times: t t0 tf
-yops states: w_ice p_im p_em w_tc scaling: [1e3, 1e5, 1e5, 1e3]
-yops controls: u_f u_wg P_gen scaling: [1, 1, 1e5]
+yops Times: t t0 tf
+yops States: w_ice p_im p_em w_tc scaling: [1e3, 1e5, 1e5, 1e3]
+yops Controls: u_f u_wg P_gen scaling: [1, 1, 1e5]
 
 % States       [rad/s]       [Pa]      [Pa]   [rad/s]
 x =     [        w_ice;     p_im;     p_em;     w_tc];

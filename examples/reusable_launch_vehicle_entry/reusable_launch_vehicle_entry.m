@@ -1,6 +1,6 @@
-yops times: t t0 tf
-yops states: rad lon lat v fpa azi scaling: [1e6,1,1,1e4,1,1]
-yops ctrls: aoa bank
+yops Times: t t0 tf
+yops States: rad lon lat v fpa azi scaling: [1e6,1,1,1e4,1,1]
+yops Controls: aoa bank
 
 x = [rad; lon; lat; v; fpa; azi]; 
 u = [aoa; bank]; 
@@ -39,6 +39,7 @@ res.plot(t, bank*180/pi)
 %% Reusable Launch Vehicle Entry
 ocp = yop.ocp('Reusable Launch Vehicle Entry');
 ocp.max( lat(tf) );
+ocp.st( t0 == 0 );
 ocp.st( 1000 <= tf <= 3000 );
 ocp.st( der(x) == launch_vehicle(x, u) );
 ocp.st(  x(t0) == x0                   );

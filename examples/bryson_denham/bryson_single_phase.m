@@ -55,7 +55,7 @@ yops times: t t0 tf states: x size: [2,1] controls: u
 
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( 1/2 * int(u^2) );
-ocp.st( tf==1, ...
+ocp.st( t0==0, tf==1, ...
     der(x) == [x(2); u], ...
      x(t0) == [0; 1], ...
      x(tf) == [0; -1], ...
@@ -86,7 +86,7 @@ sol.stairs(t, u);
 
 %% Minreal
 [t0, tf, t, x, u] = yop.vars('nx', 2, 'nu', 1);
-yop.ocp().min(1/2*int(u^2)).st(tf==1, der(x)==[x(2);u], x(t0)==[0; 1], ...
+yop.ocp().min(1/2*int(u^2)).st(t0==0,tf==1,der(x)==[x(2);u],x(t0)==[0;1],...
     x(tf)==[0;-1], x(1)<=1/9).solve().plot(t, [x;u]);
 
 %% Trade-off between control effort and traveled distance
@@ -162,7 +162,7 @@ yops params: l      % maximum cart position
 
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( 1/2 * int(a^2) + 0.1*tf );
-% ocp.st( t0==0, tf==1 );
+ocp.st( t0==0, tf==1 );
 ocp.st( der(v) == a );
 ocp.st( der(x) == v );
 ocp.st( v(t0) == -v(tf) == 1 );

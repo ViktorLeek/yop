@@ -1,0 +1,26 @@
+classdef nlp < handle
+    properties
+        J
+        w
+        w_ub
+        w_lb
+        w0
+        g
+        g_ub
+        g_lb
+        t0
+        tf
+        t
+        x
+        z
+        u
+        p
+        ocp_t0
+        ocp_tf
+        ocp_t
+        ocp_x
+        ocp_z
+        ocp_u
+        ocp_p
+    end
+end

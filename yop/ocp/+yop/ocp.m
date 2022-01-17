@@ -37,17 +37,22 @@ classdef ocp < handle
         iec_point_eqs
         guess
         
-        % NLP
-        m_nlp
-        
     end
     
-    properties (Hidden) % internal properties
+    properties (Hidden) % For parsing
         snodes % Topological sort of special nodes
         tps  % Timepoints
         ints % Integrals
         ders % Derivativtes (time varying value)
         visited = [] % special nodes that has been visited - speedup
+    end
+    
+    properties %(Hidden) % Multiphase
+        m_id     
+        m_value  
+        m_phases 
+        m_parent 
+        m_nlp
     end
     
     %% User interface
@@ -81,6 +86,11 @@ classdef ocp < handle
             obj.algebraics   = yop.ocp_var.empty(1,0);
             obj.controls     = yop.ocp_var.empty(1,0);
             obj.parameters   = yop.ocp_var.empty(1,0);
+            
+            obj.m_id = yop.ocp.get_id();
+            obj.m_value = yop.cx(['ocp', num2str(obj.m_id)]);
+            obj.m_phases = obj;
+            obj.m_parent = obj; % Self means no parent
             
         end
         
@@ -147,6 +157,167 @@ classdef ocp < handle
             
             sol = yop.ocp_sol(obj.mx_vars(), obj.ids, w_opt, N, d, cp);
             yop.progress.ocp_solved(solver.stats.success);
+        end
+    end
+    
+    %% Multiphase
+    methods
+        function varargout = solve_multiphase(obj, N, d, cp, solver, opts)
+            
+            % Build individual NLPs
+            
+            obj.build_nlps(N, d, cp);
+            nlp = obj.merge_nlps();
+            nlp_sol = solve_nlp(solver, opts);            
+            obj.nlp_to_ocp_maps(nlp);
+            %osol = obj.ocp_sol(nlp_sol);
+            psol = obj.phase_sol(nlp_sol);
+            
+            varargout = {osol};
+            %             for
+            % Merge variables
+        end
+        
+        function sol = ocp_sol(obj, nlp_sol)
+            % Solution to the complete OCP
+            t=[]; x=[]; z=[]; u=[]; p=[];
+            for p = obj.m_phases
+                tt = p.descale_t( p.m_nlp.ocp_t(nlp_sol.x) );
+                xx = p.descale_x( p.m_nlp.ocp_x(nlp_sol.x) );
+                zz = p.descale_z( p.m_nlp.ocp_z(nlp_sol.x) );
+                uu = p.descale_u( p.m_nlp.ocp_u(nlp_sol.x) );
+                t = [t, tt(2:end)];
+                x = [x, xx(:, 2:end)];
+                z = [z, zz];
+                u = [u, uu];
+            end
+            p1 = obj.m_phases(1);
+            pf = obj.m_phases(end);
+            t0 = p1.descale_t0(p1.m_nlp.ocp_t0(nlp_sol.x));
+            tf = pf.descale_tf(pf.m_nlp.ocp_tf(nlp_sol.x));
+            sol = struct('t0',t0,'tf',tf,'t',t,'x',x,'z',z,'u',u,'p',p);
+        end
+        
+        function s = phase_sol(obj, nlp_sol)
+            s = struct;
+            s.t0=[]; s.tf=[]; s.t=[]; s.x=[]; s.z=[]; s.u=[]; s.p=[];
+            for p=obj.m_phases
+                s(end+1).t0 = p.descale_t0(p.m_nlp.ocp_t0(nlp_sol.x));
+                s(end+1).tf = p.descale_tf(p.m_nlp.ocp_tf(nlp_sol.x));
+                s(end+1).t  = p.descale_t (p.m_nlp.ocp_t (nlp_sol.x));
+                s(end+1).x  = p.descale_x (p.m_nlp.ocp_x (nlp_sol.x));
+                s(end+1).z  = p.descale_z (p.m_nlp.ocp_z (nlp_sol.x));
+                s(end+1).u  = p.descale_u (p.m_nlp.ocp_u (nlp_sol.x));
+                s(end+1).p  = p.descale_p (p.m_nlp.ocp_p (nlp_sol.x));
+            end
+        end
+        
+        function build_nlps(obj, N, d, cp)
+            for k=1:length(obj.m_phases)
+                obj.m_phases(k).to_canonical();
+                obj.m_phases(k).m_nlp = ...
+                    yop.direct_collocation(N(k), d(k), cp{k});
+            end
+        end
+        
+        function nlp_sol = solve_nlp(~, solver, opts)
+            prob = struct('f', nlp.J, 'x', nlp.w, 'g', nlp.g);
+            solver = casadi.nlpsol('solver', solver, prob, opts);
+            nlp_sol = solver( ...
+                'x0' , nlp.w0, ...
+                'lbx', nlp.w_lb, ...
+                'ubx', nlp.w_ub, ...
+                'ubg', nlp.g_ub, ...
+                'lbg', nlp.g_lb ...
+                );
+        end
+        
+        function nlp = merge_nlps(obj)
+            parent = obj.parent_position;
+            nlp    = yop.nlp;
+            nlp.J  = obj.nlp_objective();
+            for k=1:length(obj.m_phases)
+                pk = obj.m_phases(k);
+                nlp.w    = [nlp.w   ; pk.m_nlp.w   ];
+                nlp.w0   = [nlp.w0  ; pk.m_nlp.w0  ];
+                nlp.w_ub = [nlp.w_ub; pk.m_nlp.w_ub];
+                nlp.w_lb = [nlp.w_lb; pk.m_nlp.w_lb];
+                nlp.g    = [nlp.g   ; pk.m_nlp.g   ];
+                nlp.g_ub = [nlp.g_ub; pk.m_nlp.g_ub];
+                nlp.g_lb = [nlp.g_lb; pk.m_nlp.g_lb];
+                obj.continuity(nlp, pk, obj.m_phases(parent(k)));
+            end
+        end
+        
+        function J = nlp_objective(obj)
+            % First create a function object for the multiphase objective
+            args = arrayfun( ...
+                @(e) e.m_value, J.m_phases, 'UniformOutput', false);
+            Jfn = casadi.Function('J', args, {obj.m_value});
+            
+            % Evaluate the function using the individual nlp objectives
+            Js = arrayfun( ...
+                @(e) e.m_nlp.J, J.m_phases, 'UniformOutput', false);
+            J = Jfn(Js{:});
+            
+        end
+        
+        function continuity(~, nlp, parent, child)
+            if parent.m_id == child.m_id
+                % Circular OCPs formualted as multi-phase problems are not
+                % supported
+                return;
+            end
+            
+            nlp_p = parent.m_nlp;
+            nlp_c = child.m_nlp;
+            
+            time_pos    = nlp_c.t0 - nlp_c.tf; % constratint <= 0
+            time_cont   = nlp_p.tf - nlp_c.t0; % constratint == 0
+            state_cont  = nlp_p.x(end).eval(0) - nlp_c.x(1).eval(0);
+            param_const = nlp_p.p - nlp_c.p;
+            
+            eq   = [time_cont; state_cont; param_const];
+            ieq  = time_pos;
+            g    = [eq; ieq];
+            g_ub = [zeros(size(eq)); zeros(size(ieq))];
+            g_lb = [zeros(size(eq));  -inf(size(ieq))];
+            
+            nlp.g    = [nlp.g   ; g   ];
+            nlp.g_ub = [nlp.g_ub; g_ub];
+            nlp.g_lb = [nlp.g_lb; g_lb];
+        end
+        
+        function parent = parent_position(obj)
+            % convert object to its id
+            parent = arrayfun(@(e) e.m_id, obj.m_parent);
+            for k=1:length(obj.m_phases)
+                % IDs are positive so positions are mapped to negative
+                % values
+                % Replace parents id with its position in the phase list,
+                % but with a negative value so as to avoid mixing indices
+                % and ids.
+                parent(parent==obj.m_phases(k).m_id) = -k;
+            end
+            % Convert to positive indices
+            parent = abs(parent);
+        end
+        
+        function nlp_to_ocp_maps(~, nlp)
+            for p=1:obj.m_phases
+                % Function that maps from multiphase nlp variable vector to
+                % single phase variable vector
+                f = casadi.Function('f', {nlp.w}, {p.m_nlp.w});
+                
+                % Functions that map from nlp vector to ocp variables
+                p.m_nlp.ocp_t0 = @(w) p.m_nlp.ocp_t0(full(f(w)));
+                p.m_nlp.ocp_tf = @(w) p.m_nlp.ocp_tf(full(f(w)));
+                p.m_nlp.ocp_t  = @(w) p.m_nlp.ocp_t (full(f(w)));
+                p.m_nlp.ocp_x  = @(w) p.m_nlp.ocp_x (full(f(w)));
+                p.m_nlp.ocp_z  = @(w) p.m_nlp.ocp_z (full(f(w)));
+                p.m_nlp.ocp_u  = @(w) p.m_nlp.ocp_u (full(f(w)));
+                p.m_nlp.ocp_p  = @(w) p.m_nlp.ocp_p (full(f(w)));
+            end
         end
         
         
@@ -309,32 +480,32 @@ classdef ocp < handle
                 % v(tf) <= num
                 var = obj.find_variable(id_lhs);
                 bnd = num_rhs;
-                var.ub0 = bnd;
+                var.ubf = bnd;
                 
             elseif istp_lhs && lhs.m_tf==tf && isnum_rhs && isa_ge && (state_lhs || control_lhs)
                 % v(tf) >= num
                 var = obj.find_variable(id_lhs);
                 bnd = num_rhs;
-                var.lb0 = bnd;
+                var.lbf = bnd;
                 
             elseif isnum_lhs && istp_rhs && rhs.m_tf==tf && isa_eq && (state_rhs || control_rhs)
                 % num == v(tf)
                 var = obj.find_variable(id_rhs);
                 bnd = num_lhs;
-                var.ub0 = bnd;
-                var.lb0 = bnd;
+                var.ubf = bnd;
+                var.lbf = bnd;
                 
             elseif isnum_lhs && istp_rhs && rhs.m_tf==tf && isa_le && (state_rhs || control_rhs)
                 % num <= v(tf)
                 var = obj.find_variable(id_rhs);
                 bnd = num_lhs;
-                var.lb0 = bnd;
+                var.lbf = bnd;
                 
             elseif isnum_lhs && istp_rhs && rhs.m_tf==tf && isa_ge && (state_rhs || control_rhs)
                 % num >= v(tf)
                 var = obj.find_variable(id_rhs);
                 bnd = num_lhs;
-                var.ub0 = bnd;
+                var.ubf = bnd;
                 
             elseif var_lhs && isnum_rhs && isa_eq
                 % v == num
@@ -1397,17 +1568,23 @@ classdef ocp < handle
             bd = obj.scale_p(bd(:));
         end
         
-        function [bool, t0, tf] = fixed_horizon(obj)
+        function [t0, tf] = get_horizon(obj)
             t0_ub = obj.independent0.ub;
             t0_lb = obj.independent0.lb;
             tf_ub = obj.independentf.ub;
             tf_lb = obj.independentf.lb;
             
-            bool = t0_lb == t0_ub && tf_lb == tf_ub && ...
+            fixed = t0_lb == t0_ub && tf_lb == tf_ub && ...
                 all(~isinf([t0_lb, t0_ub, tf_lb, tf_ub]));
             
-            t0 = t0_lb;
-            tf = tf_lb;
+            if fixed
+                t0 = t0_lb;
+                tf = tf_lb;
+            else
+                % Normalized value
+                t0 = 0;
+                tf = 1;
+            end
         end
         
         function [t00, tf0, t0, x0, z0, u0, p0] = initial_guess(obj)
@@ -1464,13 +1641,23 @@ classdef ocp < handle
     %% Multi-phase - Overloading for multiple phase problems
     methods
         function sum = plus(lhs, rhs)
-            if isempty(lhs.m_nlp)
-                lhs.build();
+            sum = yop.ocp('');
+            sum.m_value = lhs.m_value + rhs.m_value;
+            sum.m_phases = [lhs.m_phases, rhs];
+            % parent is only valid for sequential problems
+            sum.m_parent = [lhs.m_parent, lhs.m_phases(end)];
+        end
+    end
+    
+    %% Static
+    methods (Static)
+        function ID = get_id()
+            persistent cur
+            if isempty(cur)
+                cur = 0;
             end
-            if isempty(rhs.m_nlp)
-                rhs.build();
-            end
-            
+            cur = cur + 1;
+            ID = cur;
         end
     end
 end

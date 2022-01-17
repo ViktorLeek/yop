@@ -1,8 +1,8 @@
-yops times: t t0 tf states: x ctrls: u
+yops Times: t t0 tf State: x Control: u
 
 ocp = yop.ocp('Isopermetric Constraint');
 ocp.min( int(x) );
-ocp.st(   t0 ==0,   tf ==1 );
+ocp.st( t0==0, tf==1 );
 ocp.st( x(t0)==1, x(tf)==0 );
 ocp.st( der(x) == -sin(x) + u );
 ocp.st( -10 <= x <= 10 );

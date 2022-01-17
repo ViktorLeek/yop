@@ -368,7 +368,11 @@ classdef ocp_sol < handle
             % Get values
             for k=1:length(args)
                 if isa(args{k}, 'yop.ast_node')
-                    args{k} = obj.value(args{k}, round(mag));
+                    v = [];
+                    for o=obj
+                        v = [v, o.value(args{k}, round(mag))];
+                    end
+                    args{k} = v;
                 end
             end
         end

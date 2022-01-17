@@ -6,7 +6,7 @@ function nlp = direct_collocation(ocp, N, d, cp)
 
                        yop.progress.nlp_building();
 T0=[]; Tf=[]; t=[]; t0=[]; tf=[]; p=[]; dt=[]; tau=[]; tp=[]; I=[]; D=[]; 
-g=[]; g_ub=[]; g_lb=[]; w_ub=[]; w_lb=[]; w0=[];
+g=[]; g_ub=[]; g_lb=[]; w_ub=[]; w_lb=[]; w0=[]; h=[];
 t = yop.interpolating_poly.empty(N+1, 0);
 x = yop.interpolating_poly.empty(N+1, 0);
 z = yop.interpolating_poly.empty(N  , 0);
@@ -68,7 +68,8 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
     end
 
     function init_variables()
-        [~, T0, Tf] = ocp.fixed_horizon();
+        [T0, Tf] = ocp.get_horizon();
+        h = (Tf-T0)/N;
         t0 = yop.cx('t0');
         tf = yop.cx('tf');
         dt = (ocp.descale_tf(tf) - ocp.descale_t0(t0))/N;
@@ -321,15 +322,13 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
     end
 
     function [n0, r0, nf, rf] = get_ival_idx(I0, If)
-        dT = (Tf-T0)/N;
-        
         % First point after I0
-        n0 = 1 + floor((I0-T0)/dT);
+        n0 = 1 + floor((I0-T0)/h);
         if n0 == N+1
             r0 = 1;
         else
-            t_n0 = dT*(n0-1);
-            tau_I0 = (I0-t_n0)/dT;
+            t_n0 = h*(n0-1);
+            tau_I0 = (I0-t_n0)/h;
             % Does not use >= in order to always pick the next point
             r0 = find(tau - tau_I0 > 0, 1);
             if isempty(r0)
@@ -340,9 +339,9 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
         end
         
         % Last point before If
-        nf = 1 + floor((If-T0)/dT);
-        t_nf = dT*(nf-1);
-        tau_If = (If-t_nf)/dT;
+        nf = 1 + floor((If-T0)/h);
+        t_nf = h*(nf-1);
+        tau_If = (If-t_nf)/h;
         rf = find(tau - tau_If < 0, 1, 'last');
         if isempty(rf)
             if nf==1
@@ -356,12 +355,6 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
     end
 
     function box_bnd()
-        
-        dt = (Tf-T0)/N;
-        % can be casadi SX/MX, in that case open horizon. If so, it is preferable
-        % to use a dummy numeric value as it is faster.
-        h = yop.IF(isnumeric(dt), dt, 1);
-        
         t0_lb = ocp.t0_lb(T0);
         t0_ub = ocp.t0_ub(T0);
         tf_lb = ocp.tf_lb(T0);
@@ -425,12 +418,12 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
     function [tx, tz, tu] = grid_at_iv(t0_0, tf_0)
         % Time points for the initial values
         tx=[]; tz=[]; tu=[];
-        h = (tf_0-t0_0)/N;
+        h0 = (tf_0-t0_0)/N;
         for k=1:N
-            tx = [tx, t0_0 + tau*h];
-            tz = [tz, t0_0 + tau(2:end)*h];
+            tx = [tx, t0_0 + tau*h0];
+            tz = [tz, t0_0 + tau(2:end)*h0];
             tu = [tu, t0_0];
-            t0_0 = t0_0 + h;
+            t0_0 = t0_0 + h0;
         end
         tx(end+1) = tf_0;
     end

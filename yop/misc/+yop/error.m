@@ -232,5 +232,11 @@ classdef error < handle
                 yop.error.msg_stop()];
         end
         
+        function msg = timepoint_outside_range()
+            msg = [yop.error.msg_start(), ...
+                'Timepoint outside range of polynomial', ...
+                yop.error.msg_stop()];
+        end
+        
     end
 end
