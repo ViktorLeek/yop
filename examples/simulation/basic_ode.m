@@ -1,5 +1,5 @@
 %% Basic ode
-yops times: t t0 tf state: x
+yops Times: t t0 tf State: x
 sim = yop.ivp(t0==0, tf==2);
 sim.add( der(x) == -10*t );
 sim.add(  x(t0) == 1 ) ;

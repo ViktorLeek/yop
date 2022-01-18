@@ -155,7 +155,7 @@ classdef ocp < handle
             w_opt.u  = obj.descale_u (nlp.ocp_u (nlp_sol.x));
             w_opt.p  = obj.descale_p (nlp.ocp_p (nlp_sol.x));
             
-            sol = yop.ocp_sol(obj.mx_vars(), obj.ids, w_opt, N, d, cp);
+            sol = yop.ocp_sol(obj.mx_vars(), obj.ids, w_opt, N, d, {cp});
             yop.progress.ocp_solved(solver.stats.success);
         end
     end

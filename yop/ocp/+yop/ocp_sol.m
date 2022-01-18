@@ -9,45 +9,52 @@ classdef ocp_sol < handle
         z
         u
         p
-        N
-        tau
-        dt
+        n_seg
     end
     methods
-        function obj = ocp_sol(mx_vars, ids, sol, N, d, cp)
+        function obj = ocp_sol(mx_vars, ids, sol, N, dx, cpx)
             obj.mx_vars = mx_vars;
             obj.ids = ids;
             obj.t0 = sol.t0;
             obj.tf = sol.tf;
             obj.p = sol.p;
-            obj.N = N;
-            obj.tau = full([0, casadi.collocation_points(d, cp)]);
-            obj.dt = (sol.tf - sol.t0) / N;
-            obj.parameterize_polynomials(sol.t, sol.x, sol.z, sol.u);
+            obj.n_seg = sum(N);
+            obj.parameterize_polynomials( ...
+                sol.t, sol.x, sol.z, sol.u, N, dx, cpx);
         end
         
-        function n = d(obj)
-            % polynomial degree
-            n = length(obj.tau) - 1;
-        end
-        
-        function obj = parameterize_polynomials(obj, t, x, z, u)
-            ip = @(x,y)yop.interpolating_poly(x, y, obj.t0, obj.tf, obj.N);
-            tt = yop.interpolating_poly.empty(obj.N+1, 0);
-            xx = yop.interpolating_poly.empty(obj.N+1, 0);
-            zz = yop.interpolating_poly.empty(obj.N, 0);
-            uu = yop.interpolating_poly.empty(obj.N, 0);
-            d = length(obj.tau)-1;
-            for n=1:obj.N
-                cols = (n-1)*(d+1)+1 : n*(d+1);
-                cz   = (n-1)*d+1:n*d;
-                tt(n) = ip(obj.tau, t(cols));
-                xx(n) = ip(obj.tau, x(:, cols));
-                zz(n) = ip(obj.tau(2:end), z(:,cz));
-                uu(n) = ip(0, u(:,n));
+        function obj = parameterize_polynomials(obj, t, x, z, u, N, dx, cpx)
+            ip = @(x, y, t0, tf) yop.interpolating_poly(x, y, t0, tf);
+            ipe = @(k) yop.interpolating_poly.empty(0, obj.n_seg+k);
+            
+            taux = yop.ocp_sol.collocation_points(dx, cpx);
+            tt=ipe(1); xx=ipe(1); zz=ipe(0); uu=ipe(0);
+            ix=1; iz=1; iu=1;
+            for r = 1:length(N)
+                N_ = N(r);
+                dx_ = dx(r);
+                taux_ = taux{r};
+                tauz_ = taux_(2:end);
+                tauu_ = 0;
+                for n=1:N_
+                    colx = ix : ix + dx_;
+                    colz = iz : iz + dx_ - 1;
+                    colu = iu;
+                    tt0 = t(colx(1));
+                    ttf = t(colx(end)+1);
+                    tt(n) = ip(taux_, t(:, colx), tt0, ttf);
+                    xx(n) = ip(taux_, x(:, colx), tt0, ttf);
+                    zz(n) = ip(tauz_, z(:, colz), tt0, ttf);
+                    uu(n) = ip(tauu_, u(:, colu), tt0, ttf);
+                    ix = ix + dx_ + 1;
+                    iz = iz + dx_;
+                    iu = iu + 1;
+                end
+                disp('---')
             end
-            tt(n+1) = ip(0, obj.tf);
-            xx(n+1) = ip(0, x(:, end));
+            assert(n==obj.n_seg);
+            tt(n+1) = ip(0, obj.tf   , obj.tf, obj.tf);
+            xx(n+1) = ip(0, x(:, end), obj.tf, obj.tf);
             obj.t = tt;
             obj.x = xx;
             obj.z = zz;
@@ -82,9 +89,9 @@ classdef ocp_sol < handle
                 end
             end
             
-            % Return if the variables thats not know are in the ast
+            % Return if variables that are not know are in the ast.
             % This is used in getting values for ocp initial guess, but
-            % could also be a user error.
+            % could also be a user error. Consider fixing in the future.
             IDs = [obj.ids, t_id];
             known_vars = false;
             for k=1:length(vars)
@@ -135,30 +142,35 @@ classdef ocp_sol < handle
             [I0, If] = obj.ival_bnds(expr);
             
             % Evaluate at the beginning of the interval
-            tt = obj.t.value(I0); 
-            xx = obj.x.value(I0);
-            zz = obj.z.value(I0);
-            uu = obj.u.value(I0);
-            dd = ders.value(I0); 
+            tt = obj.t.valuenh(I0); 
+            xx = obj.x.valuenh(I0);
+            zz = obj.z.valuenh(I0);
+            uu = obj.u.valuenh(I0);
+            dd = ders.valuenh(I0); 
             
             % Evaluate all points within the interval
             [n0, r0, nf, rf] = obj.get_ival_idx(I0, If);
-            for n = n0 : min(nf, obj.N)
-                for r = yop.IF(n==n0, r0, 1) : yop.IF(n==nf, rf, obj.d)
-                    tt = [tt, obj.t(n).eval(obj.tau(r))];
-                    xx = [xx, obj.x(n).eval(obj.tau(r))];
-                    zz = [zz, obj.z(n).eval(obj.tau(r))];
-                    uu = [uu, obj.u(n).eval(obj.tau(r))];
-                    dd = [dd, ders(n).eval(obj.tau(r))];
+            for n = n0 : min(nf, obj.n_seg)
+                tau   = obj.t(n).x;
+                r_max = length(tau);
+                for r = yop.IF(n==n0, r0, 1) : yop.IF(n==nf, rf, r_max)
+                    tt = [tt, obj.t(n).eval(tau(r))];
+                    xx = [xx, obj.x(n).eval(tau(r))];
+                    zz = [zz, obj.z(n).eval(tau(r))];
+                    uu = [uu, obj.u(n).eval(tau(r))];
+                    dd = [dd, ders(n).eval(tau(r))];
                     if n==nf && r==rf
-                        t_nf = obj.dt*(nf-1);
-                        tau_If = (If-t_nf)/obj.dt;
-                        dT = tau_If - obj.tau(r);
+                        t_nf = obj.t(n).t0;
+                        tauf = (If-t_nf)/obj.t(n).dt; % Normalize If
+                        tau0 = tau(r);
+                        dtau = tauf - tau0;
                     else
-                        dT = obj.tau(r+1)-obj.tau(r);
+                        tau0 = tau(r);
+                        tauf = yop.IF(r==r_max, @()1, @()obj.t(n).x(r+1));
+                        dtau = tauf - tau0;
                     end
                     for k=1:mag-1 % Magnification
-                        tau_k = obj.tau(r) + k/mag*dT;
+                        tau_k = tau0 + k/mag*dtau;
                         tt = [tt, obj.t(n).eval(tau_k)];
                         xx = [xx, obj.x(n).eval(tau_k)];
                         zz = [zz, obj.z(n).eval(tau_k)];
@@ -166,39 +178,34 @@ classdef ocp_sol < handle
                         dd = [dd, ders(n).eval(tau_k)];
                     end
                 end
-                % Last collocation point is evaluated here
-                if n ~= nf
-                    tt = [tt, obj.t(n).eval(obj.tau(end))];
-                    xx = [xx, obj.x(n).eval(obj.tau(end))];
-                    zz = [zz, obj.z(n).eval(obj.tau(end))];
-                    uu = [uu, obj.u(n).eval(obj.tau(end))];
-                    dd = [dd, ders(n).eval(obj.tau(end))];
-                end
             end
             
             % Evaluate last point of interval
-            tt = [tt, obj.t.value(If)]; 
-            xx = [xx, obj.x.value(If)];
-            zz = [zz, obj.z.value(If)];
-            uu = [uu, obj.u.value(If)];
-            dd = [dd, ders.value(If)]; 
+            tt = [tt, obj.t.valuenh(If)]; 
+            xx = [xx, obj.x.valuenh(If)];
+            zz = [zz, obj.z.valuenh(If)];
+            uu = [uu, obj.u.valuenh(If)];
+            dd = [dd, ders.valuenh(If)]; 
             
             v = full(fn(obj.t0,obj.tf,tt,xx,zz,uu,obj.p,tps,ints,dd));
         end
         
         function v = path(obj, expr, tps, ints, ders, mag)
             tt=[]; xx=[]; zz=[]; uu=[]; dd=[];
-            for n=1:obj.N
-                un = obj.u(n).y;
-                for r=1:length(obj.tau)-1
-                    tt = [tt, obj.t(n).eval(obj.tau(r))];
-                    xx = [xx, obj.x(n).eval(obj.tau(r))];
-                    zz = [zz, obj.z(n).eval(obj.tau(r))];
-                    uu = [uu, obj.u(n).eval(obj.tau(r))];
-                    dd = [dd, ders(n).eval(obj.tau(r))];
-                    dT = obj.tau(r+1)-obj.tau(r);
+            for n=1:obj.n_seg
+                tau = obj.t(n).x;
+                r_max = length(tau);
+                for r=1:r_max
+                    tt = [tt, obj.t(n).eval(tau(r))];
+                    xx = [xx, obj.x(n).eval(tau(r))];
+                    zz = [zz, obj.z(n).eval(tau(r))];
+                    uu = [uu, obj.u(n).eval(tau(r))];
+                    dd = [dd, ders(n).eval(tau(r))];
+                    tau0 = tau(r);
+                    tauf = yop.IF(r==r_max, @()1, @()tau(r+1));
+                    dT = tauf - tau0;
                     for k=1:mag-1 % Magnification
-                        tau_k = obj.tau(r) + k/mag*dT;
+                        tau_k = tau0 + k/mag*dT;
                         tt = [tt, obj.t(n).eval(tau_k)];
                         xx = [xx, obj.x(n).eval(tau_k)];
                         zz = [zz, obj.z(n).eval(tau_k)];
@@ -206,11 +213,6 @@ classdef ocp_sol < handle
                         dd = [dd, ders(n).eval(tau_k)];
                     end
                 end
-                tt = [tt, obj.t(n).eval(obj.tau(end))];
-                xx = [xx, obj.x(n).eval(obj.tau(end))];
-                zz = [zz, obj.z(n).eval(obj.tau(end))];
-                uu = [uu, obj.u(n).eval(obj.tau(end))];
-                dd = [dd, ders(n).eval(obj.tau(end))];
             end
             tt = [tt, obj.t(n+1).eval(0)];
             xx = [xx, obj.x(n+1).eval(0)];
@@ -231,31 +233,39 @@ classdef ocp_sol < handle
         function [n0, r0, nf, rf] = get_ival_idx(obj, I0, If)
             
             % First point after I0
-            n0 = 1 + floor((I0-obj.t0)/obj.dt);
-            if n0 == obj.N+1
+            if I0 == obj.tf
+                n0 = obj.n_seg + 1;
                 r0 = 1;
             else
-                t_n0 = obj.dt*(n0-1);
-                tau_I0 = (I0-t_n0)/obj.dt;
-                % Does not use >= in order to always pick the next point
-                r0 = find(obj.tau - tau_I0 > 0, 1);
-                if isempty(r0)
-                    r0 = 1;
-                    n0 = n0+1;
+                for n0 = 1:length(obj.t)
+                    tt = obj.t(n0);
+                    if tt.t0 <= I0 && I0 < tt.tf
+                        tau = (I0 - tt.t0)/tt.dt;
+                        taus = tt.x;
+                        r0 = find(taus > tau, 1);
+                        if isempty(r0)
+                            n0 = n0+1;
+                            r0 = 1;
+                        end
+                        break
+                    end
                 end
             end
             
             % Last point before If
-            nf = 1 + floor((If-obj.t0)/obj.dt);
-            t_nf = obj.dt*(nf-1);
-            tau_If = (If-t_nf)/obj.dt;
-            rf = find(obj.tau - tau_If < 0, 1, 'last');
-            if isempty(rf)
-                if nf==1
-                    rf = 1;
-                else
-                    rf = length(obj.tau);
-                    nf = nf-1;
+            if If == obj.t0
+                nf = 1;
+                rf = 1;
+                
+            else
+                for nf = 1:length(obj.t)
+                    tt = obj.t(nf);
+                    if tt.t0 < If && If <= tt.tf
+                        tau = (If - tt.t0)/tt.dt; % tau > 0
+                        taus = tt.x;
+                        rf = find(taus < tau , 1, 'last');
+                        break
+                    end
                 end
             end
             
@@ -291,32 +301,36 @@ classdef ocp_sol < handle
         end
         
         function ders = init_derivatives(obj)
-            ders = yop.interpolating_poly.empty(obj.N, 0);
-            for n=1:obj.N
-                ders(n) = yop.interpolating_poly(obj.tau, [], obj.t0, ...
-                    obj.tf, obj.N);
+            ders = yop.interpolating_poly.empty(0, obj.n_seg);
+            for n=1:obj.n_seg
+                tt0 = obj.t(n).t0;
+                ttf = obj.t(n).tf;
+                tau = obj.t(n).x;
+                ders(n) = yop.interpolating_poly(tau, [], tt0, ttf);
             end
         end
         
         function val = compute_timepoint(obj, tp, tps, ints, ders, pad)
-            dd = pad(ders.value(tp.timepoint));
+            dd = pad(ders.valuenh(tp.timepoint));
             val = full(...
                 tp.fn(obj.t0, obj.tf, ...
-                obj.t.value(tp.timepoint), ...
-                obj.x.value(tp.timepoint), ...
-                obj.z.value(tp.timepoint), ...
-                obj.u.value(tp.timepoint), ...
+                obj.t.valuenh(tp.timepoint), ...
+                obj.x.valuenh(tp.timepoint), ...
+                obj.z.valuenh(tp.timepoint), ...
+                obj.u.valuenh(tp.timepoint), ...
                 obj.p, tps, ints, dd));
         end
         
         function I = compute_integral(obj, int, tps, ints, ders, pad)
             I = 0;
-            for n=1:obj.N
+            for n=1:obj.n_seg
                 yval = [];
-                for r=obj.tau
+                tau = obj.t(n).x;
+                for r=tau
                     dd = pad(ders(n).eval(r));
                     val_r = full( ...
-                        int.fn(obj.t0, obj.tf, ...
+                        int.fn(...
+                        obj.t0, obj.tf, ...
                         obj.t(n).eval(r), ...
                         obj.x(n).eval(r), ...
                         obj.z(n).eval(r), ...
@@ -324,15 +338,16 @@ classdef ocp_sol < handle
                         obj.p, tps, ints, dd));
                     yval = [yval, val_r(:)];
                 end
-                lp = yop.lagrange_polynomial(obj.tau, yval).integrate();
-                I = I + lp.evaluate(1)*obj.dt;
+                lp = yop.lagrange_polynomial(tau, yval).integrate();
+                I = I + lp.evaluate(1)*obj.t(n).dt;
             end
         end
         
         function ders = compute_derivative(obj, der, tps, ints, ders, pad)
-            for n=1:obj.N
+            for n=1:obj.n_seg
                 yval = [];
-                for r=obj.tau
+                tau = obj.t(n).x;
+                for r=tau
                     tt = obj.t(n).eval(r);
                     xx = obj.x(n).eval(r);
                     zz = obj.z(n).eval(r);
@@ -343,8 +358,8 @@ classdef ocp_sol < handle
                         obj.t0, obj.tf, tt, xx, zz, uu, pp, tps, ints, dd));
                     yval = [yval, val_r(:)];
                 end
-                yn = yop.lagrange_polynomial(obj.tau, ...
-                    yval).differentiate().evaluate(obj.tau)/obj.dt;
+                yn = yop.lagrange_polynomial(tau, yval ...
+                    ).differentiate().evaluate(tau)/obj.t(n).dt;
                 ders(n).y = [ders(n).y; yn];
             end
         end
@@ -368,11 +383,7 @@ classdef ocp_sol < handle
             % Get values
             for k=1:length(args)
                 if isa(args{k}, 'yop.ast_node')
-                    v = [];
-                    for o=obj
-                        v = [v, o.value(args{k}, round(mag))];
-                    end
-                    args{k} = v;
+                    args{k} = obj.value(args{k}, round(mag));
                 end
             end
         end
@@ -970,6 +981,16 @@ classdef ocp_sol < handle
             end 
         end
         
+    end
+    
+    methods (Static)
+        function taux = collocation_points(dx, cpx)
+            taux = cell(1,length(dx));
+            for k=1:length(dx)
+                taux{k} = ...
+                    full([0, casadi.collocation_points(dx(k), cpx{k})]);
+            end
+        end
     end
 
 end

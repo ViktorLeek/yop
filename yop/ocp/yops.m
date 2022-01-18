@@ -7,7 +7,7 @@ ts_flag    = {'times:', 'Times:'};
 state_flag = {'-state', 'states:', 'state:', 'State:', 'States:'};
 alg_flag   = {'-algebraic', '-alg', 'algs:', 'algebraics:', 'algebraic:', 'Algebraic:', 'Algebraics:', 'Algs:'};
 ctrl_flag  = {'-control'  , '-ctrl', 'ctrl:', 'ctrls:', 'controls:', 'control:', 'Control:', 'Controls:', 'Ctrl:', 'Ctrls:'};
-param_flag = {'-parameter', '-param', 'param:', 'params:', 'parameters:', 'parameter:', 'Parameter:', 'Parameters:', 'Param:'};
+param_flag = {'-parameter', '-param', 'param:', 'params:', 'parameters:', 'parameter:', 'Parameter:', 'Parameters:', 'Param:', 'Params:'};
 var_flag = [t_flag(:)', t0_flag(:)', tf_flag(:)', ts_flag(:)', ...
     state_flag(:)', alg_flag(:)', ctrl_flag(:)', param_flag(:)'];
 

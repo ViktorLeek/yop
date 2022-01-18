@@ -1,8 +1,8 @@
 %% Bang-bang Control
 %   From: http://www.ee.ic.ac.uk/ICLOCS/ExampleBangBang.html
-yops times: t t0 tf
-yops states: x size: [2,1]
-yops control: u
+yops Times: t t0 tf
+yops States: x size: [2,1]
+yops Control: u
 
 A = [0,1;0,0];
 B = [0; 1];

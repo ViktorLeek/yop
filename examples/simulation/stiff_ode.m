@@ -1,6 +1,6 @@
 %% Stiff ODE - Van der Pol equations in relaxation oscillation
 %   https://se.mathworks.com/help/matlab/ref/ode15s.html
-yops times: t t0 tf states: x1 x2
+yops Times: t t0 tf States: x1 x2
 x = [x1; x2];
 sol = yop.ivp(...
     t0==0, tf==3000, ...

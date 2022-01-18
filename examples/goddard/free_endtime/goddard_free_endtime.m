@@ -1,7 +1,7 @@
 %% Implementation 1
-yops times: t t0 tf
-yops states: x size: [3, 1] weight: [1e3,1e5,1e2]
-yops controls: u weight: 10
+yops Times: t t0 tf
+yops States: x size: [3, 1] weight: [1e3,1e5,1e2]
+yops Controls: u weight: 10
 
 [dx, y] = rocket_model(x, u);
 
@@ -30,9 +30,9 @@ sol.stairs(t, u);
 % sol = yop.load('Goddard', t, t0, tf, x, u, p);
 
 %% Implementation 1 - variation 1: PW quadratic control, integration of velocity
-yops times: t t0 
-yops states: x1 x2 x3 weight: [1e3,1e5,1e2] 
-yops ctrls: u deg: 2
+yops Times: t t0 
+yops State: x1 x2 x3 weight: [1e3,1e5,1e2] 
+yops Ctrls: u deg: 2
 x = [x1; x2; x3];
 
 [~, y] = rocket_model(x, u);
@@ -61,9 +61,9 @@ subplot(414); hold on
 sol.plot(t, u, 'mag', 5);
 
 %% Implementation 2
-yops times: t t0 tf weight: [1e2,1e0,1e2]
-yops states: v h m  weight: [1e3,1e5,1e2]
-yops controls: u    weight: 10 deg: 2
+yops Times: t t0 tf weight: [1e2,1e0,1e2]
+yops States: v h m  weight: [1e3,1e5,1e2]
+yops Controls: u    weight: 10 deg: 2
 u.du.weight(2).du.weight(0.5); % First der has weight 2, second has 0.5
 
 x     = [  v;   h;   m];
@@ -102,9 +102,9 @@ subplot(313); hold on
 sol.stairs(t, der(der(u)));
 
 %% Implementation 3
-yops times: t t0 tf
-yops states: v h m
-yops ctrls: Wf
+yops Times: t t0 tf
+yops States: v h m
+yops Ctrls: Wf
 
 % Parameters
 D0 = 0.01227; beta = 0.145e-3; c = 2060;
@@ -145,3 +145,5 @@ subplot(413); hold on
 sol.plot(t, m);
 subplot(414); hold on
 sol.stairs(t, Wf);
+
+

@@ -1,6 +1,6 @@
 yops Times: t t0 tf
 yops State: x size: [6,1] weight: [1e4,1e4,1e4,1e3,1e3,1e3]
-yops Ctrl:  u size: [2,1]
+yops Ctrls: u size: [2,1]
 
 Npop = 30000;
 x0   = [76; 1; 36; 2; 4; 1]*Npop/120;

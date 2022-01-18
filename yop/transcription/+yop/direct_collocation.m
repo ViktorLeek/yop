@@ -1,16 +1,17 @@
-function nlp = direct_collocation(ocp, N, d, cp)
+function nlp = direct_collocation(ocp, N, dx, cpx)
 
 % If horizon is not fixed, T0 and Tf are nonsense. But since they are only
 % to be used for a fixed horizon, that is OK.
 % [~, T0, Tf] = ocp.fixed_horizon();
 
                        yop.progress.nlp_building();
-T0=[]; Tf=[]; t=[]; t0=[]; tf=[]; p=[]; dt=[]; tau=[]; tp=[]; I=[]; D=[]; 
+T0=[]; Tf=[]; t=[]; t0=[]; tf=[]; p=[]; dt=[]; taux=[]; tp=[]; I=[]; D=[]; 
 g=[]; g_ub=[]; g_lb=[]; w_ub=[]; w_lb=[]; w0=[]; h=[];
-t = yop.interpolating_poly.empty(N+1, 0);
-x = yop.interpolating_poly.empty(N+1, 0);
-z = yop.interpolating_poly.empty(N  , 0);
-u = yop.interpolating_poly.empty(N  , 0);
+t = yop.interpolating_poly.empty(0, N+1);
+x = yop.interpolating_poly.empty(0, N+1);
+z = yop.interpolating_poly.empty(0, N);
+u = yop.interpolating_poly.empty(0, N);
+D = yop.interpolating_poly.empty(0, N);
 
 init_collocation();
 init_variables();      yop.progress.nlp_initialized();
@@ -64,7 +65,7 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
 
 
     function init_collocation()
-        tau = full([0, casadi.collocation_points(d, cp)]);
+        taux = full([0, casadi.collocation_points(dx, cpx)]);
     end
 
     function init_variables()
@@ -86,42 +87,55 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
 
     function init_time()
         t_n = t0;
+        T = T0;
         for n=1:N
-            t(n) = yop.interpolating_poly(tau, t_n + tau*dt, T0, Tf, N);
+            t(n) = yop.interpolating_poly(taux, t_n + taux*dt, T, T+h);
             t_n = t_n + dt;
+            T = T + h;
         end
-        t(N+1) = yop.interpolating_poly(0, tf, T0, Tf, N);
+        assert(yop.EQ(T, Tf));
+        t(N+1) = yop.interpolating_poly(0, tf, Tf, Tf);
     end
     
     function init_state()
+        T = T0;
         for n=1:N
-            x_n = yop.cx(['x_' num2str(n)], ocp.n_x, d+1);
-            x(n) = yop.interpolating_poly(tau, x_n, T0, Tf, N);
+            x_n = yop.cx(['x_' num2str(n)], ocp.n_x, dx+1);
+            x(n) = yop.interpolating_poly(taux, x_n, T, T+h);
+            T = T + h;
         end
+        assert(yop.EQ(T, Tf));
         x_n = yop.cx(['x_' num2str(N+1)], ocp.n_x);
-        x(N+1) = yop.interpolating_poly(0, x_n, T0, Tf, N);
+        x(N+1) = yop.interpolating_poly(0, x_n, Tf, Tf);
     end
 
     function init_algebraic()
+        T = T0;
         for n=1:N
-            z_n = yop.cx(['z_' num2str(n)], ocp.n_z, d);
-            z(n) = yop.interpolating_poly(tau(2:end), z_n, T0, Tf, N);
+            z_n = yop.cx(['z_' num2str(n)], ocp.n_z, dx);
+            z(n) = yop.interpolating_poly(taux(2:end), z_n, T, T+h);
+            T = T + h;
         end
+        assert(yop.EQ(T, Tf));
     end
 
     function init_control()
-        u = yop.interpolating_poly.empty(N, 0);
+        T = T0;
         for n=1:N
             u_n = yop.cx(['u_' num2str(n)], ocp.n_u);
-            u(n) = yop.interpolating_poly(0, u_n, T0, Tf, N);
+            u(n) = yop.interpolating_poly(0, u_n, T, T+h);
+            T = T + h;
         end
+        assert(yop.EQ(T, Tf));
     end
 
     function init_derivatives()
-        D = yop.interpolating_poly.empty(N, 0);
+        T = T0;
         for n=1:N
-            D(n) = yop.interpolating_poly(tau, [], T0, Tf, N);
+            D(n) = yop.interpolating_poly(taux, [], T, T+h);
+            T = T + h;
         end
+        assert(yop.EQ(T, Tf));
     end
 
     function special_nodes()
@@ -156,7 +170,7 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
         Ival = 0;
         for n=1:N
             yval = [];
-            for r=tau
+            for r=taux
                 tt = t(n).eval(r);
                 xx = x(n).eval(r);
                 zz = z(n).eval(r);
@@ -165,7 +179,7 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
                 yval = [yval, i.fn(...
                     t0, tf, tt, xx, zz, uu, p, tp_tmp, int_tmp, dd)];
             end
-            lp = yop.lagrange_polynomial(tau, yval).integrate();
+            lp = yop.lagrange_polynomial(taux, yval).integrate();
             Ival = Ival + lp.evaluate(1)*dt;
         end
         I = [I; Ival];
@@ -174,7 +188,7 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
     function parameterize_derivative(der, tp_tmp, int_tmp)
         for n=1:N
             yval = [];
-            for r=tau
+            for r=taux
                 tt = t(n).eval(r);
                 xx = x(n).eval(r);
                 zz = z(n).eval(r);
@@ -183,8 +197,8 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
                 yval = [yval, der.fn(...
                     t0, tf, tt, xx, zz, uu, p, tp_tmp, int_tmp, dd)];
             end
-            lp = yop.lagrange_polynomial(tau, yval);
-            yn = lp.differentiate().evaluate(tau)/dt;
+            lp = yop.lagrange_polynomial(taux, yval);
+            yn = lp.differentiate().evaluate(taux)/dt;
             D(n).y = [D(n).y; yn];
         end
     end
@@ -195,8 +209,8 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
 
     function discretize_dynamics()
         for n=1:N % Dynamics
-            dx = x(n).differentiate();
-            for r=tau(2:end)
+            derx = x(n).differentiate();
+            for r=taux(2:end)
                 tt = t(n).eval(r);
                 xx = x(n).eval(r);
                 zz = z(n).eval(r);
@@ -204,7 +218,7 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
                 dd = D(n).eval(r);
                 f = ocp.ode.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd);
                 a = ocp.alg.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd);
-                g = [g; (dx.evaluate(r) - dt*f); a];
+                g = [g; (derx.evaluate(r) - dt*f); a];
             end
         end
         
@@ -252,7 +266,7 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
     function hard_pathcons()
         if ocp.has_hard_path()
             for n=1:N
-                for r = tau
+                for r = taux
                     tt = t(n).eval(r);
                     xx = x(n).eval(r);
                     zz = z(n).eval(r);
@@ -268,8 +282,8 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
             uu = u(N).eval(1);
             dd = D(N).eval(1);
             g = [g; ocp.path_hard.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd)];
-            g_ub = [g_ub; repmat(ocp.path_hard.ub, N*(d+1)+1, 1)];
-            g_lb = [g_lb; repmat(ocp.path_hard.lb, N*(d+1)+1, 1)];
+            g_ub = [g_ub; repmat(ocp.path_hard.ub, N*(dx+1)+1, 1)];
+            g_lb = [g_lb; repmat(ocp.path_hard.lb, N*(dx+1)+1, 1)];
         end
     end
 
@@ -289,12 +303,12 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
         % Evaluate all points within the interval
         [n0, r0, nf, rf] = get_ival_idx(I0, If);
         for n = n0 : min(nf, N) % N+1 is handled by evaluating at If
-            for r = yop.IF(n==n0, r0, 1) : yop.IF(n==nf, rf, d+1)
-                tt = t(n).eval(tau(r));
-                xx = x(n).eval(tau(r));
-                zz = z(n).eval(tau(r));
-                uu = u(n).eval(tau(r));
-                dd = D(n).eval(tau(r));
+            for r = yop.IF(n==n0, r0, 1) : yop.IF(n==nf, rf, dx+1)
+                tt = t(n).eval(taux(r));
+                xx = x(n).eval(taux(r));
+                zz = z(n).eval(taux(r));
+                uu = u(n).eval(taux(r));
+                dd = D(n).eval(taux(r));
                 g = [g; expr.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd)];
                 g_ub = [g_ub; expr.ub];
                 g_lb = [g_lb; expr.lb];
@@ -330,7 +344,7 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
             t_n0 = h*(n0-1);
             tau_I0 = (I0-t_n0)/h;
             % Does not use >= in order to always pick the next point
-            r0 = find(tau - tau_I0 > 0, 1);
+            r0 = find(taux - tau_I0 > 0, 1);
             if isempty(r0)
                 % Next point is the next control interval
                 r0 = 1;
@@ -342,12 +356,12 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
         nf = 1 + floor((If-T0)/h);
         t_nf = h*(nf-1);
         tau_If = (If-t_nf)/h;
-        rf = find(tau - tau_If < 0, 1, 'last');
+        rf = find(taux - tau_If < 0, 1, 'last');
         if isempty(rf)
             if nf==1
                 rf = 1;
             else
-                rf = length(tau);
+                rf = length(taux);
                 nf = nf-1;
             end
         end
@@ -362,35 +376,35 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
         
         x_ub = ocp.x0_ub(T0);
         x_lb = ocp.x0_lb(T0);
-        tt = yop.IF(isnumeric(T0), T0, 1);
+        T = T0;
         for n=1:N
-            for r = tau(yop.IF(n==1,2,1):end)
-                x_ub = [x_ub; ocp.x_ub(tt+r)];
-                x_lb = [x_lb; ocp.x_lb(tt+r)];
+            for r = taux(yop.IF(n==1,2,1):end)
+                x_ub = [x_ub; ocp.x_ub(T+r)];
+                x_lb = [x_lb; ocp.x_lb(T+r)];
             end
-            tt = tt + h;
+            T = T + h;
         end
         x_ub = [x_ub; ocp.xf_ub(Tf)];
         x_lb = [x_lb; ocp.xf_lb(Tf)];
         
         z_ub = [];
         z_lb = [];
-        tt = yop.IF(isnumeric(T0), T0, 1);
+        T = T0;
         for n=1:N
-            for r = tau(2:end)
-                z_ub = [z_ub; ocp.z_ub(tt+r)];
-                z_lb = [z_lb; ocp.z_lb(tt+r)];
+            for r = taux(2:end)
+                z_ub = [z_ub; ocp.z_ub(T+r)];
+                z_lb = [z_lb; ocp.z_lb(T+r)];
             end
-            tt = tt + h;
+            T = T + h;
         end
         
         u_ub = ocp.u0_ub(T0);
         u_lb = ocp.u0_lb(T0);
-        tt = yop.IF(isnumeric(T0), T0, 1) + h;
+        T = T0;
         for n=2:N-1
-            u_ub = [u_ub; ocp.u_ub(tt)];
-            u_lb = [u_lb; ocp.u_lb(tt)];
-            tt = tt + h;
+            u_ub = [u_ub; ocp.u_ub(T)];
+            u_lb = [u_lb; ocp.u_lb(T)];
+            T = T + h;
         end
         u_ub = [u_ub; ocp.uf_ub(Tf)];
         u_lb = [u_lb; ocp.uf_lb(Tf)];
@@ -420,8 +434,8 @@ nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
         tx=[]; tz=[]; tu=[];
         h0 = (tf_0-t0_0)/N;
         for k=1:N
-            tx = [tx, t0_0 + tau*h0];
-            tz = [tz, t0_0 + tau(2:end)*h0];
+            tx = [tx, t0_0 + taux*h0];
+            tz = [tz, t0_0 + taux(2:end)*h0];
             tu = [tu, t0_0];
             t0_0 = t0_0 + h0;
         end
