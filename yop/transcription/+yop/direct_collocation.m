@@ -54,13 +54,20 @@ nlp.x  = x;
 nlp.z  = z;
 nlp.u  = u;
 nlp.p  = p;
-nlp.ocp_t0 = @(w) full(t0fn(w));
-nlp.ocp_tf = @(w) full(tffn(w));
-nlp.ocp_t  = @(w) full(tfn(w));
-nlp.ocp_x  = @(w) full(xfn(w));
-nlp.ocp_z  = @(w) full(zfn(w));
-nlp.ocp_u  = @(w) full(ufn(w));
-nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
+nlp.ocp_t0 = t0fn;
+nlp.ocp_tf = tffn;
+nlp.ocp_t  = tfn;
+nlp.ocp_x  = xfn;
+nlp.ocp_z  = zfn;
+nlp.ocp_u  = ufn;
+nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
+% nlp.ocp_t0 = @(w) full(t0fn(w));
+% nlp.ocp_tf = @(w) full(tffn(w));
+% nlp.ocp_t  = @(w) full(tfn(w));
+% nlp.ocp_x  = @(w) full(xfn(w));
+% nlp.ocp_z  = @(w) full(zfn(w));
+% nlp.ocp_u  = @(w) full(ufn(w));
+% nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
 
 
 

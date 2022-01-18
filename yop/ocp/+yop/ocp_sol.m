@@ -29,7 +29,7 @@ classdef ocp_sol < handle
             
             taux = yop.ocp_sol.collocation_points(dx, cpx);
             tt=ipe(1); xx=ipe(1); zz=ipe(0); uu=ipe(0);
-            ix=1; iz=1; iu=1;
+            cnt=1; ix=1; iz=1; iu=1;
             for r = 1:length(N)
                 N_ = N(r);
                 dx_ = dx(r);
@@ -42,19 +42,19 @@ classdef ocp_sol < handle
                     colu = iu;
                     tt0 = t(colx(1));
                     ttf = t(colx(end)+1);
-                    tt(n) = ip(taux_, t(:, colx), tt0, ttf);
-                    xx(n) = ip(taux_, x(:, colx), tt0, ttf);
-                    zz(n) = ip(tauz_, z(:, colz), tt0, ttf);
-                    uu(n) = ip(tauu_, u(:, colu), tt0, ttf);
+                    tt(cnt) = ip(taux_, t(:, colx), tt0, ttf);
+                    xx(cnt) = ip(taux_, x(:, colx), tt0, ttf);
+                    zz(cnt) = ip(tauz_, z(:, colz), tt0, ttf);
+                    uu(cnt) = ip(tauu_, u(:, colu), tt0, ttf);
+                    cnt = cnt + 1;
                     ix = ix + dx_ + 1;
                     iz = iz + dx_;
                     iu = iu + 1;
                 end
-                disp('---')
             end
-            assert(n==obj.n_seg);
-            tt(n+1) = ip(0, obj.tf   , obj.tf, obj.tf);
-            xx(n+1) = ip(0, x(:, end), obj.tf, obj.tf);
+            assert(cnt==obj.n_seg+1);
+            tt(cnt) = ip(0, obj.tf   , obj.tf, obj.tf);
+            xx(cnt) = ip(0, x(:, end), obj.tf, obj.tf);
             obj.t = tt;
             obj.x = xx;
             obj.z = zz;

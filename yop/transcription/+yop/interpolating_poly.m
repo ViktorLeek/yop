@@ -17,7 +17,7 @@ classdef interpolating_poly < yop.lagrange_polynomial
             
             if length(obj.x) == 1
                 v = obj.y(:);
-                return;
+                return
             end
             
             [M, I] = min(abs(tau - obj.x));

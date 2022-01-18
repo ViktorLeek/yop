@@ -47,7 +47,7 @@ classdef ocp < handle
         visited = [] % special nodes that has been visited - speedup
     end
     
-    properties %(Hidden) % Multiphase
+    properties % Multiphase
         m_id     
         m_value  
         m_phases 
@@ -115,7 +115,7 @@ classdef ocp < handle
             obj.st(varargin{:});
         end
         
-        function sol = solve(obj, varargin)
+        function varargout = solve(obj, varargin)
             ip = inputParser();
             ip.FunctionName = "yop.ocp/solve";
             ip.addParameter('intervals', yop.defaults.control_invervals);
@@ -126,15 +126,43 @@ classdef ocp < handle
             ip.addParameter('opts', struct());
             ip.parse(varargin{:});
             
-            N  = ip.Results.intervals;
-            d  = ip.Results.degree;
-            cp = ip.Results.points;
+            N   = ip.Results.intervals;
+            dx  = ip.Results.degree;
+            cpx = ip.Results.points;
             opts = ip.Results.opts;
             solver = ip.Results.solver;
             obj.guess = ip.Results.guess;
             
+            if isscalar(N) && length(obj.m_phases) > 1
+                N = N * ones(1, length(obj.m_phases));
+            end
+            
+            if isscalar(dx) && length(obj.m_phases) > 1
+                dx = dx * ones(1, length(obj.m_phases));
+            end
+            
+            if ~iscell(cpx)
+                pnts = cpx;
+                cpx = cell(1, length(obj.m_phases));
+                for k=1:length(cpx)
+                    cpx{k} = pnts;
+                end
+            end
+            
+            if length(obj.m_phases) == 1
+                varargout{1} = obj.solve_single(N, dx, cpx, solver, opts);
+                
+            else
+                n_phases = length(obj.m_phases);
+                [varargout{1:n_phases+1}] = obj.solve_multi(N, dx, cpx, solver, opts);
+            end
+            
+            
+        end
+        
+        function sol = solve_single(obj, N, dx, cpx, solver, opts)
             obj.to_canonical();
-            nlp = yop.direct_collocation(obj, N, d, cp);
+            nlp = yop.direct_collocation(obj, N, dx, cpx{1});
             
             solver = casadi.nlpsol('solver', solver, ...
                 struct('f', nlp.J, 'x', nlp.w, 'g', nlp.g), opts);
@@ -147,80 +175,142 @@ classdef ocp < handle
                 );
             
             w_opt = struct;
-            w_opt.t0 = obj.descale_t0(nlp.ocp_t0(nlp_sol.x));
-            w_opt.tf = obj.descale_tf(nlp.ocp_tf(nlp_sol.x));
-            w_opt.t  = obj.descale_t (nlp.ocp_t (nlp_sol.x));
-            w_opt.x  = obj.descale_x (nlp.ocp_x (nlp_sol.x));
-            w_opt.z  = obj.descale_z (nlp.ocp_z (nlp_sol.x));
-            w_opt.u  = obj.descale_u (nlp.ocp_u (nlp_sol.x));
-            w_opt.p  = obj.descale_p (nlp.ocp_p (nlp_sol.x));
+            w_opt.t0 = obj.descale_t0(full(nlp.ocp_t0(nlp_sol.x)));
+            w_opt.tf = obj.descale_tf(full(nlp.ocp_tf(nlp_sol.x)));
+            w_opt.t  = obj.descale_t (full(nlp.ocp_t (nlp_sol.x)));
+            w_opt.x  = obj.descale_x (full(nlp.ocp_x (nlp_sol.x)));
+            w_opt.z  = obj.descale_z (full(nlp.ocp_z (nlp_sol.x)));
+            w_opt.u  = obj.descale_u (full(nlp.ocp_u (nlp_sol.x)));
+            w_opt.p  = obj.descale_p (full(nlp.ocp_p (nlp_sol.x)));
             
-            sol = yop.ocp_sol(obj.mx_vars(), obj.ids, w_opt, N, d, {cp});
+            sol = yop.ocp_sol(obj.mx_vars(), obj.ids, w_opt, N, dx, cpx);
             yop.progress.ocp_solved(solver.stats.success);
         end
     end
     
     %% Multiphase
     methods
-        function varargout = solve_multiphase(obj, N, d, cp, solver, opts)
-            
-            % Build individual NLPs
-            
-            obj.build_nlps(N, d, cp);
+        function varargout = solve_multi(obj, N, dx, cpx, solver, opts)
+            obj.build_nlps(N, dx, cpx);
             nlp = obj.merge_nlps();
-            nlp_sol = solve_nlp(solver, opts);            
+            nlp_sol = obj.solve_nlp(nlp, solver, opts);            
             obj.nlp_to_ocp_maps(nlp);
-            %osol = obj.ocp_sol(nlp_sol);
-            psol = obj.phase_sol(nlp_sol);
+            osol = obj.ocp_solution(nlp_sol);
+            psol = obj.phase_solution(nlp_sol);
             
-            varargout = {osol};
-            %             for
-            % Merge variables
+            [mx_args, ids] = obj.input_variables();
+            varargout{1} = yop.ocp_sol(mx_args, ids, osol, N, dx, cpx);
+            for k=1:length(obj.m_phases)
+                varargout{k+1} = ...
+                    yop.ocp_sol(mx_args, ids, psol(k), N(k), dx(k), cpx(k));
+            end
         end
         
-        function sol = ocp_sol(obj, nlp_sol)
+        function [mx_args, ids] = input_variables(obj)
+            % Find largest set of input variables
+            ids = [];
+            for ph=obj.m_phases
+                ids = [ids, ph.variables().ids];
+            end
+            ids = unique(ids);
+            
+            t  = obj.m_phases(1).independent;
+            t0 = obj.m_phases(1).independent0;
+            tf = obj.m_phases(1).independentf;
+            
+            x = [];
+            for ph=obj.m_phases
+                x = [x, ph.states];
+            end
+            [~,idx] = unique(x.ids);
+            x = x(unique(idx));
+            
+            z = [];
+            for ph=obj.m_phases
+                z = [z, ph.algebraics];
+            end
+            [~,idx] = unique(z.ids);
+            z = z(unique(idx));
+            
+            u = [];
+            for ph=obj.m_phases
+                u = [u, ph.controls];
+            end
+            [~,idx] = unique(u.ids);
+            u = u(unique(idx));
+            
+            p = [];
+            for ph=obj.m_phases
+                p = [p, ph.parameters];
+            end
+            [~,idx] = unique(p.ids);
+            p = p(unique(idx));
+            
+            mx_args = {t0.mx_vec(), tf.mx_vec(), t.mx_vec(), x.mx_vec(),...
+                z.mx_vec(), u.mx_vec(), p.mx_vec()};
+        end
+        
+        function sol = ocp_solution(obj, nlp_sol)
             % Solution to the complete OCP
-            t=[]; x=[]; z=[]; u=[]; p=[];
-            for p = obj.m_phases
-                tt = p.descale_t( p.m_nlp.ocp_t(nlp_sol.x) );
-                xx = p.descale_x( p.m_nlp.ocp_x(nlp_sol.x) );
-                zz = p.descale_z( p.m_nlp.ocp_z(nlp_sol.x) );
-                uu = p.descale_u( p.m_nlp.ocp_u(nlp_sol.x) );
-                t = [t, tt(2:end)];
-                x = [x, xx(:, 2:end)];
+            p1 = obj.m_phases(1);
+            pf = obj.m_phases(end);
+            t0 = p1.descale_t0( full(p1.m_nlp.ocp_t0(nlp_sol.x)) );
+            tf = pf.descale_tf( full(pf.m_nlp.ocp_tf(nlp_sol.x)) );
+            p  = p1.descale_p ( full(p1.m_nlp.ocp_p (nlp_sol.x)) );
+            %             t  = p1.descale_t ( full(p1.m_nlp.ocp_t (nlp_sol.x)) );
+            %             x  = p1.descale_x ( full(p1.m_nlp.ocp_x (nlp_sol.x)) );
+            %             z  = p1.descale_z ( full(p1.m_nlp.ocp_z (nlp_sol.x)) );
+            %             u  = p1.descale_u ( full(p1.m_nlp.ocp_u (nlp_sol.x)) );
+            t=[]; x=[]; z=[]; u=[]; 
+            for ph = obj.m_phases(1:end-1)
+                tt = ph.descale_t( full(ph.m_nlp.ocp_t(nlp_sol.x)) );
+                xx = ph.descale_x( full(ph.m_nlp.ocp_x(nlp_sol.x)) );
+                zz = ph.descale_z( full(ph.m_nlp.ocp_z(nlp_sol.x)) );
+                uu = ph.descale_u( full(ph.m_nlp.ocp_u(nlp_sol.x)) );
+                t = [t, tt(1:end-1)];
+                x = [x, xx(:, 1:end-1)];
                 z = [z, zz];
                 u = [u, uu];
             end
-            p1 = obj.m_phases(1);
-            pf = obj.m_phases(end);
-            t0 = p1.descale_t0(p1.m_nlp.ocp_t0(nlp_sol.x));
-            tf = pf.descale_tf(pf.m_nlp.ocp_tf(nlp_sol.x));
+            ph = obj.m_phases(end);
+            tt = ph.descale_t( full(ph.m_nlp.ocp_t(nlp_sol.x)) );
+            xx = ph.descale_x( full(ph.m_nlp.ocp_x(nlp_sol.x)) );
+            zz = ph.descale_z( full(ph.m_nlp.ocp_z(nlp_sol.x)) );
+            uu = ph.descale_u( full(ph.m_nlp.ocp_u(nlp_sol.x)) );
+            t = [t, tt];
+            x = [x, xx];
+            z = [z, zz];
+            u = [u, uu];
             sol = struct('t0',t0,'tf',tf,'t',t,'x',x,'z',z,'u',u,'p',p);
         end
         
-        function s = phase_sol(obj, nlp_sol)
+        function s = phase_solution(obj, nlp_sol)
             s = struct;
             s.t0=[]; s.tf=[]; s.t=[]; s.x=[]; s.z=[]; s.u=[]; s.p=[];
+            cnt = 1;
             for p=obj.m_phases
-                s(end+1).t0 = p.descale_t0(p.m_nlp.ocp_t0(nlp_sol.x));
-                s(end+1).tf = p.descale_tf(p.m_nlp.ocp_tf(nlp_sol.x));
-                s(end+1).t  = p.descale_t (p.m_nlp.ocp_t (nlp_sol.x));
-                s(end+1).x  = p.descale_x (p.m_nlp.ocp_x (nlp_sol.x));
-                s(end+1).z  = p.descale_z (p.m_nlp.ocp_z (nlp_sol.x));
-                s(end+1).u  = p.descale_u (p.m_nlp.ocp_u (nlp_sol.x));
-                s(end+1).p  = p.descale_p (p.m_nlp.ocp_p (nlp_sol.x));
+                tmp = struct;
+                tmp.t0 = p.descale_t0(full(p.m_nlp.ocp_t0(nlp_sol.x)));
+                tmp.tf = p.descale_tf(full(p.m_nlp.ocp_tf(nlp_sol.x)));
+                tmp.t  = p.descale_t (full(p.m_nlp.ocp_t (nlp_sol.x)));
+                tmp.x  = p.descale_x (full(p.m_nlp.ocp_x (nlp_sol.x)));
+                tmp.z  = p.descale_z (full(p.m_nlp.ocp_z (nlp_sol.x)));
+                tmp.u  = p.descale_u (full(p.m_nlp.ocp_u (nlp_sol.x)));
+                tmp.p  = p.descale_p (full(p.m_nlp.ocp_p (nlp_sol.x)));
+                s(cnt) = tmp;
+                cnt = cnt + 1;
             end
         end
         
         function build_nlps(obj, N, d, cp)
             for k=1:length(obj.m_phases)
                 obj.m_phases(k).to_canonical();
-                obj.m_phases(k).m_nlp = ...
-                    yop.direct_collocation(N(k), d(k), cp{k});
+                obj.m_phases(k).m_nlp = yop.direct_collocation( ...
+                    obj.m_phases(k), N(k), d(k), cp{k});
             end
         end
         
-        function nlp_sol = solve_nlp(~, solver, opts)
+        function nlp_sol = solve_nlp(~, nlp, solver, opts)
             prob = struct('f', nlp.J, 'x', nlp.w, 'g', nlp.g);
             solver = casadi.nlpsol('solver', solver, prob, opts);
             nlp_sol = solver( ...
@@ -245,19 +335,19 @@ classdef ocp < handle
                 nlp.g    = [nlp.g   ; pk.m_nlp.g   ];
                 nlp.g_ub = [nlp.g_ub; pk.m_nlp.g_ub];
                 nlp.g_lb = [nlp.g_lb; pk.m_nlp.g_lb];
-                obj.continuity(nlp, pk, obj.m_phases(parent(k)));
+                obj.continuity(nlp, obj.m_phases(parent(k)), pk);
             end
         end
         
         function J = nlp_objective(obj)
             % First create a function object for the multiphase objective
             args = arrayfun( ...
-                @(e) e.m_value, J.m_phases, 'UniformOutput', false);
+                @(e) e.m_value, obj.m_phases, 'UniformOutput', false);
             Jfn = casadi.Function('J', args, {obj.m_value});
             
             % Evaluate the function using the individual nlp objectives
             Js = arrayfun( ...
-                @(e) e.m_nlp.J, J.m_phases, 'UniformOutput', false);
+                @(e) e.m_nlp.J, obj.m_phases, 'UniformOutput', false);
             J = Jfn(Js{:});
             
         end
@@ -266,7 +356,7 @@ classdef ocp < handle
             if parent.m_id == child.m_id
                 % Circular OCPs formualted as multi-phase problems are not
                 % supported
-                return;
+                return
             end
             
             nlp_p = parent.m_nlp;
@@ -303,20 +393,27 @@ classdef ocp < handle
             parent = abs(parent);
         end
         
-        function nlp_to_ocp_maps(~, nlp)
-            for p=1:obj.m_phases
+        function nlp_to_ocp_maps(obj, nlp)
+            for p=obj.m_phases
                 % Function that maps from multiphase nlp variable vector to
                 % single phase variable vector
                 f = casadi.Function('f', {nlp.w}, {p.m_nlp.w});
                 
                 % Functions that map from nlp vector to ocp variables
-                p.m_nlp.ocp_t0 = @(w) p.m_nlp.ocp_t0(full(f(w)));
-                p.m_nlp.ocp_tf = @(w) p.m_nlp.ocp_tf(full(f(w)));
-                p.m_nlp.ocp_t  = @(w) p.m_nlp.ocp_t (full(f(w)));
-                p.m_nlp.ocp_x  = @(w) p.m_nlp.ocp_x (full(f(w)));
-                p.m_nlp.ocp_z  = @(w) p.m_nlp.ocp_z (full(f(w)));
-                p.m_nlp.ocp_u  = @(w) p.m_nlp.ocp_u (full(f(w)));
-                p.m_nlp.ocp_p  = @(w) p.m_nlp.ocp_p (full(f(w)));
+                p.m_nlp.ocp_t0 = casadi.Function('t0', {nlp.w}, {p.m_nlp.ocp_t0(f(nlp.w))});
+                p.m_nlp.ocp_tf = casadi.Function('tf', {nlp.w}, {p.m_nlp.ocp_tf(f(nlp.w))});
+                p.m_nlp.ocp_t  = casadi.Function('t', {nlp.w}, {p.m_nlp.ocp_t(f(nlp.w))});
+                p.m_nlp.ocp_x  = casadi.Function('x', {nlp.w}, {p.m_nlp.ocp_x(f(nlp.w))});
+                p.m_nlp.ocp_z  = casadi.Function('z', {nlp.w}, {p.m_nlp.ocp_z(f(nlp.w))});
+                p.m_nlp.ocp_u  = casadi.Function('u', {nlp.w}, {p.m_nlp.ocp_u(f(nlp.w))});
+                p.m_nlp.ocp_p  = casadi.Function('p', {nlp.w}, {p.m_nlp.ocp_p(f(nlp.w))});
+                %                 p.m_nlp.ocp_t0 = @(w) p.m_nlp.ocp_t0(full(f(w)));
+                %                 p.m_nlp.ocp_tf = @(w) p.m_nlp.ocp_tf(full(f(w)));
+                %                 p.m_nlp.ocp_t  = @(w) p.m_nlp.ocp_t (full(f(w)));
+                %                 p.m_nlp.ocp_x  = @(w) p.m_nlp.ocp_x (full(f(w)));
+                %                 p.m_nlp.ocp_z  = @(w) p.m_nlp.ocp_z (full(f(w)));
+                %                 p.m_nlp.ocp_u  = @(w) p.m_nlp.ocp_u (full(f(w)));
+                %                 p.m_nlp.ocp_p  = @(w) p.m_nlp.ocp_p (full(f(w)));
             end
         end
         
@@ -676,6 +773,7 @@ classdef ocp < handle
         end
         
         function obj = augment_system(obj)
+            
             
             % Augment system based on control parametrization
             % Step 1: Account for all control inputs
