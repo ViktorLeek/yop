@@ -104,8 +104,8 @@ sol.stairs(t, der(der(u)));
 
 %% Implementation 3
 yops Times: t t0 tf
-yops States: v h m
-yops Ctrls: Wf
+yops States: v h m scaling: [1e3,1e5,1e2]
+yops Ctrls: Wf deg: 2 scaling: 10
 
 % Parameters
 D0 = 0.01227; beta = 0.145e-3; c = 2060;
@@ -125,7 +125,7 @@ Wfmin = 0; Wfmax = 9.5;
 
 % Optimal control problem
 ocp = yop.ocp();
-ocp.max( h(tf) );
+ocp.max( h(tf)*1e-5 );
 ocp.st( t0==0 );
 ocp.st( h(t0)==0, v(t0)==0, m(t0)==m_max );
 ocp.st( der(v) == (Wf*c-F_D)/m-g );
@@ -139,12 +139,47 @@ sol = ocp.solve('intervals', 50);
 figure(1);
 subplot(411); hold on
 sol.plot(t, v);
-sol.plot(t, der(h), '--'); % Test that v == der(h)
 subplot(412); hold on
 sol.plot(t, h);
 subplot(413); hold on
 sol.plot(t, m);
 subplot(414); hold on
-sol.stairs(t, Wf);
+sol.plot(t, Wf);
 
+%% Model
+
+function [dx, y] = rocket_model(x, u)
+% States and control
+v = x(1);
+h = x(2);
+m = x(3);
+F = u;
+
+% Parameters
+D0   = 0.01227;
+beta = 0.145e-3;
+c    = 2060;
+g0   = 9.81;
+r0   = 6.371e6;
+
+% Drag and gravity
+D   = D0*exp(-beta*h);
+F_D = D*v^2;
+g   = g0*(r0/(r0+h))^2;
+
+% Dynamics
+dv = (F*c-F_D)/m-g;
+dh = v;
+dm = -F;
+dx = [dv;dh;dm];
+
+% Signals y
+y.rocket.velocity       = v;
+y.rocket.height         = h;
+y.rocket.mass           = m;
+y.rocket.fuel_mass_flow = F;
+y.drag.coefficient      = D;
+y.drag.force            = F_D;
+y.gravity               = g;
+end 
 
