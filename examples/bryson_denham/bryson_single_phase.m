@@ -1,8 +1,8 @@
 %% Original formulation
 yops Times: t t0 tf % Parsed by position: t, t0, tf
-yops State: x v    % position, speed
+yops State: x v     % position, speed
 yops Ctrls: a       % acceleration
-yops Param: l      % maximum cart position
+yops Param: l       % maximum cart position
 
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( 1/2 * int(a^2) );

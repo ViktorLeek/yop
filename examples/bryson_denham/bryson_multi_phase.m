@@ -23,7 +23,7 @@ p2.st( v(tf)  == -1 );
 p2.st( x <= 1/9 );
 
 ocp = p1 + p2;
-[sol, s1, s2] = ocp.solve('intervals', 20, 'degree', 2);
+[sol, s1, s2] = ocp.solve('intervals', [10, 10], 'degree', [2, 2]);
 
 figure(1);
 subplot(311); hold on

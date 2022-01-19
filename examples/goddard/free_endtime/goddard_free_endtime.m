@@ -14,6 +14,7 @@ ocp.st( y.rocket.velocity(t0) == 0 );
 ocp.st( y.rocket.mass(t0)     == 215 );
 ocp.st( 68 <= y.rocket.mass <= 215 );
 ocp.st( 0 <= y.rocket.fuel_mass_flow <= 9.5 );
+
 sol = ocp.solve('intervals', 50);
 
 figure(1);
