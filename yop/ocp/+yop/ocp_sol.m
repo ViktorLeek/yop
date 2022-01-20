@@ -19,7 +19,7 @@ classdef ocp_sol < handle
         nu
     end
     methods
-        function obj = ocp_sol(mx_vars, ids, sol, N, dx, cpx)
+        function obj = ocp_sol(mx_vars, ids, sol, N, dx, cpx, du, cpu)
             obj.mx_vars = mx_vars;
             obj.ids = ids;
             obj.t0 = sol.t0;
@@ -27,7 +27,7 @@ classdef ocp_sol < handle
             obj.p = sol.p;
             obj.n_seg = sum(N);
             obj.parameterize_polynomials( ...
-                sol.t, sol.x, sol.z, sol.u, N, dx, cpx);
+                sol.t, sol.x, sol.z, sol.u, N, dx, cpx, du, cpu);
             obj.precompute_solution(sol);
             obj.nx = size(sol.x,1);
             obj.nz = size(sol.z,1);
@@ -37,9 +37,9 @@ classdef ocp_sol < handle
         
         function obj = precompute_solution(obj, sol)
             % Precompute solution on standard grid
-            [zus, uus] = obj.upsample_zu();
             obj.sol_t = sol.t;
             obj.sol_x = sol.x;
+            [zus, uus] = obj.upsample_zu();
             obj.sol_z = zus;
             obj.sol_u = uus;
         end
@@ -72,23 +72,26 @@ classdef ocp_sol < handle
             us(:,cnt) = poly(n).eval(1);
         end
         
-        function obj = parameterize_polynomials(obj, t, x, z, u, N, dx, cpx)
+        function obj = parameterize_polynomials(obj, t, x, z, u, N, dx, cpx, du, cpu)
             ip = @(x, y, t0, tf) yop.interpolating_poly(x, y, t0, tf);
             ipe = @(k) yop.interpolating_poly.empty(0, obj.n_seg+k);
             
-            taux = yop.ocp_sol.collocation_points(dx, cpx);
+            taux = yop.ocp_sol.collocation_pointsx(dx, cpx);
+            tauu = yop.ocp_sol.collocation_pointsu(du, cpu);
+            
             tt=ipe(1); xx=ipe(1); zz=ipe(0); uu=ipe(0);
             cnt=1; ix=1; iz=1; iu=1;
             for r = 1:length(N)
                 N_ = N(r);
                 dx_ = dx(r);
+                du_ = du(r);
                 taux_ = taux{r};
                 tauz_ = taux_(2:end);
-                tauu_ = 0;
+                tauu_ = tauu{r};
                 for n=1:N_
                     colx = ix : ix + dx_;
                     colz = iz : iz + dx_ - 1;
-                    colu = iu;
+                    colu = iu : iu + du_ - 1;
                     tt0 = t(colx(1));
                     ttf = t(colx(end)+1);
                     tt(cnt) = ip(taux_, t(:, colx), tt0, ttf);
@@ -98,7 +101,7 @@ classdef ocp_sol < handle
                     cnt = cnt + 1;
                     ix = ix + dx_ + 1;
                     iz = iz + dx_;
-                    iu = iu + 1;
+                    iu = iu + du_;
                 end
             end
             assert(cnt==obj.n_seg+1);
@@ -1107,11 +1110,18 @@ classdef ocp_sol < handle
     end
     
     methods (Static)
-        function taux = collocation_points(dx, cpx)
+        function taux = collocation_pointsx(dx, cpx)
             taux = cell(1,length(dx));
             for k=1:length(dx)
                 taux{k} = ...
-                    full([0, casadi.collocation_points(dx(k), cpx{k})]);
+                    [0, full(casadi.collocation_points(dx(k), cpx{k}))];
+            end
+        end
+        
+        function tauu = collocation_pointsu(dx, cpx)
+            tauu = cell(1,length(dx));
+            for k=1:length(dx)
+                tauu{k} = full(casadi.collocation_points(dx(k), cpx{k}));
             end
         end
     end

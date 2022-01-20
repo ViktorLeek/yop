@@ -12,7 +12,7 @@ ocp.st( der(x) == v );
 ocp.st( v(t0) == -v(tf) == 1 );
 ocp.st( x(t0) ==  x(tf) == 0 );
 ocp.st( x <= l == 1/9 );
-sol = ocp.solve('intervals', 10, 'degree', 2);
+sol = ocp.solve('intervals', 21, 'degree', 4);
 
 figure(1);
 subplot(311); hold on
@@ -20,7 +20,8 @@ sol.plot(t, x);
 subplot(312); hold on
 sol.plot(t, v);
 subplot(313); hold on
-sol.stairs(t, a);
+% sol.stairs(t, a);
+sol.plot(t, a);
 
 %% State vector, minimum value and traveled distance
 %   Piecewise quadratic control input (deg == 2)

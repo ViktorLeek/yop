@@ -179,6 +179,11 @@ classdef error < handle
                 yop.error.msg_stop()];
         end
         
+        function msg = cannot_parse_yoptions()
+            msg = [yop.error.msg_start(), 'Cannot parse yoptions flag', ...
+                yop.error.msg_stop()];
+        end
+        
         function msg = independent_scaled()
             msg = [yop.error.msg_start(), ...
                 'Not possible to scale the independent variable. '...

@@ -162,7 +162,9 @@ classdef ocp < handle
         
         function sol = solve_single(obj, N, dx, cpx, solver, opts)
             obj.to_canonical();
-            nlp = yop.direct_collocation(obj, N, dx, cpx{1});
+            du = 3;
+            cpu = {'radau'};
+            nlp = yop.direct_collocation(obj, N, dx, cpx{1}, du, cpu{1});
             
             solver = casadi.nlpsol('solver', solver, ...
                 struct('f', nlp.J, 'x', nlp.w, 'g', nlp.g), opts);
@@ -183,7 +185,7 @@ classdef ocp < handle
             w_opt.u  = obj.descale_u (full(nlp.ocp_u (nlp_sol.x)));
             w_opt.p  = obj.descale_p (full(nlp.ocp_p (nlp_sol.x)));
             
-            sol = yop.ocp_sol(obj.mx_vars(), obj.ids, w_opt, N, dx, cpx);
+            sol = yop.ocp_sol(obj.mx_vars(), obj.ids, w_opt, N, dx, cpx, du, cpu);
             yop.progress.ocp_solved(solver.stats.success);
         end
     end
@@ -191,7 +193,9 @@ classdef ocp < handle
     %% Multiphase
     methods
         function varargout = solve_multi(obj, N, dx, cpx, solver, opts)
-            obj.build_nlps(N, dx, cpx);
+            du = [3,3];
+            cpu = {'radau', 'radau'};
+            obj.build_nlps(N, dx, cpx, du, cpu);
             nlp = obj.merge_nlps();
             nlp_sol = obj.solve_nlp(nlp, solver, opts);            
             obj.nlp_to_ocp_maps(nlp);
@@ -199,10 +203,10 @@ classdef ocp < handle
             psol = obj.phase_solution(nlp_sol);
             
             [mx_args, ids] = obj.input_variables();
-            varargout{1} = yop.ocp_sol(mx_args, ids, osol, N, dx, cpx);
+            varargout{1} = yop.ocp_sol(mx_args, ids, osol, N, dx, cpx, du, cpu);
             for k=1:length(obj.m_phases)
                 varargout{k+1} = ...
-                    yop.ocp_sol(mx_args, ids, psol(k), N(k), dx(k), cpx(k));
+                    yop.ocp_sol(mx_args, ids, psol(k), N(k), dx(k), cpx(k), du(k), cpu(k));
             end
         end
         
@@ -257,10 +261,6 @@ classdef ocp < handle
             t0 = p1.descale_t0( full(p1.m_nlp.ocp_t0(nlp_sol.x)) );
             tf = pf.descale_tf( full(pf.m_nlp.ocp_tf(nlp_sol.x)) );
             p  = p1.descale_p ( full(p1.m_nlp.ocp_p (nlp_sol.x)) );
-            %             t  = p1.descale_t ( full(p1.m_nlp.ocp_t (nlp_sol.x)) );
-            %             x  = p1.descale_x ( full(p1.m_nlp.ocp_x (nlp_sol.x)) );
-            %             z  = p1.descale_z ( full(p1.m_nlp.ocp_z (nlp_sol.x)) );
-            %             u  = p1.descale_u ( full(p1.m_nlp.ocp_u (nlp_sol.x)) );
             t=[]; x=[]; z=[]; u=[]; 
             for ph = obj.m_phases(1:end-1)
                 tt = ph.descale_t( full(ph.m_nlp.ocp_t(nlp_sol.x)) );
@@ -302,11 +302,11 @@ classdef ocp < handle
             end
         end
         
-        function build_nlps(obj, N, d, cp)
+        function build_nlps(obj, N, dx, cpx, du, cpu)
             for k=1:length(obj.m_phases)
                 obj.m_phases(k).to_canonical();
                 obj.m_phases(k).m_nlp = yop.direct_collocation( ...
-                    obj.m_phases(k), N(k), d(k), cp{k});
+                    obj.m_phases(k), N(k), dx(k), cpx{k}, du(k), cpu{k});
             end
         end
         

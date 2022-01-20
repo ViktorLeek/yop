@@ -1,12 +1,8 @@
-function nlp = direct_collocation(ocp, N, dx, cpx)
-
-% If horizon is not fixed, T0 and Tf are nonsense. But since they are only
-% to be used for a fixed horizon, that is OK.
-% [~, T0, Tf] = ocp.fixed_horizon();
+function nlp = direct_collocation(ocp, N, dx, cpx, du, cpu)
 
                        yop.progress.nlp_building();
 T0=[]; Tf=[]; t=[]; t0=[]; tf=[]; p=[]; dt=[]; taux=[]; tp=[]; I=[]; D=[]; 
-g=[]; g_ub=[]; g_lb=[]; w_ub=[]; w_lb=[]; w0=[]; h=[];
+g=[]; g_ub=[]; g_lb=[]; w_ub=[]; w_lb=[]; w0=[]; h=[]; tauu=[];
 t = yop.interpolating_poly.empty(0, N+1);
 x = yop.interpolating_poly.empty(0, N+1);
 z = yop.interpolating_poly.empty(0, N);
@@ -23,6 +19,7 @@ hard_pathcons();
 for pk = ocp.path_ival
     ival_pathcons(pk);
 end
+continuous_control();
                        yop.progress.nlp_pathcons_done();
 
 w = vertcat(t0, tf, x.vec(), z.vec(), u.vec(), p);
@@ -61,18 +58,10 @@ nlp.ocp_x  = xfn;
 nlp.ocp_z  = zfn;
 nlp.ocp_u  = ufn;
 nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
-% nlp.ocp_t0 = @(w) full(t0fn(w));
-% nlp.ocp_tf = @(w) full(tffn(w));
-% nlp.ocp_t  = @(w) full(tfn(w));
-% nlp.ocp_x  = @(w) full(xfn(w));
-% nlp.ocp_z  = @(w) full(zfn(w));
-% nlp.ocp_u  = @(w) full(ufn(w));
-% nlp.ocp_p  = @(w) full(pfn(w));  yop.progress.nlp_completed();
-
-
 
     function init_collocation()
         taux = full([0, casadi.collocation_points(dx, cpx)]);
+        tauu = full(casadi.collocation_points(du, cpu));
     end
 
     function init_variables()
@@ -129,11 +118,20 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
     function init_control()
         T = T0;
         for n=1:N
-            u_n = yop.cx(['u_' num2str(n)], ocp.n_u);
-            u(n) = yop.interpolating_poly(0, u_n, T, T+h);
+            u_n = yop.cx(['u_' num2str(n)], ocp.n_u, du);
+            u(n) = yop.interpolating_poly(tauu, u_n, T, T+h);
             T = T + h;
         end
         assert(yop.EQ(T, Tf));
+    end
+
+    function continuous_control()
+        for n=1:N-1
+            c = u(n).eval(1)-u(n+1).eval(0);
+            g = [g; c];
+            g_ub = [g_ub; zeros(size(c))];
+            g_lb = [g_lb; zeros(size(c))];
+        end
     end
 
     function init_derivatives()
@@ -385,7 +383,7 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
         x_lb = ocp.x0_lb(T0);
         T = T0;
         for n=1:N
-            for r = taux(yop.IF(n==1,2,1):end)
+            for r = taux(yop.IF(n==1,2,1):end)*h
                 x_ub = [x_ub; ocp.x_ub(T+r)];
                 x_lb = [x_lb; ocp.x_lb(T+r)];
             end
@@ -398,23 +396,79 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
         z_lb = [];
         T = T0;
         for n=1:N
-            for r = taux(2:end)
+            for r = taux(2:end)*h
                 z_ub = [z_ub; ocp.z_ub(T+r)];
                 z_lb = [z_lb; ocp.z_lb(T+r)];
             end
             T = T + h;
         end
         
-        u_ub = ocp.u0_ub(T0);
-        u_lb = ocp.u0_lb(T0);
-        T = T0;
+        
+        % First interval
+        if du == 1
+            u_ub = ocp.u0_ub(T0);
+            u_lb = ocp.u0_lb(T0);
+        else
+            g    = [g   ; u(1).eval(0)];
+            g_ub = [g_ub; ocp.u0_ub(T0)];
+            g_lb = [g_lb; ocp.u0_lb(T0)];
+            
+            u_ub=[]; u_lb=[];
+            for r = tauu*h
+                u_ub = [u_ub; ocp.u_ub(r)];
+                u_lb = [u_lb; ocp.u_lb(r)];
+            end
+        end
+        
+        % Middle intervals
+        T = T0 + h;
         for n=2:N-1
-            u_ub = [u_ub; ocp.u_ub(T)];
-            u_lb = [u_lb; ocp.u_lb(T)];
+            for r = tauu*h
+                u_ub = [u_ub; ocp.u_ub(T+r)];
+                u_lb = [u_lb; ocp.u_lb(T+r)];
+            end
             T = T + h;
         end
-        u_ub = [u_ub; ocp.uf_ub(Tf)];
-        u_lb = [u_lb; ocp.uf_lb(Tf)];
+        
+        % Last interval
+        if du == 1    
+            u_ub = [u_ub; ocp.uf_ub(Tf)];
+            u_lb = [u_lb; ocp.uf_lb(Tf)];
+        else
+            for r = tauu(1:end-1)*h
+                u_ub = [u_ub; ocp.u_ub(T+r)];
+                u_lb = [u_lb; ocp.u_lb(T+r)];
+            end
+            if ~strcmp(cpu, 'radau')
+                % Final point is not a nlp variable, so we add final box
+                % constraint as a nonlinear constraint.
+                
+                % First evaluate last collocation point
+                % This is done here, since radau points uses uf_ub instead
+                % of u_ub for last point.
+                u_ub = [u_ub; ocp.u_ub(T+tauu(end)*h)];
+                u_lb = [u_lb; ocp.u_lb(T+tauu(end)*h)];
+                
+                g    = [g   ; u(end).eval(1)];
+                g_ub = [g_ub; ocp.uf_ub(Tf)];
+                g_lb = [g_lb; ocp.uf_lb(Tf)];
+            else
+                u_ub = [u_ub; ocp.uf_ub(Tf)];
+                u_lb = [u_lb; ocp.uf_lb(Tf)];
+                
+            end
+        end
+        
+        %         u_ub = ocp.u0_ub(T0);
+        %         u_lb = ocp.u0_lb(T0);
+        %         T = T0;
+        %         for n=2:N-1
+        %             u_ub = [u_ub; ocp.u_ub(T)];
+        %             u_lb = [u_lb; ocp.u_lb(T)];
+        %             T = T + h;
+        %         end
+        %         u_ub = [u_ub; ocp.uf_ub(Tf)];
+        %         u_lb = [u_lb; ocp.uf_lb(Tf)];
         
         p_lb = ocp.p_lb(T0);
         p_ub = ocp.p_ub(T0);
@@ -443,7 +497,8 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
         for k=1:N
             tx = [tx, t0_0 + taux*h0];
             tz = [tz, t0_0 + taux(2:end)*h0];
-            tu = [tu, t0_0];
+            tu = [tu, t0_0 + tauu*h0];
+            %tu = [tu, t0_0];
             t0_0 = t0_0 + h0;
         end
         tx(end+1) = tf_0;

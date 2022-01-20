@@ -76,14 +76,13 @@ ocp.st( u_min  <=   u   <= u_max  );
 ocp.st( du_min <=  du   <= du_max );
 
 % First solve it without obstacles 
-guess = yop.guess(t0, 0, tf, 8e3, x, x0', u, u_max');
+guess = yop.guess(t0, 0, tf, 8e3, x, x0, u, u_max);
 sol = ocp.solve('intervals', 100, 'guess', guess);
 
 % Add the obstacles and resolve the problem with the previous solution as
 % initial guess.
 ocp.hard( (npos-obs_n).^2 + (epos-obs_e).^2 >= obs_r.^2 );
 sol = ocp.solve('intervals', 800, 'guess', sol);
-
 %% Plot solution
 r2d = @(r) r*180/pi;
 

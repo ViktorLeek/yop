@@ -15,7 +15,9 @@ ocp.st( y.rocket.mass(t0)     == 215 );
 ocp.st( 68 <= y.rocket.mass <= 215 );
 ocp.st( 0 <= y.rocket.fuel_mass_flow <= 9.5 );
 
-sol = ocp.solve('intervals', 50);
+
+yoptions Interval: 100 State: legendre 5 Control: 2 radau >> yopts
+sol = ocp.solve(yopts);
 
 figure(1);
 subplot(411); hold on
@@ -25,7 +27,7 @@ sol.plot(t, x(2));
 subplot(413); hold on
 sol.plot(t, x(3));
 subplot(414); hold on
-sol.stairs(t, u);
+sol.plot(t, u, 'mag', 4);
 
 % sol.save('Goddard.mat');
 % sol = yop.load('Goddard', t, t0, tf, x, u, p);

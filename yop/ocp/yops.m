@@ -1,5 +1,4 @@
 function yops(varargin)
-decl = {};
 t_flag     = {'-independent', '-time' , '-t', 'time:', 'Time:'};
 t0_flag    = {'-independent_initial', '-independent0', '-time0', '-t0', 'time0:', 'time_0:', 'Time0:'};
 tf_flag    = {'-independent_final', '-independentf', '-timef', '-tf', 'timef:', 'time_f:', 'Timef:'};
@@ -10,12 +9,12 @@ ctrl_flag  = {'-control'  , '-ctrl', 'ctrl:', 'ctrls:', 'controls:', 'control:',
 param_flag = {'-parameter', '-param', 'param:', 'params:', 'parameters:', 'parameter:', 'Parameter:', 'Parameters:', 'Param:', 'Params:'};
 var_flag = [t_flag(:)', t0_flag(:)', tf_flag(:)', ts_flag(:)', ...
     state_flag(:)', alg_flag(:)', ctrl_flag(:)', param_flag(:)'];
-
 size_flag  = {'size:', 'sz:'};
 w_flag = {'-weight', '-w', '-W', 'weight:', 'w:', 'W:', 'weights:', 'scaling:'};
 os_flag = {'-offset', '-os', '-OS', 'offset:', 'os:', 'OS:', 'offsets:'};
 deg_flag = {'-deg', 'deg:', 'degree:'};
 
+decl = {};
 k=1;
 while k <= length(varargin)
     
@@ -81,7 +80,7 @@ end
                     step();
                     
                 case var_flag
-                    break;
+                    break
                     
                 otherwise
                     vars{end+1} = varargin{k};
