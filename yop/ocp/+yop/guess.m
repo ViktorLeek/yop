@@ -12,7 +12,8 @@ while k <= K
     [type, id] = Type(var_k);
     for r=1:length(type)
         vr = get_var(id(r));
-        vr.iv = val_k(:,r);
+        % vr.iv = val_k(:,r);
+        vr.iv = val_k(r,:);
     end
     k = k + 2;
 end
@@ -23,11 +24,11 @@ end
 
 if isempty(t)
     t = yop.ivp_var(yop.independent);
-    t.iv = [t0.iv; tf.iv];
+    t.iv = [t0.iv, tf.iv];
 end
 
 if isscalar(t.iv)
-    t.iv = [t0.iv; tf.iv];
+    t.iv = [t0.iv, tf.iv];
 end
 
 if isempty(t0) && isempty(tf)
@@ -41,8 +42,8 @@ for var = time_vars()
     filter(var);
 end
 
-ig = yop.ivp_sol(t.iv', horzcat(x.iv)', horzcat(z.iv, u.iv)', ...
-    horzcat(p.iv)', mxargs(), variables().ids);
+ig = yop.ivp_sol(t.iv, vertcat(x.iv), vertcat(z.iv, u.iv), ...
+    vertcat(p.iv), mxargs(), variables().ids);
 
 
     function find_variables(expr)
@@ -99,7 +100,8 @@ ig = yop.ivp_sol(t.iv', horzcat(x.iv)', horzcat(z.iv, u.iv)', ...
         if isscalar(v.iv) % Scalar guess
             v.iv = interp1([t0.iv; tf.iv], [v.iv; v.iv], t.iv);
             
-        elseif size(v.iv, 1) ~= length(t.iv) && size(v.iv, 1) ~= 2 
+        %elseif size(v.iv, 1) ~= length(t.iv) && size(v.iv, 1) ~= 2 
+        elseif size(v.iv, 2) ~= length(t.iv) && size(v.iv, 2) ~= 2 
             % Guess does not confirm to scalar value, boundary values, or
             % grid.
             error(yop.error.guess_improper_grid());

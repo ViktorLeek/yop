@@ -30,6 +30,17 @@ classdef interpolating_poly < yop.lagrange_polynomial
             end
         end
         
+        function v = evaln(obj, n, tau)
+            % Empty object arrays can't take obj(n), but can call method,
+            % this way, if an empty object calls this method, gets []
+            % returned. While a non-empty object gets the expected result.
+            if isempty(obj)
+                v = [];
+            else
+                v = obj(n).eval(tau);
+            end
+        end
+        
         function v = value(obj, x)
             % Value at timepoint x
             % obj is a vector or polynomials
@@ -61,6 +72,11 @@ classdef interpolating_poly < yop.lagrange_polynomial
         function v = valuenh(obj, x)
             % Value at timepoint x for non-homogenuous grids
             % obj is a vector or polynomials
+            if isempty(obj)
+                v = [];
+                return
+            end
+            
             if x == yop.initial_timepoint
                 v = obj(1).evaluate(0);
                 return

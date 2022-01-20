@@ -135,7 +135,8 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
                         l_j = conv(l_j, Pi_r);
                     end
                 end
-                obj.l(j,:) = yop.lagrange_polynomial.filter0(l_j);
+                obj.l(j,:) = l_j;
+                % obj.l(j,:) = yop.lagrange_polynomial.filter0(l_j);
             end
         end
         
@@ -173,8 +174,9 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
             for n=1:length(t)
                 v = 0;
                 for j=1:obj.degree+1
-                    ll = yop.lagrange_polynomial.filter0( ...
-                        polyval(obj.l(j,:), t(n)));
+                    %                     ll = yop.lagrange_polynomial.filter0( ...
+                    %                         polyval(obj.l(j,:), t(n)));
+                    ll = polyval(obj.l(j,:), t(n));
                     v = v + ll .* obj.y(:,j);
                 end
                 values = [values, v];
@@ -216,7 +218,8 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
                 new_basis(k,:) = polyint(obj.l(k,:), constant_term);
             end
             polynomial = copy(obj);
-            polynomial.l = yop.lagrange_polynomial.filter0(new_basis);
+            polynomial.l = new_basis;
+            %polynomial.l = yop.lagrange_polynomial.filter0(new_basis);
         end
         
         function polynomial = differentiate(obj)
@@ -246,7 +249,8 @@ classdef lagrange_polynomial < handle & matlab.mixin.Copyable
                 new_basis(k, :) = polyder(obj.l(k, :));
             end
             polynomial = copy(obj);
-            polynomial.l = yop.lagrange_polynomial.filter0(new_basis);
+            polynomial.l = new_basis;
+            %             polynomial.l = yop.lagrange_polynomial.filter0(new_basis);
         end
         
         function deg = degree(obj)
