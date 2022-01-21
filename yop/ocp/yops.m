@@ -1,4 +1,5 @@
 function yops(varargin)
+% Use lower to reduce this mess
 t_flag     = {'-independent', '-time' , '-t', 'time:', 'Time:'};
 t0_flag    = {'-independent_initial', '-independent0', '-time0', '-t0', 'time0:', 'time_0:', 'Time0:'};
 tf_flag    = {'-independent_final', '-independentf', '-timef', '-tf', 'timef:', 'time_f:', 'Timef:'};
@@ -12,7 +13,7 @@ var_flag = [t_flag(:)', t0_flag(:)', tf_flag(:)', ts_flag(:)', ...
 size_flag  = {'size:', 'sz:'};
 w_flag = {'-weight', '-w', '-W', 'weight:', 'w:', 'W:', 'weights:', 'scaling:'};
 os_flag = {'-offset', '-os', '-OS', 'offset:', 'os:', 'OS:', 'offsets:'};
-deg_flag = {'-deg', 'deg:', 'degree:'};
+int_flag = {'int:', 'integrate:', 'aug:', 'augment:'};
 
 decl = {};
 k=1;
@@ -226,7 +227,7 @@ end
     end
 
     function control()
-        vars={}; size=[1,1]; w=1; os=0; deg=0;
+        vars={}; size=[1,1]; w=1; os=0; int=0;
         while k <= length(varargin)
             switch varargin{k}
                 case size_flag
@@ -247,9 +248,9 @@ end
                 case var_flag
                     break;
                     
-                case deg_flag
+                case int_flag
                     step();
-                    deg = str2num(varargin{k});
+                    int = str2num(varargin{k});
                     step();
                     
                 otherwise
@@ -257,7 +258,7 @@ end
                     step();
             end
         end
-        add_control(vars, size, w, os, deg);
+        add_control(vars, size, w, os, int);
     end
 
     function parameter()
@@ -352,11 +353,11 @@ end
         end
     end
 
-    function add_control(vars, sz, w, os, deg)
+    function add_control(vars, sz, w, os, int)
         if isequal(sz, [1, 1])
-            add_control_scalar(vars, w, os, deg);
+            add_control_scalar(vars, w, os, int);
         else
-            add_control_matrix(vars, sz, w, os, deg);
+            add_control_matrix(vars, sz, w, os, int);
         end
     end
 
@@ -386,13 +387,13 @@ end
         end
     end
 
-    function add_control_scalar(vars, w, os, deg)
+    function add_control_scalar(vars, w, os, int)
         N = length(vars);
         w   = ones(N, 1) .* w(:);
         os  = ones(N, 1) .* os(:);
-        deg = ones(N, 1) .* deg(:);
+        int = ones(N, 1) .* int(:);
         for n=1:N
-            decl{end+1} = control_string_scalar(vars{n}, w(n), os(n), deg(n));
+            decl{end+1} = control_string_scalar(vars{n}, w(n), os(n), int(n));
         end
     end
 
@@ -414,8 +415,8 @@ end
         decl{end+1} = algebraic_string_matrix(vars{1}, w(:)', os(:)', sz);
     end
 
-    function add_control_matrix(vars, sz, w, os, deg)
-        decl{end+1} = control_string_matrix(vars{1}, w(:)', os(:)', sz, deg);
+    function add_control_matrix(vars, sz, w, os, int)
+        decl{end+1} = control_string_matrix(vars{1}, w(:)', os(:)', sz, int);
     end
 
 end
@@ -440,8 +441,8 @@ function str = algebraic_string_scalar(name, w, os)
 str = [name, ' = yop.ast_algebraic(''', name, ''',', num2str(w), ',', num2str(os), ');'];
 end
 
-function str = control_string_scalar(name, w, os, deg)
-str = [name, ' = yop.ast_control(''', name, ''',', num2str(w), ',', num2str(os), ',', num2str(deg), ');'];
+function str = control_string_scalar(name, w, os, int)
+str = [name, ' = yop.ast_control(''', name, ''',', num2str(w), ',', num2str(os), ',', num2str(int), ');'];
 end
 
 function str = parameter_string_scalar(name, w, os)
@@ -456,8 +457,8 @@ function str = algebraic_string_matrix(name, w, os, sz)
 str = [name ' = yop.algebraic([' num2str(sz) '],''name'',''' name ''',''scaling'',[' num2str(w), '],''offset'',[', num2str(os) ']);'];
 end
 
-function str = control_string_matrix(name, w, os, sz, deg)
-str = [name ' = yop.control([' num2str(sz) '],''name'',''' name ''',''scaling'',[' num2str(w), '],''offset'',[' num2str(os) '], ''deg'',[' num2str(deg) ']);'];
+function str = control_string_matrix(name, w, os, sz, int)
+str = [name ' = yop.control([' num2str(sz) '],''name'',''' name ''',''scaling'',[' num2str(w), '],''offset'',[' num2str(os) '], ''int'',[' num2str(int) ']);'];
 end
 
 function str = parameter_string_matrix(name, w, os, sz)

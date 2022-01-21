@@ -1,7 +1,7 @@
 %% Time Optimal Flight Profile
 yops times: t t0 tf
 yops state: x size: [7, 1] scaling: [1e3,1e5,1e5,1e2,1,1,1e4]
-yops ctrls: alpha phi throttle deg: [2,2,0]
+yops ctrls: alpha phi throttle int: [2,2,0]
 
 flight_param;
 d2r    = @(d) d*pi/180;
@@ -76,13 +76,12 @@ ocp.st( u_min  <=   u   <= u_max  );
 ocp.st( du_min <=  du   <= du_max );
 
 % First solve it without obstacles 
-guess = yop.guess(t0, 0, tf, 8e3, x, x0, u, u_max);
-sol = ocp.solve('intervals', 100, 'guess', guess);
+sol = ocp.solve('ival', 100);
 
 % Add the obstacles and resolve the problem with the previous solution as
 % initial guess.
 ocp.hard( (npos-obs_n).^2 + (epos-obs_e).^2 >= obs_r.^2 );
-sol = ocp.solve('intervals', 800, 'guess', sol);
+sol = ocp.solve('ival', 800, 'guess', sol);
 %% Plot solution
 r2d = @(r) r*180/pi;
 

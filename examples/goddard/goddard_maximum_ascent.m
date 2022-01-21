@@ -20,7 +20,7 @@ ocp.st( der(m) == -T/c );
 ocp.st( h >= 1, m >= 0.6 );
 ocp.st( 0 <= T <= 3.5 );
 
-sol = ocp.solve('intervals', 50);
+sol = ocp.solve('ival', 50);
 
 figure(1);
 subplot(411); hold on

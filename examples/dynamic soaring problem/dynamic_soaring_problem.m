@@ -1,6 +1,6 @@
 yops Times: t t0 tf
 yops State: x size: [6,1] scaling: [1e3,1e3,1e3,1e2,1,1]
-yops Ctrls: u size: [2,1] deg: 2
+yops Ctrls: u size: [2,1] int: 2
 yops Param: p             scaling: 0.1
 
 x_max = [+1000; +1000; 1000; 350; +75*pi/180; +0.5*pi];
@@ -13,31 +13,6 @@ p_max = 0.15;
 p_min = 0.005;
 
 [dx, y] = soaring(x, u, p);
-
-%% Initial guess
-sim = yop.ivp(t0==0, tf==30);
-sim.add( der(x) == dx );
-sim.add(  x(t0) == [0; 0; 0; 220; 0; -1] );
-sim.add( p == 0.08 );
-sim.add( u == [0.5; 0] );
-res = sim.solve();
-
-%% Plot initial guess
-figure(1); 
-subplot(4,2,[1,2]); hold on
-res.plot(x(1), x(2)) 
-subplot(423); hold on
-res.plot(t, x(3))
-subplot(424); hold on
-res.plot(t, x(4))
-subplot(425); hold on
-res.plot(t, x(5)*180/pi)
-subplot(426); hold on
-res.plot(t, x(6)*180/pi)
-subplot(427); hold on
-res.plot(t, u(1))
-subplot(428); hold on
-res.plot(t, u(2)*180/pi)
 
 %% Optimal control problem
 ocp = yop.ocp('Dynamic Soaring Problem');
@@ -54,7 +29,7 @@ ocp.st( ...
     x(4:5).at(t0) == x(4:5).at(tf), ...
     x(6).at(t0) == x(6).at(tf) + 2*pi ...
     );
-sol = ocp.solve('intervals', 100, 'degree', 3, 'guess', res);
+sol = ocp.solve('ival', 100, 'dx', 3);
 
 %% Plot solution
 figure(1); 

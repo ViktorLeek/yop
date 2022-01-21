@@ -62,7 +62,7 @@ ocp.st( final( h^2 + k^2 ) == 0.61761258786099^2 );
 ocp.st( final( f*h + g*k ) == 0 );
 ocp.st( -3 <= final( g*h - k*f ) <= 0 );
 
-sol = ocp.solve('guess', res, 'intervals', 125, 'degree', 3);
+sol = ocp.solve('guess', res, 'ival', 125, 'dx', 3);
 
 %% Plot solution
 figure(1);

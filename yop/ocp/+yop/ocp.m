@@ -91,7 +91,6 @@ classdef ocp < handle
             obj.m_value = yop.cx(['ocp', num2str(obj.m_id)]);
             obj.m_phases = obj;
             obj.m_parent = obj; % Self means no parent
-            
         end
         
         function obj = min(obj, expr)
@@ -116,58 +115,129 @@ classdef ocp < handle
         end
         
         function varargout = solve(obj, varargin)
+            
+            if nargin == 2 && isstruct(varargin{1})
+                yopts = varargin{1};
+                varargin = {};
+                
+            elseif nargin > 2 && isstruct(varargin{1})
+                yopts = varargin{1};
+                varargin = varargin{2:end};
+                
+            else
+                yopts = yoptions('default');
+            end
+                    
             ip = inputParser();
             ip.FunctionName = "yop.ocp/solve";
-            ip.addParameter('intervals', yop.defaults.control_invervals);
-            ip.addParameter('degree', yop.defaults.polynomial_degree);
-            ip.addParameter('points', yop.defaults.collocation_points);
+            ip.addParameter('ival', []);
+            ip.addParameter('dx', []);
+            ip.addParameter('cpx', []);
+            ip.addParameter('du', []);
+            ip.addParameter('cpu', []);
             ip.addParameter('guess', []);
-            ip.addParameter('solver', 'ipopt');
-            ip.addParameter('opts', struct());
+            ip.addParameter('solver', []);
+            ip.addParameter('ipopts', []);
+            ip.addParameter('continuity', []);
             ip.parse(varargin{:});
             
-            N   = ip.Results.intervals;
-            dx  = ip.Results.degree;
-            cpx = ip.Results.points;
-            opts = ip.Results.opts;
-            solver = ip.Results.solver;
-            obj.guess = ip.Results.guess;
-            
-            if isscalar(N) && length(obj.m_phases) > 1
-                N = N * ones(1, length(obj.m_phases));
+            if ~isempty(ip.Results.guess)
+                obj.guess = ip.Results.guess;
             end
             
-            if isscalar(dx) && length(obj.m_phases) > 1
-                dx = dx * ones(1, length(obj.m_phases));
+            if ~isempty(ip.Results.ival)
+                yopts.intervals = ip.Results.ival;
             end
             
-            if ~iscell(cpx)
-                pnts = cpx;
-                cpx = cell(1, length(obj.m_phases));
-                for k=1:length(cpx)
-                    cpx{k} = pnts;
+            if ~isempty(ip.Results.dx)
+                yopts.state_degree = ip.Results.dx;
+            end
+            
+            if ~isempty(ip.Results.cpx)
+                if iscell(ip.Results.cpx)
+                    yopts.state_points = ip.Results.cpx;
+                else
+                    yopts.state_points = {ip.Results.cpx};
+                end
+            end
+            
+            if ~isempty(ip.Results.du)
+                yopts.control_degree = ip.Results.du;
+            end
+            
+            if ~isempty(ip.Results.cpu)
+                if iscell(ip.Results.cpu)
+                    yopts.control_points = ip.Results.cpu;
+                else
+                    yopts.control_points = {ip.Results.cpu};
+                end
+            end
+            
+            if ~isempty(ip.Results.solver)
+                yopts.solver = ip.Results.solver;
+            end
+            
+            if ~isempty(ip.Results.continuity)
+                yopts.continuity = ip.Results.continuity;
+            end
+            
+            if ~isempty(ip.Results.ipopts)
+                yopts.ipopts = ip.Results.ipopts;
+            end
+            
+            if isscalar(yopts.intervals) && length(obj.m_phases) > 1
+                yopts.intervals = ...
+                    yopts.intervals * ones(1, length(obj.m_phases));
+            end
+            
+            if isscalar(yopts.state_degree) && length(obj.m_phases) > 1
+                yopts.state_degree = ...
+                    yopts.state_degree * ones(1, length(obj.m_phases));
+            end
+            
+            if isscalar(yopts.control_degree) && length(obj.m_phases) > 1
+                yopts.control_degree = ...
+                    yopts.control_degree * ones(1, length(obj.m_phases));
+            end
+            
+            if length(yopts.state_points) < length(obj.m_phases)
+                for k=2:length(obj.m_phases)
+                    yopts.state_points{k} = yopts.state_points{1};
+                end
+            end
+            
+            if length(yopts.control_points) < length(obj.m_phases)
+                for k=2:length(obj.m_phases)
+                    yopts.control_points{k} = yopts.control_points{1};
                 end
             end
             
             if length(obj.m_phases) == 1
-                varargout{1} = obj.solve_single(N, dx, cpx, solver, opts);
+                varargout{1} = obj.solve_single(yopts);
                 
             else
                 n_phases = length(obj.m_phases);
-                [varargout{1:n_phases+1}] = obj.solve_multi(N, dx, cpx, solver, opts);
+                [varargout{1:n_phases+1}] = obj.solve_multi(yopts);
             end
             
             
         end
         
-        function sol = solve_single(obj, N, dx, cpx, solver, opts)
+        function sol = solve_single(obj, yopts)
             obj.to_canonical();
-            du = 3;
-            cpu = {'radau'};
-            nlp = yop.direct_collocation(obj, N, dx, cpx{1}, du, cpu{1});
+            nlp = yop.direct_collocation(obj, ...
+                yopts.intervals(1), ...
+                yopts.state_degree(1), ...
+                yopts.state_points{1}, ...
+                yopts.control_degree(1), ...
+                yopts.control_points{1}, ...
+                yopts.continuity ...
+                );
             
-            solver = casadi.nlpsol('solver', solver, ...
-                struct('f', nlp.J, 'x', nlp.w, 'g', nlp.g), opts);
+            ipopts.ipopt = yopts.ipopts;
+            program = struct('f', nlp.J, 'x', nlp.w, 'g', nlp.g);
+            solver = casadi.nlpsol('solver', yopts.solver, program, ipopts);
+            
             nlp_sol = solver( ...
                 'x0', nlp.w0, ...
                 'lbx', nlp.w_lb, ...
@@ -185,28 +255,44 @@ classdef ocp < handle
             w_opt.u  = obj.descale_u (full(nlp.ocp_u (nlp_sol.x)));
             w_opt.p  = obj.descale_p (full(nlp.ocp_p (nlp_sol.x)));
             
-            sol = yop.ocp_sol(obj.mx_vars(), obj.ids, w_opt, N, dx, cpx, du, cpu);
+            sol = yop.ocp_sol(obj.mx_vars(), obj.ids, w_opt, ...
+                yopts.intervals, ...
+                yopts.state_degree, ...
+                yopts.state_points, ...
+                yopts.control_degree, ...
+                yopts.control_points ...
+                );
             yop.progress.ocp_solved(solver.stats.success);
         end
     end
     
     %% Multiphase
     methods
-        function varargout = solve_multi(obj, N, dx, cpx, solver, opts)
-            du = [3,3];
-            cpu = {'radau', 'radau'};
-            obj.build_nlps(N, dx, cpx, du, cpu);
-            nlp = obj.merge_nlps();
-            nlp_sol = obj.solve_nlp(nlp, solver, opts);            
+        function varargout = solve_multi(obj, yopts)
+            obj.build_nlps(yopts);
+            nlp = obj.merge_nlps(yopts);
+            nlp_sol = obj.solve_nlp(nlp, yopts);            
             obj.nlp_to_ocp_maps(nlp);
             osol = obj.ocp_solution(nlp_sol);
             psol = obj.phase_solution(nlp_sol);
             
             [mx_args, ids] = obj.input_variables();
-            varargout{1} = yop.ocp_sol(mx_args, ids, osol, N, dx, cpx, du, cpu);
+            varargout{1} = yop.ocp_sol(mx_args, ids, osol, ...
+                yopts.intervals, ...
+                yopts.state_degree, ...
+                yopts.state_points, ...
+                yopts.control_degree, ...
+                yopts.control_points ...
+                );
             for k=1:length(obj.m_phases)
                 varargout{k+1} = ...
-                    yop.ocp_sol(mx_args, ids, psol(k), N(k), dx(k), cpx(k), du(k), cpu(k));
+                    yop.ocp_sol(mx_args, ids, psol(k), ...
+                    yopts.intervals(k), ...
+                    yopts.state_degree(k), ...
+                    yopts.state_points(k), ...
+                    yopts.control_degree(k), ...
+                    yopts.control_points(k) ...
+                    );
             end
         end
         
@@ -302,17 +388,25 @@ classdef ocp < handle
             end
         end
         
-        function build_nlps(obj, N, dx, cpx, du, cpu)
+        function build_nlps(obj, yopts)
             for k=1:length(obj.m_phases)
                 obj.m_phases(k).to_canonical();
                 obj.m_phases(k).m_nlp = yop.direct_collocation( ...
-                    obj.m_phases(k), N(k), dx(k), cpx{k}, du(k), cpu{k});
+                    obj.m_phases(k), ...
+                    yopts.intervals(k), ...
+                    yopts.state_degree(k), ...
+                    yopts.state_points{k}, ...
+                    yopts.control_degree(k), ...
+                    yopts.control_points{k}, ...
+                    yopts.continuity ...
+                    );
             end
         end
         
-        function nlp_sol = solve_nlp(~, nlp, solver, opts)
-            prob = struct('f', nlp.J, 'x', nlp.w, 'g', nlp.g);
-            solver = casadi.nlpsol('solver', solver, prob, opts);
+        function nlp_sol = solve_nlp(~, nlp, yopts)
+            ipopts.ipopt = yopts.ipopts;
+            program = struct('f', nlp.J, 'x', nlp.w, 'g', nlp.g);
+            solver = casadi.nlpsol('solver', yopts.solver, program, ipopts);
             nlp_sol = solver( ...
                 'x0' , nlp.w0, ...
                 'lbx', nlp.w_lb, ...
@@ -322,7 +416,7 @@ classdef ocp < handle
                 );
         end
         
-        function nlp = merge_nlps(obj)
+        function nlp = merge_nlps(obj, yopts)
             parent = obj.parent_position;
             nlp    = yop.nlp;
             nlp.J  = obj.nlp_objective();
@@ -335,7 +429,7 @@ classdef ocp < handle
                 nlp.g    = [nlp.g   ; pk.m_nlp.g   ];
                 nlp.g_ub = [nlp.g_ub; pk.m_nlp.g_ub];
                 nlp.g_lb = [nlp.g_lb; pk.m_nlp.g_lb];
-                obj.continuity(nlp, obj.m_phases(parent(k)), pk);
+                obj.continuity(nlp, obj.m_phases(parent(k)), pk, yopts);
             end
         end
         
@@ -352,7 +446,7 @@ classdef ocp < handle
             
         end
         
-        function continuity(~, nlp, parent, child)
+        function continuity(~, nlp, parent, child, yopts)
             if parent.m_id == child.m_id
                 % Circular OCPs formualted as multi-phase problems are not
                 % supported
@@ -376,6 +470,13 @@ classdef ocp < handle
             nlp.g    = [nlp.g   ; g   ];
             nlp.g_ub = [nlp.g_ub; g_ub];
             nlp.g_lb = [nlp.g_lb; g_lb];
+            
+            if yopts.continuity % Control continuity
+                cc = nlp_p.u(end).eval(1) - nlp_c.u(1).eval(0);
+                nlp.g    = [nlp.g   ; cc       ];
+                nlp.g_ub = [nlp.g_ub; zeros(size(cc))];
+                nlp.g_lb = [nlp.g_lb; zeros(size(cc))];
+            end
         end
         
         function parent = parent_position(obj)

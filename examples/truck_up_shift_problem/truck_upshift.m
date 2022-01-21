@@ -109,7 +109,7 @@ end
 
 %% OCP
 ocp = p1 + p2 + p3;
-[sol, sol1, sol2, sol3] = ocp.solve('intervals', 15, 'degree', 5);
+[sol, sol1, sol2, sol3] = ocp.solve('ival', 15, 'dx', 5);
 
 %% Plot solution
 figure(1);

@@ -1,7 +1,7 @@
 %% Optimal Control Benchmark
 yops Times: t t0 tf
 yops States: w_ice p_im p_em w_tc scaling: [1e3, 1e5, 1e5, 1e3]
-yops Controls: u_f u_wg P_gen scaling: [1, 1, 1e5] deg: [0, 2, 0]
+yops Controls: u_f u_wg P_gen scaling: [1, 1, 1e5] int: [0, 2, 0]
 
 % States       [rad/s]       [Pa]      [Pa]   [rad/s]
 x =     [        w_ice;     p_im;     p_em;     w_tc];
@@ -45,28 +45,28 @@ sim.add( u_wg == 0 );
 sim.add( P_gen == P_dem );
 sim.add( der(I) == K/Ti*e + es/Tt ); % PID controller dynamics
 sim.add( I(t0)  == 0 );
-res = sim.solve('solver', 'ode15s'); 
-% res = sim.solve('solver', 'idas', 'points', 100);
+% res = sim.solve('solver', 'ode15s'); 
+res = sim.solve('solver', 'idas', 'points', 100);
 
 %% Plot simulation results
-% figure(1)
-% subplot(411); hold on
-% res.plot(t, rad2rpm(w_ice))
-% subplot(412); hold on
-% res.plot(t, p_im)
-% subplot(413); hold on
-% res.plot(t, p_em)
-% subplot(414); hold on
-% res.plot(t, w_tc)
-% 
-% figure(2)
-% subplot(311); hold on
-% res.plot(t, u_f)
-% res.plot(t, y.u_f_max, '--', 'LineWidth', 2);
-% subplot(312); hold on
-% res.stairs(t, u_wg)
-% subplot(313); hold on
-% res.plot(t, P_gen)
+figure(1)
+subplot(411); hold on
+res.plot(t, rad2rpm(w_ice))
+subplot(412); hold on
+res.plot(t, p_im)
+subplot(413); hold on
+res.plot(t, p_em)
+subplot(414); hold on
+res.plot(t, w_tc)
+
+figure(2)
+subplot(311); hold on
+res.plot(t, u_f)
+res.plot(t, y.u_f_max, '--', 'LineWidth', 2);
+subplot(312); hold on
+res.stairs(t, u_wg)
+subplot(313); hold on
+res.plot(t, P_gen)
 
 %% Optimal control problem
 ocp = yop.ocp('Optimal Control Problem Benchmark');
@@ -87,7 +87,7 @@ ocp.st( int(P_gen) >= 100e3 ); % [J]
 ocp.st(  P_gen(tf) == 100e3 ); % [W]
 ocp.st(     dx(tf) == 0 );     % Stationarity
     
-sol = ocp.solve('intervals', 55, 'degree', 6,'guess', res);
+sol = ocp.solve('ival', 55, 'dx', 6,'guess', res);
 
 %% Plot the optimal control and trajectory
 figure(1)
@@ -100,23 +100,11 @@ sol.plot(t, p_em, 'mag', 2)
 subplot(414); hold on
 sol.plot(t, w_tc, 'mag', 2)
 
-% figure(2)
-% subplot(311); hold on
-% sol.stairs(t, u_f)
-% sol.plot(t, y.u_f_max);
-% subplot(312); hold on
-% sol.stairs(t, u_wg)
-% subplot(313); hold on
-% sol.plot(t, P_gen)
-
-
-%%
-mag = 5;
 figure(2)
 subplot(311); hold on
-sol.plot(t, u_f, 'mag', mag)
+sol.stairs(t, u_f)
 sol.plot(t, y.u_f_max);
 subplot(312); hold on
-sol.plot(t, u_wg, 'mag', mag)
+sol.stairs(t, u_wg)
 subplot(313); hold on
-sol.plot(t, P_gen, 'mag', mag)
+sol.plot(t, P_gen)

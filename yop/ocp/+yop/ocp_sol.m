@@ -91,7 +91,7 @@ classdef ocp_sol < handle
                 for n=1:N_
                     colx = ix : ix + dx_;
                     colz = iz : iz + dx_ - 1;
-                    colu = iu : iu + du_ - 1;
+                    colu = iu : iu + du_ + 1 - 1;
                     tt0 = t(colx(1));
                     ttf = t(colx(end)+1);
                     tt(cnt) = ip(taux_, t(:, colx), tt0, ttf);
@@ -101,7 +101,7 @@ classdef ocp_sol < handle
                     cnt = cnt + 1;
                     ix = ix + dx_ + 1;
                     iz = iz + dx_;
-                    iu = iu + du_;
+                    iu = iu + du_ + 1;
                 end
             end
             assert(cnt==obj.n_seg+1);
@@ -1118,10 +1118,14 @@ classdef ocp_sol < handle
             end
         end
         
-        function tauu = collocation_pointsu(dx, cpx)
-            tauu = cell(1,length(dx));
-            for k=1:length(dx)
-                tauu{k} = full(casadi.collocation_points(dx(k), cpx{k}));
+        function tauu = collocation_pointsu(du, cpu)
+            tauu = cell(1,length(du));
+            for k=1:length(du)
+                if du(k) == 0
+                    tauu{k} = 0;
+                else
+                    tauu{k} = full(casadi.collocation_points(du(k)+1, cpu{k}));
+                end
             end
         end
     end

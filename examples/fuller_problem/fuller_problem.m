@@ -12,7 +12,7 @@ ocp.st( der(x) == [x(2); u] );
 ocp.st(  x(t0) == [   0; 1] );
 ocp.st(  x(tf) == [   0; 0] );
 ocp.st( -1e-2 <= u <= 1e-2  );
-sol = ocp.solve('intervals', 1000, 'degree', 2);
+sol = ocp.solve('ival', 1000, 'dx', 2);
 
 figure(1); 
 subplot(311); hold on;

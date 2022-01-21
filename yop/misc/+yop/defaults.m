@@ -25,9 +25,13 @@ classdef defaults
         parameter_ub = inf;
         parameter_lb = -inf;
         
-        polynomial_degree = 5;
-        collocation_points = 'legendre';
+        solver = 'ipopt'
+        state_degree = 5;
+        state_points = {'legendre'};
+        control_degree = 0;
+        control_points = {'radau'};
         control_invervals = 50;
+        continuity = false;
         rk4_steps = 4;
     end
     

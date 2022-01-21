@@ -41,7 +41,7 @@ p2.st(   u_min <= u  <=  u_max );
 
 % A hobbit's tale
 ocp = p1 + p2;
-[sol, sol1, sol2] = ocp.solve('intervals', 15, 'degree', 2);
+[sol, sol1, sol2] = ocp.solve('ival', 15, 'dx', 2);
 
 % by Bilbo Baggins
 figure(1); 

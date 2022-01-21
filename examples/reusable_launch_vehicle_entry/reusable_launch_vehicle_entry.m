@@ -49,7 +49,7 @@ ocp.st( rad(tf) == 24384 + Re );
 ocp.st(   v(tf) == 762        );
 ocp.st( fpa(tf) == -5*d2r     );
 
-sol = ocp.solve('guess', res, 'intervals', 250, 'degree', 3);
+sol = ocp.solve('guess', res, 'ival', 250, 'dx', 3);
 
 %% Plot solution
 figure(1)

@@ -29,7 +29,7 @@ ocp.st( ...
     int(u) <= A ...
     );
 
-sol = ocp.solve('intervals', 150);
+sol = ocp.solve('ival', 150);
 
 figure(1)
 subplot(311); hold on;

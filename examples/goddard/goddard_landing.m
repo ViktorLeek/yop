@@ -1,7 +1,7 @@
 %% Goddard's Rocket Problem - Including landing phase
 yops Times: t t0 tf
 yops States: v h m scaling: [1e3,1e5,1e2]
-yops Ctrls: Wf deg: 2 scaling: 10
+yops Ctrls: Wf int: 2 scaling: 10
 
 % Parameters
 D0 = 0.01227; beta = 0.145e-3; c = 2060;
@@ -46,18 +46,14 @@ p2.st( Wfmin <= Wf <= Wfmax );
 
 ocp = p1 + p2;
 
-sol = ocp.solve('intervals', 100, 'degree', 3);
+sol = ocp.solve('ival', 100, 'dx', 5);
 
 figure(1);
 subplot(411); hold on
 sol.plot(t, v, 'mag', 4);
-sol1.plot(t, v, 'mag', 4);
 subplot(412); hold on
 sol.plot(t, h, 'mag', 4);
-sol1.plot(t, h, 'mag', 4);
 subplot(413); hold on
 sol.plot(t, m, 'mag', 4);
-sol1.plot(t, m, 'mag', 4);
 subplot(414); hold on
 sol.plot(t, Wf, 'mag', 4);
-sol1.plot(t, Wf, 'mag', 4);

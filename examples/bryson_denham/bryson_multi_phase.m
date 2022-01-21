@@ -23,7 +23,7 @@ p2.st( v(tf)  == -1 );
 p2.st( x <= 1/9 );
 
 ocp = p1 + p2;
-[sol, s1, s2] = ocp.solve('intervals', [5, 5], 'degree', [4, 4]);
+[sol, s1, s2] = ocp.solve('ival', [5, 5], 'dx', 2);
 
 figure(1);
 subplot(311); hold on
@@ -35,9 +35,6 @@ sol.plot(t, v, 'LineWidth', 2);
 s1.plot(t, v);
 s2.plot(t, v);
 subplot(313); hold on
-% sol.stairs(t, a, 'LineWidth', 2);
-% s1.stairs(t, a);
-% s2.stairs(t, a);
-% sol.plot(t, a, 'LineWidth', 2);
-s1.plot(t, a, 'x-');
-s2.plot(t, a, 'x-');
+sol.stairs(t, a, 'LineWidth', 2);
+s1.stairs(t, a);
+s2.stairs(t, a);

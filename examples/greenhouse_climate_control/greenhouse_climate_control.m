@@ -11,7 +11,7 @@ ocp.st( der(x(1)) == p(1)*I*x(2) );
 ocp.st( der(x(2)) == p(2)*(T0-x(2)) + p(3)*u );
 ocp.st( x(t0) == [0; 10] );
 ocp.st( 0 <= u <= 10 );
-sol = ocp.solve('intervals', 20);
+sol = ocp.solve('ival', 20);
 
 figure(1)
 subplot(311); hold on;

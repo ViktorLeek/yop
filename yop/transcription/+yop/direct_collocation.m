@@ -1,4 +1,4 @@
-function nlp = direct_collocation(ocp, N, dx, cpx, du, cpu)
+function nlp = direct_collocation(ocp, N, dx, cpx, du, cpu, continuity)
 
                        yop.progress.nlp_building();
 T0=[]; Tf=[]; t=[]; t0=[]; tf=[]; p=[]; dt=[]; taux=[]; tp=[]; I=[]; D=[]; 
@@ -19,7 +19,9 @@ hard_pathcons();
 for pk = ocp.path_ival
     ival_pathcons(pk);
 end
-continuous_control();
+if continuity
+    continuous_control();
+end
                        yop.progress.nlp_pathcons_done();
 
 w = vertcat(t0, tf, x.vec(), z.vec(), u.vec(), p);
@@ -61,7 +63,11 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
 
     function init_collocation()
         taux = full([0, casadi.collocation_points(dx, cpx)]);
-        tauu = full(casadi.collocation_points(du, cpu));
+        if du == 0
+            tauu = 0;
+        else
+            tauu = full(casadi.collocation_points(du+1, cpu));
+        end
     end
 
     function init_variables()
@@ -118,7 +124,7 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
     function init_control()
         T = T0;
         for n=1:N
-            u_n = yop.cx(['u_' num2str(n)], ocp.n_u, du);
+            u_n = yop.cx(['u_' num2str(n)], ocp.n_u, du+1);
             u(n) = yop.interpolating_poly(tauu, u_n, T, T+h);
             T = T + h;
         end
@@ -405,7 +411,7 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
         
         
         % First interval
-        if du == 1
+        if du+1 == 1
             u_ub = ocp.u0_ub(T0);
             u_lb = ocp.u0_lb(T0);
         else
@@ -431,7 +437,7 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
         end
         
         % Last interval
-        if du == 1    
+        if du+1 == 1    
             u_ub = [u_ub; ocp.uf_ub(Tf)];
             u_lb = [u_lb; ocp.uf_lb(Tf)];
         else
@@ -458,17 +464,6 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
                 
             end
         end
-        
-        %         u_ub = ocp.u0_ub(T0);
-        %         u_lb = ocp.u0_lb(T0);
-        %         T = T0;
-        %         for n=2:N-1
-        %             u_ub = [u_ub; ocp.u_ub(T)];
-        %             u_lb = [u_lb; ocp.u_lb(T)];
-        %             T = T + h;
-        %         end
-        %         u_ub = [u_ub; ocp.uf_ub(Tf)];
-        %         u_lb = [u_lb; ocp.uf_lb(Tf)];
         
         p_lb = ocp.p_lb(T0);
         p_ub = ocp.p_ub(T0);

@@ -21,7 +21,7 @@ ocp.st(  x(tf) == xf );
 ocp.st(  tf_min <= tf <= tf_max );
 ocp.st(   x_min <= x  <=  x_max );
 ocp.st(   u_min <= u  <=  u_max );
-sol = ocp.solve('intervals', 30, 'degree', 2);
+sol = ocp.solve('ival', 30, 'dx', 2);
 
 figure(1); 
 subplot(311); hold on;
