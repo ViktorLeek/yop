@@ -12,7 +12,7 @@ ocp.st( der(x) == v );
 ocp.st( v(t0) == -v(tf) == 1 );
 ocp.st( x(t0) ==  x(tf) == 0 );
 ocp.st( x <= l == 1/9 );
-sol = ocp.solve('intervals', 21, 'degree', 4);
+sol = ocp.solve();
 
 figure(1);
 subplot(311); hold on
@@ -20,8 +20,27 @@ sol.plot(t, x);
 subplot(312); hold on
 sol.plot(t, v);
 subplot(313); hold on
-% sol.stairs(t, a);
-sol.plot(t, a);
+sol.stairs(t, a);
+
+%% Clean implementation
+yops Times: t t0 tf 
+yops States: x size: [2,1]
+yops Controls: u
+
+ocp = yop.ocp('Bryson-Denham Problem');
+ocp.min( 1/2 * int(u^2) );
+ocp.st( 0 == t0 < tf == 1 );
+ocp.st( der(x) == [x(2); u] );
+ocp.st(  x(t0) == [0; +1] );
+ocp.st(  x(tf) == [0; -1] );
+ocp.st(  x(1)  <= 1/9     );
+sol = ocp.solve();
+
+figure(1);
+subplot(211); hold on
+sol.plot(t, x);
+subplot(212); hold on
+sol.stairs(t, u);
 
 %% State vector, minimum value and traveled distance
 %   Piecewise quadratic control input (deg == 2)
