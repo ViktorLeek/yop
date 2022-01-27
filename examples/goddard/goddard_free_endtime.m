@@ -1,7 +1,7 @@
 %% Implementation 1
 yops Times: t t0 tf
-yops States: x size: [3,1] weight: [1e3,1e5,1e2]
-yops Controls: u weight: 10
+yops States: x size: [3,1] nominal: [1e3,1e5,1e2]
+yops Controls: u nominal: 10
 
 [dx, y] = rocket_model(x, u);
 

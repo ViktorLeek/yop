@@ -13,8 +13,8 @@
 % without it, but it demonstrates the method.
 %% Variables, bounds, dynamics 
 yops Times: t t0 tf
-yops States: w_ice p_im p_em w_tc scaling: [1e3, 1e5, 1e5, 1e3]
-yops Controls: u_f u_wg P_gen     scaling: [1, 1, 1e5]
+yops States: w_ice p_im p_em w_tc nominal: [1e3, 1e5, 1e5, 1e3]
+yops Controls: u_f u_wg P_gen     nominal: [1, 1, 1e5]
 
 % States       [rad/s]       [Pa]      [Pa]   [rad/s]
 x =     [        w_ice;     p_im;     p_em;     w_tc];
@@ -55,11 +55,11 @@ ocp.hard( y.phi <= y.phi_max );
 ocp.st( int(P_gen) == 100e3 ); % [J]
 % Terminal conditions
 ocp.st(  P_gen(tf) == 100e3 ); % [W]
-sol = ocp.solve('intervals', 25, 'degree', 2,'guess', guess);
+sol = ocp.solve('ival', 25, 'dx', 2,'guess', guess);
 
 %% Full problem - include stationarity constraint and solution refinement
 ocp.st( dx(tf) == 0 ); % Stationarity
-sol = ocp.solve('intervals', 75, 'degree', 3,'guess', sol);
+sol = ocp.solve('ival', 75, 'dx', 3,'guess', sol);
 
 %% Plot the optimal control and trajectory
 figure(1)

@@ -1,8 +1,8 @@
 %% Fuller Problem
 %   From: https://www.bocop.org/fuller-problem/
 yops Times: t t0 tf 
-yops States: x size: [2,1] scaling: [10,1]
-yops Control: u scaling: 1e-2
+yops States: x size: [2,1] nominal: [10,1]
+yops Control: u nominal: 1e-2
 
 ocp = yop.ocp('Fuller Problem');
 ocp.min( int(x(1)^2) );

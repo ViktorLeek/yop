@@ -1,5 +1,5 @@
 yops Times: t t0 tf
-yops States: rad lon lat v fpa azi scaling: [1e6,1,1,1e4,1,1]
+yops States: rad lon lat v fpa azi nominal: [1e6,1,1,1e4,1,1]
 yops Controls: aoa bank
 
 x = [rad; lon; lat; v; fpa; azi]; 

@@ -11,7 +11,7 @@ param_flag = {'-parameter', '-param', 'param:', 'params:', 'parameters:', 'param
 var_flag = [t_flag(:)', t0_flag(:)', tf_flag(:)', ts_flag(:)', ...
     state_flag(:)', alg_flag(:)', ctrl_flag(:)', param_flag(:)'];
 size_flag  = {'size:', 'sz:'};
-w_flag = {'-weight', '-w', '-W', 'weight:', 'w:', 'W:', 'weights:', 'scaling:'};
+w_flag = {'-weight', '-w', '-W', 'weight:', 'w:', 'W:', 'weights:', 'scaling:', 'nominal:'};
 os_flag = {'-offset', '-os', '-OS', 'offset:', 'os:', 'OS:', 'offsets:'};
 int_flag = {'int:', 'integrate:', 'aug:', 'augment:'};
 

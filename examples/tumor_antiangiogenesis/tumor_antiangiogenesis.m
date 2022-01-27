@@ -1,6 +1,6 @@
 yops Times: t t0 tf 
-yops States: p q scaling: [1e3, 1e3] offset: [-8e3, -2e3]
-yops Controls: u scaling: 10
+yops States: p q nominal: [1e3, 1e3] offset: [-8e3, -2e3]
+yops Controls: u nominal: 10
 
 zeta = 0.084; % per day
 b = 5.85;     % per day

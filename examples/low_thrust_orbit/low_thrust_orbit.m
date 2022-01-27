@@ -1,5 +1,5 @@
 yops Times: t t0 tf
-yops States: p f g h k L w scaling: [1e7,0.1,1,1,0.1,10,1]
+yops States: p f g h k L w nominal: [1e7,0.1,1,1,0.1,10,1]
 yops Control: u size: [3,1]
 yops Param: tau
 

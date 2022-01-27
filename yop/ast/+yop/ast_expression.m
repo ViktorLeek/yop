@@ -348,6 +348,10 @@ classdef ast_expression < yop.ast_node
             node = yop.ast_int(obj);
         end
         
+        function node = if_else(varargin)
+            node = yop.ast_if_else(varargin{:});
+        end
+        
         function idx = end(obj, k, n)
             idx = builtin('end', ones(size(obj)), k, n);
         end

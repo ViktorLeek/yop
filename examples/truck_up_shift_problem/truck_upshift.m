@@ -1,11 +1,11 @@
 yops Times: t t0 tf 
-yops State: x size: [8,1] scaling: [1e2,1e5,1e5,1e4,1e2,1,10,1e5]
-yops Ctrls: u size: [3,1] scaling: [1e2, 1, 1e5]
+yops States: x size: [8,1] nominal: [1e2,1e5,1e5,1e4,1e2,1,10,1e5]
+yops Controls: u size: [3,1] nominal: [1e2, 1, 1e5]
 upshift_param;
 w_ice=x(1); w_tr=x(5); u_f=u(1); u_wg=u(2); P_gen=u(3);
 
 %% Objective
-J = @(dx, y) 1e-4 * int( der(dx(5))^2 ) + 1e-3 * int( y.cylinder.fuel_massflow );
+J = @(dx, y) 1e-4 * int( der( dx(5) )^2 ) + 1e-3 * int( y.cylinder.fuel_massflow );
 
 %% First phase
 [dx1, y1, c1] = coupled_gear_first(x, u);
@@ -17,7 +17,7 @@ p1.st( der(x) == dx1 );
 p1.st(  x(t0) == x0 );
 p1.st( x_min <= x <= x_max );
 p1.st( u_min <= u <= u_max );
-p1.st( y1.engine.torque(tf) ==  y1.emachine.torque(tf) );
+p1.st( y1.engine.torque(tf) - y1.emachine.torque(tf) == 0 );
 p1.st( c1{:} );
 
 %% Second phase
@@ -26,9 +26,9 @@ p2 = yop.ocp('Up-shift - Phase 2');
 p2.min( J(dx2, y2) );
 p2.st( tf-t0 == 0.3 ); % Phase duration
 p2.st( der(x) == dx2 );
-p2.st(  x_min <=   x   <= x_max  );
-p2.st(  u_min <=   u   <= u_max  );
-p2.st( y2.engine.torque(tf) == y2.emachine.torque(tf) );
+p2.st(  x_min <= x <= x_max  );
+p2.st(  u_min <= u <= u_max  );
+p2.st( y2.engine.torque(tf) - y2.emachine.torque(tf) == 0 );
 p2.st( w_ice(tf) == w_tr(tf)*i_t(2) ); % Match transmission speed
 p2.st( c2{:} );
 
@@ -47,7 +47,8 @@ p3.st( c3{:} );
 %% Initial guess - phase 1
 e1 = max(0, y1.emachine.torque - y1.engine.torque);
 kp1 = 10;
-ivp1 = yop.ivp(t0==0, tf==0.7);
+ivp1 = yop.ivp();
+ivp1.add( t0==0, tf==0.7 );
 ivp1.add( der(x) == dx1 );
 ivp1.add(  x(t0) == x0  );
 ivp1.add( u_f   == kp1*e1 );

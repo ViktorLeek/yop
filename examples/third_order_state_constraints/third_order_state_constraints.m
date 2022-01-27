@@ -1,8 +1,6 @@
 %% Third Order State Constraints
 %   From: https://www.bocop.org/robbins/
-yops Times: t t0 tf 
-yops States: y1 y2 y3
-yops Control: u
+yops Times: t t0 tf States: y1 y2 y3 Control: u
 y = [y1; y2; y3];
 
 a = 3;

@@ -1,6 +1,6 @@
 %% Time Optimal Flight Profile
 yops times: t t0 tf
-yops state: x size: [7, 1] scaling: [1e3,1e5,1e5,1e2,1,1,1e4]
+yops state: x size: [7, 1] nominal: [1e3,1e5,1e5,1e2,1,1,1e4]
 yops ctrls: alpha phi throttle int: [2,2,0]
 
 flight_param;

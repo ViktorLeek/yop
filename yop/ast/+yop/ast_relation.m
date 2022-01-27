@@ -58,6 +58,22 @@ classdef (InferiorClasses = {?yop.ast_expression, ?yop.ast_variable}) ast_relati
             rel = yop.ast_eq(lhs, rhs);
         end
         
+        function node = if_else(varargin)
+            node = yop.ast_if_else(varargin{:});
+        end
+        
+        function rel = or(lhs, rhs)
+            rel = yop.ast_or(lhs, rhs);
+        end
+        
+        function rel = and(lhs, rhs)
+            rel = yop.ast_and(lhs, rhs);
+        end
+        
+        function rel = not(lhs, rhs)
+            rel = yop.ast_not(lhs, rhs);
+        end
+        
         function sum = plus(lhs, rhs)
             error('[yop] Error: Method not implemented for class "yop.ast_relation".');
         end

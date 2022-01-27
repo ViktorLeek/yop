@@ -1,7 +1,7 @@
 yops Times: t t0 tf
-yops State: x size: [6,1] scaling: [1e3,1e3,1e3,1e2,1,1]
+yops State: x size: [6,1] nominal: [1e3,1e3,1e3,1e2,1,1]
 yops Ctrls: u size: [2,1] int: 2
-yops Param: p             scaling: 0.1
+yops Param: p             nominal: 0.1
 
 x_max = [+1000; +1000; 1000; 350; +75*pi/180; +0.5*pi];
 x_min = [-1000; -1000;    0;  10; -75*pi/180; -3.0*pi];

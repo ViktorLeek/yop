@@ -1035,6 +1035,9 @@ classdef ocp < handle
         end
         
         function obj = set_objective_fn(obj)
+            if isempty(obj.objective)
+                obj.set_objective(0);
+            end
             t0 = mx_vec(obj.independent0);
             tf = mx_vec(obj.independentf);
             pp = mx_vec(obj.parameters);
