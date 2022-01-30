@@ -1,5 +1,4 @@
 # AST
-Är inte helt orimligt att tänka sig att kunna representera hela casadis matlab-interface.
 -[x] `transpose`
 -[x]`ctranspose`
 -[x] `reshape`
@@ -47,10 +46,10 @@
 -[x] `pinv`
 -[x] `expm`
 -[x] `cumsum`
--[ ] `and`
--[ ] `or`
--[ ] `not`
--[ ] `empty`? - väntar med
+-[x] `and`
+-[x] `or`
+-[x] `not`
+-[x] `empty`
 -[ ] `permute` ?
 -[ ] `colon` - går ej att avgöra storlek, stödj ej heller i casadi. Ej impl.
 -[ ] `jacobian`
@@ -66,11 +65,11 @@
 -[x] `alg`
 
 # Modelleringsfunktioner
--[ ] `if_else`
+-[x] `if_else`
 -[ ] `conditional`
 -[ ] `interp1d`
 -[ ] `interpolant`
 
 # `ast_node`
--[ ] `disp`
--[ ] `display`
+-[x] `disp`
+-[x] `display`

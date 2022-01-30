@@ -21,6 +21,14 @@ classdef ast_node < handle
             v = obj.m_value;
         end
         
+        function disp(obj)
+            disp(obj.m_value);
+        end
+        
+        function display(obj)
+            eval([inputname(1) '= obj.m_value']);
+        end
+        
         function id = ID(obj)
             id = obj.m_id;
         end
