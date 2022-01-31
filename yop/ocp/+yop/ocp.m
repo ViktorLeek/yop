@@ -58,6 +58,20 @@ classdef ocp < handle
     %% User interface
     methods 
         function obj = ocp(name)
+            % YOP.OCP - Optimal control problem
+            %   ocp = yop.ocp()
+            %   ocp = yop.ocp(name)
+            %
+            % To formulate an optimal control problem, the following 
+            % methods are used:
+            %   ocp.min(expr) - Objective to minimize.
+            %   ocp.max(expr) - Objective to maximize.
+            %   ocp.st(varargin) - Constraints.
+            %   ocp.hard(varargin) - Hard constraints. Constraint applied
+            %                        to every collocation point (increases
+            %                        problem size).
+            %   ocp.alg(varargin) - Algebraic equation.
+            
             if nargin == 1
                 obj.name = name;
             else
@@ -94,20 +108,58 @@ classdef ocp < handle
         end
         
         function obj = min(obj, expr)
+            % YOP.OCP/MIN - Objective function to minimize. 
+            %   ocp.min(expr)
+            %
+            % All states, control inputs, and algebraic variables must be
+            % part of an integral, OR, evaulated at a timepoint. It is
+            % possible to use several timepoints or integrals, but
+            % timevarying expressions must be evaluated at a timepoint or
+            % integrated over the problem horizon.
             obj.set_objective(expr);
         end
         
         function obj = max(obj, expr)
+            % YOP.OCP/MAX - Objective function to maximize. 
+            %   ocp.max(expr)
+            %
+            % All states, control inputs, and algebraic variables must be
+            % part of an integral, OR, evaulated at a timepoint. It is
+            % possible to use several timepoints or integrals, but
+            % timevarying expressions must be evaluated at a timepoint or
+            % integrated over the problem horizon.
             obj.set_objective(-expr);
         end
         
         function obj = st(obj, varargin)
+            % YOP.OCP/ST - Constraints
+            % Constraints can be included several at the time:
+            %   ocp.st(c1, c2, ..., cN)
+            % Or one at the time:
+            %   ocp.st(c1)
+            %   ocp.st(c2)
+            %   ...
+            %   ocp.st(cN)
             for k=1:length(varargin)
                 obj.parse_constraint(varargin{k});
             end
         end
         
         function obj = hard(obj, varargin)
+            % YOP.OCP/HARD - Hard constraints
+            % This concerns non-box constraints. As opposted to the
+            % ordinary constraints, hard constraints are enforced on every
+            % collocation point. The benefit is that it is harder for the
+            % solver to "cheat". The drawback is that the NLP size is
+            % larger.
+            %   ocp.hard(c1, c2, ..., cN)
+            %
+            %   ocp.hard(c1)
+            %   ocp.hard(c2)
+            %   ...
+            %   ocp.hard(cN)
+            % This is equivalent to:
+            %   ocp.st(hard(c1), hard(c2), ..., hard(cN))
             for k=1:length(varargin)
                 varargin{k} = hard(varargin{k});
             end
@@ -115,6 +167,18 @@ classdef ocp < handle
         end
         
         function obj = alg(obj, varargin)
+            % YOP.OCP/ALG - Algebraic equation
+            % In case the plant model is formulated as a semi-explicit
+            % index-1 DAE, then the algebraic equation/-s can be specified
+            % using this function.
+            %   ocp.alg(a1, a2, ..., aN)
+            %
+            %   ocp.alg(a1)
+            %   ocp.alg(a2)
+            %   ...
+            %   ocp.alg(aN)
+            % Equivalent to
+            %   ocp.st(alg(a1), alg(a2), ..., alg(aN))
             for k=1:length(varargin)
                 varargin{k} = alg(varargin{k});
             end
@@ -122,7 +186,20 @@ classdef ocp < handle
         end
         
         function varargout = solve(obj, varargin)
-            
+            % YOP.OCP/SOLVE - Solve optimal control problem
+            %   ocp.solve()
+            %   ocp.solve('optname1', optval1, 'optnam2', optval2, ...)
+            % Options are specified using key-value pairs. Available keys
+            % are:
+            %   'ival' - Number of control intervals
+            %   'dx' - Degree of state collocation polynomial: [1, 9]
+            %   'cpx' - State collocation points: 'legendre' or 'radau'
+            %   'du' - Degree of control polynomial: [0, 9]
+            %   'cpu' - Control points: 'legendre' or 'radau'
+            %   'guess' - Initial guess
+            %   'solver' - Optimization problem solver
+            %   'ipopts' - IPOPT options (only used for 'ipopt')
+            %   'continuity' - Control continuity for muliphase OCPs
             if nargin == 2 && isstruct(varargin{1})
                 yopts = varargin{1};
                 varargin = {};
