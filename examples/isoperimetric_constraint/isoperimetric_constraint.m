@@ -8,7 +8,7 @@ ocp.st( der(x) == -sin(x) + u );
 ocp.st( -10 <= x <= 10 );
 ocp.st(  -4 <= u <=  4 );
 ocp.st( int(u^2) == 10 );
-sol = ocp.solve('intervals', 25);
+sol = ocp.solve('ival', 25);
 
 figure(1)
 subplot(211); hold on;

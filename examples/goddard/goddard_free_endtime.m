@@ -30,7 +30,7 @@ sol.plot(t, u);
 %% Implementation 2 
 % PW quadratic control (by integration), integration of velocity for height
 yops Times: t t0 
-yops State: x1 x2 x3 weight: [1e3,1e5,1e2] 
+yops State: x1 x2 x3 nominal: [1e3,1e5,1e2] 
 yops Ctrls: u int: 2
 x = [x1; x2; x3];
 
@@ -60,9 +60,9 @@ subplot(414); hold on
 sol.plot(t, u, 'mag', 5); % Exact upsampling 5 times
 
 %% Implementation 2 - piecewise polynomials control input
-yops Times: t t0 tf weight: [1e2,1e0,1e2]
-yops States: v h m  weight: [1e3,1e5,1e2]
-yops Controls: u    weight: 10
+yops Times: t t0 tf nominal: [1e2,1e0,1e2]
+yops States: v h m  nominal: [1e3,1e5,1e2]
+yops Controls: u    nominal: 10
 
 x     = [  v;   h;   m];
 x0    = [  0;   0; 215];
@@ -108,8 +108,8 @@ sol.plot(t, der(der(u)), 'mag', 5);
 
 %% Implementation 3 - Formulate dynamics into the problem directly
 yops Times: t t0 tf
-yops States: v h m scaling: [1e3,1e5,1e2]
-yops Ctrls: Wf int: 2 scaling: 10
+yops States: v h m nominal: [1e3,1e5,1e2]
+yops Ctrls: Wf int: 2 nominal: 10
 
 % Parameters
 D0 = 0.01227; beta = 0.145e-3; c = 2060;

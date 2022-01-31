@@ -1,7 +1,7 @@
 %% Goddard's Rocket Problem - Including landing phase
 yops Times: t t0 tf
-yops States: v h m scaling: [1e3,1e5,1e2]
-yops Ctrls: Wf int: 2 scaling: 10
+yops States: v h m nominal: [1e3,1e5,1e2]
+yops Ctrls: Wf int: 2 nominal: 10
 
 % Parameters
 D0 = 0.01227; beta = 0.145e-3; c = 2060;

@@ -17,7 +17,7 @@ p1.st( der(x) == dx1 );
 p1.st(  x(t0) == x0 );
 p1.st( x_min <= x <= x_max );
 p1.st( u_min <= u <= u_max );
-p1.st( y1.engine.torque(tf) - y1.emachine.torque(tf) == 0 );
+p1.st( y1.engine.torque(tf) == y1.emachine.torque(tf) );
 p1.st( c1{:} );
 
 %% Second phase
@@ -28,7 +28,7 @@ p2.st( tf-t0 == 0.3 ); % Phase duration
 p2.st( der(x) == dx2 );
 p2.st(  x_min <= x <= x_max  );
 p2.st(  u_min <= u <= u_max  );
-p2.st( y2.engine.torque(tf) - y2.emachine.torque(tf) == 0 );
+p2.st( y2.engine.torque(tf) == y2.emachine.torque(tf) );
 p2.st( w_ice(tf) == w_tr(tf)*i_t(2) ); % Match transmission speed
 p2.st( c2{:} );
 
