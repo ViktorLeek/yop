@@ -16,7 +16,7 @@ classdef ocp < handle
         
         % Dynamics
         ode
-        alg
+        m_alg
         
         % Constraints
         path
@@ -110,6 +110,13 @@ classdef ocp < handle
         function obj = hard(obj, varargin)
             for k=1:length(varargin)
                 varargin{k} = hard(varargin{k});
+            end
+            obj.st(varargin{:});
+        end
+        
+        function obj = alg(obj, varargin)
+            for k=1:length(varargin)
+                varargin{k} = alg(varargin{k});
             end
             obj.st(varargin{:});
         end
@@ -1096,8 +1103,8 @@ classdef ocp < handle
                 z_k = obj.alg_eqs{k};
                 alg_rhs{k} = z_k.m_rhs - z_k.m_lhs;
             end
-            obj.alg.m_lhs = zeros(nz, 1);
-            obj.alg.m_rhs = vertcat(alg_rhs{:});
+            obj.m_alg.m_lhs = zeros(nz, 1);
+            obj.m_alg.m_rhs = vertcat(alg_rhs{:});
             
             % Compute symbolic functions of the dynamics
             obj.set_dynamics_fn();
@@ -1105,14 +1112,14 @@ classdef ocp < handle
         
         function obj = set_dynamics_fn(obj)
             ode_expr = value(obj.ode.m_rhs);
-            alg_expr = value(obj.alg.m_rhs);
+            alg_expr = value(obj.m_alg.m_rhs);
             f = casadi.Function('f', obj.mx_args(), {ode_expr});
             
             % Descale input variables, evaluate ode rhs, scale derivative
             dargs = obj.mx_dargs();
             fs = f(dargs{:}).*(1./obj.W_x);
             obj.ode.fn = casadi.Function('ode', obj.mx_args(), {fs});
-            obj.alg.fn = obj.dsfn(alg_expr, 'alg');
+            obj.m_alg.fn = obj.dsfn(alg_expr, 'alg');
         end
         
         function obj = set_path_con(obj)                       

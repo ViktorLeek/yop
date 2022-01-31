@@ -228,7 +228,7 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
                 uu = u(n).eval(r);
                 dd = D(n).eval(r);
                 f = ocp.ode.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd);
-                a = ocp.alg.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd);
+                a = ocp.m_alg.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd);
                 g = [g; (derx.evaluate(r) - dt*f); a];
             end
         end

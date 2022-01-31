@@ -138,15 +138,11 @@ w_attr     = {'nominal:', 'nom:'};
 os_attr    = {'offset:', 'os:'};
 int_attr   = {'int:', 'integrate:', 'aug:', 'augment:'};
 
-for r=1:length(varargin)
-    varargin{r} = lower(varargin{r});
-end
-
 decl = {};
 k=1;
 while k <= length(varargin)
     
-    switch varargin{k}
+    switch lower(varargin{k})
         case t_token
             step();
             time();
@@ -196,7 +192,7 @@ end
     function time()
         vars={}; w=1; os=0;
         while k <= length(varargin)
-            switch varargin{k}
+            switch lower(varargin{k})
                 case w_attr
                     step();
                     w = str2num(varargin{k});
@@ -221,7 +217,7 @@ end
     function time0()
         vars={}; w=1; os=0;
         while k <= length(varargin)
-            switch varargin{k}
+            switch lower(varargin{k})
                 case w_attr
                     step();
                     w = str2num(varargin{k});
@@ -246,7 +242,7 @@ end
     function timef()
         vars={}; w=1; os=0;
         while k <= length(varargin)
-            switch varargin{k}
+            switch lower(varargin{k})
                 case w_attr
                     step();
                     w = str2num(varargin{k});
@@ -271,7 +267,7 @@ end
     function times()
         vars={}; w=1; os=0;
         while k <= length(varargin)
-            switch varargin{k}
+            switch lower(varargin{k})
                 case w_attr
                     step();
                     w = str2num(varargin{k});
@@ -296,7 +292,7 @@ end
     function state()
         vars={}; size=[1,1]; w=1; os=0;
         while k <= length(varargin)
-            switch varargin{k}
+            switch lower(varargin{k})
                 case size_attr
                     step();
                     size = str2num(varargin{k});
@@ -326,7 +322,7 @@ end
     function algebraic()
         vars={};  size=[1,1]; w=1; os=0;
         while k <= length(varargin)
-            switch varargin{k}
+            switch lower(varargin{k})
                 case size_attr
                     step();
                     size = str2num(varargin{k});
@@ -356,7 +352,7 @@ end
     function control()
         vars={}; size=[1,1]; w=1; os=0; int=0;
         while k <= length(varargin)
-            switch varargin{k}
+            switch lower(varargin{k})
                 case size_attr
                     step();
                     size = str2num(varargin{k});
@@ -391,7 +387,7 @@ end
     function parameter()
         vars={}; size=[1,1]; w=1; os=0;
         while k <= length(varargin)
-            switch varargin{k}
+            switch lower(varargin{k})
                 case size_attr
                     step();
                     size = str2num(varargin{k});

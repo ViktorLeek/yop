@@ -110,22 +110,22 @@ end
 
 %% OCP
 ocp = p1 + p2 + p3;
-[sol, sol1, sol2, sol3] = ocp.solve('ival', 15, 'dx', 5);
+[sol, sol1, sol2, sol3] = ocp.solve('ival', 35, 'dx', 5);
 
 %% Plot solution
 figure(1);
 for k=1:8
     subplot(4,2,k); hold on
-    sol.plot(t, x(k), 'mag', 5, '--', 'LineWidth', 2)
-    sol1.plot(t, x(k), 'mag', 5)
-    sol2.plot(t, x(k), 'mag', 5)
-    sol3.plot(t, x(k), 'mag', 5)
+    sol.plot(t, x(k), 'LineWidth', 2)
+    sol1.plot(t, x(k))
+    sol2.plot(t, x(k))
+    sol3.plot(t, x(k))
 end
 
 figure(2);
 for k=1:3
     subplot(3,1,k); hold on
-    sol.plot(t, u(k), '--', 'LineWidth', 2)
+    sol.plot(t, u(k), 'LineWidth', 2)
     sol1.plot(t, u(k))
     sol2.plot(t, u(k))
     sol3.plot(t, u(k))

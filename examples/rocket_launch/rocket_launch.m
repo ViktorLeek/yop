@@ -51,21 +51,21 @@ p1 = yop.ocp();
 p1.st( 0 == t0 < tf == srb.tb );
 p1.st( der(x) == vehicle1(x,u) );
 p1.st( x(t0) == x0 );
-p1.st( 0.995^2 <= norm(u)^2 <= 1.005^2 );
+p1.st( norm(u)^2 == 1 );
 p1.st( norm(r)^2 >= Re^2 );
 p1.guess = sim1;
 
 p2 = yop.ocp();
 p2.st( srb.tb == t0 < tf == 2*srb.tb );
 p2.st( der(x) == vehicle2(x,u) );
-p2.st( 0.995^2 <= norm(u)^2 <= 1.005^2 );
+p2.st( norm(u)^2 == 1 );
 p2.st( norm(r)^2 >= Re^2 );
 p2.guess = sim2;
 
 p3 = yop.ocp();
 p3.st( 2*srb.tb == t0 < tf == e1.tb );
 p3.st( der(x) == vehicle3(x,u) );
-p3.st( 0.995^2 <= norm(u)^2 <= 1.005^2 );
+p3.st( norm(u)^2 == 1 );
 p3.st( norm(r)^2 >= Re^2 );
 p3.guess = sim3;
 
@@ -74,7 +74,7 @@ p4.max( mf(tf) );
 p4.max( norm(r(tf))^2 );
 p4.st( e1.tb == t0 < tf <= e1.tb+e2.tb );
 p4.st( der(x) == vehicle4(x,u) );
-p4.st( 0.995^2 <= norm(u)^2 <= 1.005^2 );
+p4.st( norm(u)^2 == 1 );
 p4.st( norm(r)^2 >= Re^2 );
 p4.st( state2orbit(x(tf),mu) == final_orbit );
 p4.guess = sim4;
