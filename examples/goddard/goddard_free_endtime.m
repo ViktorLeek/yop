@@ -6,7 +6,8 @@ yops Controls: u nominal: 10
 [dx, y] = rocket_model(x, u);
 
 ocp = yop.ocp('Goddard''s Rocket Problem');
-ocp.max( y.rocket.height(tf)*1e-5 );
+% ocp.max( y.rocket.height(tf)*1e-5 );
+ocp.max( y.rocket.height(tf) );
 ocp.st( t0==0 );
 ocp.st( der(x) == dx );
 ocp.st( y.rocket.height(t0)   == 0 );
