@@ -348,6 +348,26 @@ classdef ast_expression < yop.ast_node
             node = yop.ast_int(obj);
         end
         
+        function node = jacobian(expr, var)
+            node = yop.ast_jacobian(expr, var);
+        end
+        
+        function node = hessian(expr, var)
+            node = yop.ast_hessian(expr, var);
+        end
+        
+        function node = tangent(expr, var)
+            node = yop.ast_tangent(expr, var);
+        end
+        
+        function node = gradient(expr, var)
+            node = yop.ast_gradient(expr, var);
+        end
+        
+        function node = linearize(f, x, x0)
+            node = yop.ast_linearize(f, x, x0);
+        end
+        
         function node = if_else(varargin)
             node = yop.ast_if_else(varargin{:});
         end
