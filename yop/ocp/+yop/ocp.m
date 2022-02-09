@@ -1737,10 +1737,12 @@ classdef ocp < handle
         function bd = z_ub(obj, t)
             bd = [];
             if ~isempty(obj.algebraics)
-                if isa(obj.algebraics.ub, 'function_handle')
-                    bd = obj.algebraics.ub(t);
-                else
-                    bd = obj.algebraics.ub;
+                for v = obj.algebraics
+                    if isa(v.ub, 'function_handle')
+                        bd(end+1) = v.ub(t);
+                    else
+                        bd(end+1) = v.ub;
+                    end
                 end
             end
             bd = obj.scale_z(bd(:));
@@ -1749,10 +1751,12 @@ classdef ocp < handle
         function bd = z_lb(obj, t)
             bd = [];
             if ~isempty(obj.algebraics)
-                if isa(obj.algebraics.lb, 'function_handle')
-                    bd = obj.algebraics.lb(t);
-                else
-                    bd = obj.algebraics.lb;
+                for v = obj.algebraics
+                    if isa(v.lb, 'function_handle')
+                        bd = v.lb(t);
+                    else
+                        bd = v.lb;
+                    end
                 end
             end
             bd = obj.scale_z(bd(:));
