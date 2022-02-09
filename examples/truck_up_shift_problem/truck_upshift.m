@@ -45,13 +45,13 @@ p3.st( dx3(tf) == 0 );
 p3.st( c3{:} );
 
 %% Initial guess - phase 1
-e1 = max(0, y1.emachine.torque - y1.engine.torque);
+e1 = y1.emachine.torque - y1.engine.torque;
 kp1 = 10;
 ivp1 = yop.ivp();
 ivp1.add( t0==0, tf==0.7 );
 ivp1.add( der(x) == dx1 );
 ivp1.add(  x(t0) == x0  );
-ivp1.add( u_f   == kp1*e1 );
+ivp1.add( u_f   == max(0, kp1*e1) );
 ivp1.add( u_wg  == 1 );
 ivp1.add( P_gen == 0 );
 sim1 = ivp1.solve();
