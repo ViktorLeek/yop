@@ -12,12 +12,14 @@ for k=1:K
     if numel_lhs > 1 && numel_rhs == 1
         for n=1:numel_lhs
             rhs = get_subexpr(sr.m_rhs, n); % size(@fn) == [1,1]
-            ssr{end+1} = rel(sr.m_lhs(n), rhs);
+            lhs = sr.m_lhs;
+            ssr{end+1} = rel(lhs(n), rhs);
         end
     elseif numel_lhs==1 && numel_rhs > 1
         for n=1:numel_rhs
             lhs = get_subexpr(sr.m_lhs, n); % size(@fn) == [1,1]
-            ssr{end+1} = rel(lhs, sr.m_rhs(n));
+            rhs = sr.m_rhs;
+            ssr{end+1} = rel(lhs, rhs(n));
         end
     elseif numel_lhs == numel_rhs
         for n=1:numel_lhs

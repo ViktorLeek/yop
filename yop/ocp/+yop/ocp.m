@@ -1045,7 +1045,7 @@ classdef ocp < handle
                 obj.independentf.ub = max(obj.independentf.ub, t_min);
             end
             
-            if ~isempty(obj.independent.lb)
+            if ~isempty(obj.independent.ub)
                 t_max = obj.independent.ub;
                 obj.independent0.lb = min(obj.independent0.lb, t_max);
                 obj.independent0.ub = min(obj.independent0.ub, t_max);

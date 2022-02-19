@@ -21,6 +21,10 @@ classdef ast_node < handle
             v = obj.m_value;
         end
         
+        function l = length(obj, varargin)
+            l = length(obj.m_value, varargin{:});
+        end
+        
         function disp(obj)
             disp(obj.m_value);
         end

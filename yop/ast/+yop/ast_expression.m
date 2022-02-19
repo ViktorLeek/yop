@@ -382,7 +382,6 @@ classdef ast_expression < yop.ast_node
             node=yop.ast_expression.timed_expression(timepoint, expression);
         end
         
-        
         function varargout = subsref(obj, s)
             % sr = subsref(obj, s)
             % The function is designed to enable two things.
@@ -411,9 +410,6 @@ classdef ast_expression < yop.ast_node
             end
             
             if length(s) > 1 || s(1).type ~= "()"
-                % This needs to be revised because it only works with
-                % objects of size [1, 1]. Must overload 
-                % numArgumentsFromSubscript
                 [varargout{1:nargout}] = builtin('subsref',obj, s);
                 return;
             end

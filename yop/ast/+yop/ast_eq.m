@@ -12,13 +12,16 @@ classdef ast_eq < yop.ast_relation
     methods
         function obj = ast_eq(lhs, rhs, ishard, isode, isalg)
             if isa(lhs, 'function_handle')
-                val = eq(lhs(1), rhs);
+                val = eq(lhs(1), value(rhs));
+                num = eq(lhs(1), numval(rhs));
             elseif isa(rhs, 'function_handle')
-                val = eq(lhs, rhs(1));
+                val = eq(value(lhs), rhs(1));
+                num = eq(numval(lhs), rhs(1));
             else
                 val = eq(value(lhs), value(rhs));
+                num = eq(numval(lhs), numval(rhs));
             end
-            obj@yop.ast_relation(val, lhs, rhs);
+            obj@yop.ast_relation(val, num, lhs, rhs);
             if nargin > 2
                 obj.m_hard = ishard;
                 obj.m_ode = isode;

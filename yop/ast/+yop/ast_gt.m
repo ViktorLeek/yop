@@ -7,13 +7,16 @@ classdef ast_gt < yop.ast_relation
     methods
         function obj = ast_gt(lhs, rhs, ishard)
             if isa(lhs, 'function_handle')
-                val = gt(lhs(1), rhs);
+                val = gt(lhs(1), value(rhs));
+                num = gt(lhs(1), numval(rhs));
             elseif isa(rhs, 'function_handle')
-                val = gt(lhs, rhs(1));
+                val = gt(value(lhs), rhs(1));
+                num = gt(numval(lhs), rhs(1));
             else
                 val = gt(value(lhs), value(rhs));
+                num = gt(numval(lhs), numval(rhs));
             end
-            obj@yop.ast_relation(val, lhs, rhs);
+            obj@yop.ast_relation(val, num, lhs, rhs);
             if nargin == 3
                 obj.m_hard = ishard;
             end
@@ -27,7 +30,7 @@ classdef ast_gt < yop.ast_relation
             fn = get_constructor(obj);
             ceq = fn(obj.m_rhs-obj.m_lhs, 0);
         end
-        
+
     end
     
 end
