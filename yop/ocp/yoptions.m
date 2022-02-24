@@ -146,12 +146,18 @@ print_level_tokens = { ...
     'print:', ...
     'plevel:' ...
     };
+linear_solver_tokens = { ...
+    'linear_solver:', ...
+    'lin_sol:', ...
+    'ls:' ...
+    };
 ipopt_options_tokens = { ...
     max_iter_tokens{:}, ...
     acc_iter_tokens{:}, ...
     acctol_tokens{:}, ...
     constr_viol_tokens{:}, ...
     print_level_tokens{:}, ...
+    linear_solver_tokens{:}, ...
     opttol_tokens{:} ...
     };
 
@@ -251,6 +257,10 @@ while k <= length(varargin)
         case print_level_tokens
             step();
             print_level();
+
+        case linear_solver_tokens
+            step();
+            linear_solver();
             
         otherwise
             error(yop.error.cannot_parse_yops());
@@ -364,6 +374,11 @@ end
 
     function print_level()
         yopts.ipopts.print_level = str2num(varargin{k});
+        step();
+    end
+
+    function linear_solver()
+        yopts.ipopts.linear_solver = varargin{k};
         step();
     end
 
@@ -498,7 +513,11 @@ end
         for n=1:N
             field = fields{n};
             value = ipopt.(field);
-            str = [str, q(field), ',' num2str(value)];
+            if isstring(value) || ischar(value)
+                str = [str, q(field), ',' q(value)];
+            else
+                str = [str, q(field), ',' num2str(value)];
+            end
             str = yop.IF(n==N, str, [str, ',']);
         end
         str = [str, ')'];

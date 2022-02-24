@@ -532,6 +532,11 @@ classdef ocp_sol < handle
         
         function varargout = stairs(obj, varargin)
             args = obj.filter(varargin);
+            for k=1:length(args)
+                if isnumeric(args{k})
+                    args{k} = args{k}';
+                end
+            end
             h = stairs(args{:});
             if nargout > 0
                 varargout{1} = h;
