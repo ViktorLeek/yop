@@ -8,7 +8,6 @@ r=[rx;ry;rz]; v=[vx;vy;vz]; x=[r;v;mf];
 %% Initial value
 r0  = [Re*cosd(28.5); 0; Re*sind(28.5)];
 v0  = -cross(w,r0) + 5*r0/norm(r0);
-% v0  = cross(w,r0) + 5*r0/norm(r0);
 mf0 = 9*srb.mp + e1.mp + e2.mp;
 x0  = [r0; v0; mf0];
 
@@ -21,28 +20,28 @@ ivp1 = yop.ivp();
 ivp1.add(t0==0, tf==srb.tb);
 ivp1.add( der(x) == vehicle1(x,u) );
 ivp1.add( x(t0) == x0 );
-ivp1.add( u == [0.4;0.6;0] );
+ivp1.add( u == [1;0;0] );
 sim1 = ivp1.solve();
 
 ivp2 = yop.ivp();
 ivp2.add(t0==srb.tb, tf==2*srb.tb);
 ivp2.add( der(x) == vehicle2(x,u) );
 ivp2.add( x(t0) == sim1.value(x(tf)) );
-ivp2.add( u == [0.5;0.25;0.25] );
+ivp2.add( u == [1;0;0] );
 sim2 = ivp2.solve();
 
 ivp3 = yop.ivp();
 ivp3.add(t0==2*srb.tb, tf==e1.tb);
 ivp3.add( der(x) == vehicle3(x,u) );
 ivp3.add( x(t0) == sim2.value(x(tf)) );
-ivp3.add( u == [0;0.9;0.1] );
+ivp3.add( u == [0;1;0] );
 sim3 = ivp3.solve();
 
 ivp4 = yop.ivp();
 ivp4.add(t0==e1.tb, tf==e1.tb+e2.tb);
 ivp4.add( der(x) == vehicle4(x,u) );
 ivp4.add( x(t0) == sim3.value(x(tf)) );
-ivp4.add( u == [0;0.9;0.1] );
+ivp4.add( u == [0;1;0] );
 sim4 = ivp4.solve();
 
 %% OCP
