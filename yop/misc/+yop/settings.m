@@ -3,7 +3,7 @@ classdef settings < handle
     properties
         m_errors = true
         m_warnings = true
-        m_cx_type = yop.settings.SX
+        m_cx_type = yop.settings.MX
     end
     
     properties (Constant, Hidden)

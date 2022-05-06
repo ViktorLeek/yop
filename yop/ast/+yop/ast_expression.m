@@ -1,9 +1,7 @@
 classdef ast_expression < yop.ast_node
     % ast_expression
     % The purpose of this class is to enable to right operator and function
-    % overloads for expressions. This class is inferior to the
-    % yop.ast_relation class in order to avoid structures with confusing
-    % semantics, such as '(expr1 <= expr2) + expr3'
+    % overloads for expressions.
     
     properties
         m_numval
@@ -346,6 +344,10 @@ classdef ast_expression < yop.ast_node
         
         function node = int(obj)
             node = yop.ast_int(obj);
+        end
+        
+        function node = interp1(x, v, xq)
+            node = yop.ast_interp1(x, v, xq);
         end
         
         function node = jacobian(expr, var)

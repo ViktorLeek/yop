@@ -1,7 +1,7 @@
 %% Implementation 1
 yops Times: t t0 tf
 yops States: x size: [3,1] nominal: [1e3,1e5,1e2]
-yops Controls: u nominal: 10
+yops Controls: u nominal: 10 int: 1
 
 [dx, y] = rocket_model(x, u);
 
@@ -15,7 +15,6 @@ ocp.st( y.rocket.mass(t0)     == 215 );
 ocp.st( 68 <= y.rocket.mass <= 215 );
 ocp.st( 0 <= y.rocket.fuel_mass_flow <= 9.5 );
 sol = ocp.solve();
-
 
 figure(1);
 subplot(411); hold on
@@ -178,6 +177,7 @@ dm = -F;
 dx = [dv;dh;dm];
 
 % Signals y
+y.rocket.acceleration   = dv;
 y.rocket.velocity       = v;
 y.rocket.height         = h;
 y.rocket.mass           = m;
