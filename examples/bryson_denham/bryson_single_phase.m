@@ -198,6 +198,28 @@ sol.plot(t, v);
 subplot(313); hold on
 sol.stairs(t, a);
 
+%% Using (t==0) and (t==1) instead of (t0) and (tf)
+t  = yop.independent();
+t0 = yop.time0();
+tf = yop.timef();
+s  = yop.state();
+v  = yop.state();
+u  = yop.control();
+
+ocp = yop.ocp();
+ocp.min( 1/2 * int(u^2) );
+ocp.st( t0==0, tf==1 );
+ocp.st( der(s) == v );
+ocp.st( der(v) == u );
+ocp.st( s(t==0) ==  s(t==1) == 0 );
+ocp.st( v(t==0) == -v(t==1) == 1 );
+ocp.st( s <= 1/9 );
+
+sol = ocp.solve();
+figure(1); hold on;
+sol.plot(t, s);
+sol.plot(t, v);
+sol.plot(t, u);
 
 
 
