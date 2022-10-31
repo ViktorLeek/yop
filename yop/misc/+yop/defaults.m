@@ -37,7 +37,7 @@ classdef defaults
     
     properties (Constant) % IVP
         algebraic_guess = 1;
-        ivp_solver = 'idas';
+        ivp_solver = 'ode15s';
         ivp_sol_points = 100;
     end
     

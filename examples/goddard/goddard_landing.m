@@ -29,8 +29,7 @@ p1.st( der(h) == v );
 p1.st( der(m) == -Wf );
 p1.st( m_min <= m  <= m_max );
 p1.st( Wfmin <= Wf <= Wfmax );
-sol1 = p1.solve(); % Using solution to first phase as initial guess for the phase
-p1.guess = sol1; 
+p1.guess = p1.solve(); % Using solution to first phase as initial guess for the phase
 
 p2 = yop.ocp();
 p2.min( 0 );
@@ -50,9 +49,9 @@ sol = ocp.solve('ival', 100, 'dx', 5);
 
 figure(1);
 subplot(411); hold on
-sol.plot(t, v, 'mag', 4);
-subplot(412); hold on
 sol.plot(t, h, 'mag', 4);
+subplot(412); hold on
+sol.plot(t, v, 'mag', 4);
 subplot(413); hold on
 sol.plot(t, m, 'mag', 4);
 subplot(414); hold on

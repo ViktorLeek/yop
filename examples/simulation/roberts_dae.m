@@ -10,7 +10,8 @@ sim.add(    0    == x1 + x2 + z - 1 );
 sim.add( x1(t0)  == 1 );
 sim.add( x2(t0)  == 0 );
 sim.add(  z(t0)  == 0 );
-sol_15s = sim.solve('solver', 'ode15s', 'reltol', 1e-4, 'abstol', [1e-6, 1e-10, 1e-6]);
+sol_15s = sim.solve('reltol', 1e-4, 'abstol', [1e-6, 1e-10, 1e-6]);
+% sol_15s = sim.solve('solver', 'ode15s', 'reltol', 1e-4, 'abstol', [1e-6, 1e-10, 1e-6]);
 sol_idas = sim.solve('solver', 'idas', 'opts', struct('grid', 4*logspace(-6,6)));
 
 figure(1);

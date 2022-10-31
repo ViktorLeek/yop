@@ -30,7 +30,7 @@ function yops(varargin)
 %       'yops Parameters: p1 p2' - Two scalar parameters p1 and p2
 %       'yops Params: p1 p2' - Same as above
 %       'yops Param: p1 p2' - Same as above
-%       'yops Param: p1 p2 Param: p3 size [2,1]' - Two scalar parameters p1
+%       'yops Param: p1 p2 Param: p3 size: [2,1]' -Two scalar parameters p1
 %                                                  and p2, and one vector
 %                                                  valued parameter p3
 %       'yops Algebraic: z' - A scalar valued algebraic variable

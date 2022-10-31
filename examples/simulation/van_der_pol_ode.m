@@ -6,6 +6,7 @@ sim = yop.ivp(t0==0, tf==20);
 sim.add(der(x) == [x(2); (1-x(1)^2)*x(2)-x(1)]);
 sim.add(x(t0)  == [2; 0]);
 sol = sim.solve('solver', 'idas', 'points', 200);
+% sol = sim.solve('solver', 'cvodes', 'points', 200);
 % sol = sim.solve('solver', 'ode15s');
 
 figure(1); hold on;

@@ -560,6 +560,10 @@ classdef ast_expression < yop.ast_node
             elseif ist
                 % expr(t)
                 ast = expr;
+            
+            elseif n==1 && a1_time_lhs && a1_eq && a1_time_rhs
+                % expr(t == t)
+                ast = expr;
                 
             elseif n==1 && a1_time_lhs && a1_eq && a1_time0_rhs
                 % expr(t == t0)
