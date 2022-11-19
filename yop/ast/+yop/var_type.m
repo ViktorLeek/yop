@@ -11,6 +11,7 @@ classdef var_type
         control = 6
         parameter = 7
         variables_stop = 7
+        state_der = 8 % is not a variable in d. collocation
     end
     methods (Static)
         function bool = isa_variable(type)

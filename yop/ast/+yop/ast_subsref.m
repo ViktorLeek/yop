@@ -3,6 +3,7 @@ classdef ast_subsref < yop.ast_expression
     properties
         m_expr
         m_s
+        m_dval
     end
     
     methods
@@ -27,6 +28,20 @@ classdef ast_subsref < yop.ast_expression
                 );
             obj.m_expr = expr;
             obj.m_s = s;
+            
+            if all(expr.m_type == yop.var_type.state)
+                obj.m_dval = subsref(expr.m_dval, s);
+            elseif all(obj.m_type == yop.var_type.state)
+                obj.m_dval = zeros(size(obj));
+            end
+        end
+        
+        function d = der(obj)
+            if isempty(obj.m_dval)
+                d = der@yop.ast_expression(obj);
+            else
+                d = obj.m_dval;
+            end
         end
         
         function ast(obj)

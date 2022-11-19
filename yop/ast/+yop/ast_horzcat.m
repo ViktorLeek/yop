@@ -1,6 +1,7 @@
 classdef ast_horzcat < yop.ast_expression
     properties
         m_args
+        m_dval
     end
     methods
         function obj = ast_horzcat(varargin)
@@ -29,6 +30,21 @@ classdef ast_horzcat < yop.ast_expression
                 horzcat(tid{:}) ... typeid
                 );
             obj.m_args = varargin;
+            if all(obj.m_type == yop.var_type.state)
+                dval = c0;
+                for k=1:length(varargin)
+                    dval{k} = varargin{k}.m_dval;
+                end
+                obj.m_dval = horzcat(dval{:});
+            end
+        end
+        
+        function d = der(obj)
+            if isempty(obj.m_dval)
+                d = der@yop.ast_expression(obj);
+            else
+                d = obj.m_dval;
+            end
         end
         
         function ast(obj)

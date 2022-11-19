@@ -2,6 +2,7 @@ classdef ast_reshape < yop.ast_expression
     properties
         m_expr
         m_args
+        m_dval
     end
     methods
         function obj = ast_reshape(expr, varargin)
@@ -17,6 +18,17 @@ classdef ast_reshape < yop.ast_expression
                 );
             obj.m_expr = expr;
             obj.m_args = varargin;
+            if all(expr.m_type == yop.var_type.state)
+                obj.m_dval = reshape(expr.m_dval, varargin{:});
+            end
+        end
+        
+        function d = der(obj)
+            if isempty(obj.m_dval)
+                d = der@yop.ast_expression(obj);
+            else
+                d = obj.m_dval;
+            end
         end
         
         function ast(obj)

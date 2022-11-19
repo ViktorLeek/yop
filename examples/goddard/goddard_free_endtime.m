@@ -8,7 +8,7 @@ yops Controls: u nominal: 10 int: 1
 ocp = yop.ocp('Goddard''s Rocket Problem');
 ocp.max( y.rocket.height(tf)*1e-5 );
 ocp.st( t0==0 );
-ocp.st( der(x) == dx );
+ocp.st( 0 == der(x) - dx );
 ocp.st( y.rocket.height(t0)   == 0 );
 ocp.st( y.rocket.velocity(t0) == 0 );
 ocp.st( y.rocket.mass(t0)     == 215 );

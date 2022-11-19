@@ -14,7 +14,7 @@ name = ip.Results.name;
 weight = ones(nx,1) .* ip.Results.scaling(:);
 offset = ones(nx,1) .* ip.Results.offset(:);
 
-if isequal(sz, [1, 1])
+if isequal(sz, [1, 1]) 
     x = yop.ast_state(name, weight, offset);
 else
     states = cell(nx, 1);

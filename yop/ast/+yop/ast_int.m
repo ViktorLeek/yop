@@ -4,6 +4,11 @@ classdef ast_int < yop.ast_unary_expression
         m_name = 'int'
     end
     
+    properties
+        m_to
+        m_fr
+    end
+    
     methods
         function obj = ast_int(expr)
             sz = size(expr);
@@ -18,6 +23,14 @@ classdef ast_int < yop.ast_unary_expression
                 zeros(sz)                  , ... typeid
                 expr                        ...
                 );
+        end
+        
+        function obj = fr(obj, t)
+            obj.m_fr = t;
+        end
+        
+        function obj = to(obj, t)
+            obj.m_to = t;
         end
     end
 end

@@ -1,10 +1,11 @@
-function nlp = direct_collocation(ocp, N, dx, cpx, du, cpu, continuity)
+function nlp = direct_collocation(ocp, N, degx, cpx, degu, cpu, continuity)
 
                        yop.progress.nlp_building();
 T0=[]; Tf=[]; t=[]; t0=[]; tf=[]; p=[]; dt=[]; taux=[]; tp=[]; I=[]; D=[]; 
 g=[]; g_ub=[]; g_lb=[]; w_ub=[]; w_lb=[]; w0=[]; h=[]; tauu=[];
 t = yop.interpolating_poly.empty(0, N+1);
 x = yop.interpolating_poly.empty(0, N+1);
+dx= yop.interpolating_poly.empty(0, N+1);
 z = yop.interpolating_poly.empty(0, N);
 u = yop.interpolating_poly.empty(0, N);
 D = yop.interpolating_poly.empty(0, N);
@@ -62,11 +63,11 @@ nlp.ocp_u  = ufn;
 nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
 
     function init_collocation()
-        taux = full([0, casadi.collocation_points(dx, cpx)]);
-        if du == 0
+        taux = full([0, casadi.collocation_points(degx, cpx)]);
+        if degu == 0
             tauu = 0;
         else
-            tauu = full(casadi.collocation_points(du+1, cpu));
+            tauu = full(casadi.collocation_points(degu+1, cpu));
         end
     end
 
@@ -102,19 +103,23 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
     function init_state()
         T = T0;
         for n=1:N
-            x_n = yop.cx(['x_' num2str(n)], ocp.n_x, dx+1);
+            x_n = yop.cx(['x_' num2str(n)], ocp.n_x, degx+1);
             x(n) = yop.interpolating_poly(taux, x_n, T, T+h);
+            dx(n) = yop.interpolating_poly(taux, [], T, T+h);
+            dx(n).y = x(n).differentiate().evaluate(taux)/dt;
             T = T + h;
         end
         assert(yop.EQ(T, Tf));
         x_n = yop.cx(['x_' num2str(N+1)], ocp.n_x);
         x(N+1) = yop.interpolating_poly(0, x_n, Tf, Tf);
+        dx(N+1) = yop.interpolating_poly(0, [], T, T+h);
+        dx(N+1).y = x(N).differentiate().evaluate(1)/dt;
     end
 
     function init_algebraic()
         T = T0;
         for n=1:N
-            z_n = yop.cx(['z_' num2str(n)], ocp.n_z, dx);
+            z_n = yop.cx(['z_' num2str(n)], ocp.n_z, degx);
             z(n) = yop.interpolating_poly(taux(2:end), z_n, T, T+h);
             T = T + h;
         end
@@ -124,7 +129,7 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
     function init_control()
         T = T0;
         for n=1:N
-            u_n = yop.cx(['u_' num2str(n)], ocp.n_u, du+1);
+            u_n = yop.cx(['u_' num2str(n)], ocp.n_u, degu+1);
             u(n) = yop.interpolating_poly(tauu, u_n, T, T+h);
             T = T + h;
         end
@@ -171,10 +176,11 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
     function parameterize_timepoint(ocp_tp, tp_tmp, int_tmp)
         tt = t.value(ocp_tp.timepoint);
         xx = x.value(ocp_tp.timepoint);
+        Dx = dx.value(ocp_tp.timepoint);
         zz = z.value(ocp_tp.timepoint);
         uu = u.value(ocp_tp.timepoint);
         dd = pad(D.value(ocp_tp.timepoint));
-        tp = [tp; ocp_tp.fn(t0,tf,tt,xx,zz,uu,p,tp_tmp,int_tmp,dd)];
+        tp = [tp; ocp_tp.fn(t0,tf,tt,xx,Dx,zz,uu,p,tp_tmp,int_tmp,dd)];
     end
 
     function parameterize_integral(i, tp_tmp, int_tmp)
@@ -184,11 +190,12 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
             for r=taux
                 tt = t(n).eval(r);
                 xx = x(n).eval(r);
+                Dx = dx(n).eval(r);
                 zz = z(n).eval(r);
                 uu = u(n).eval(r);
                 dd = pad(D(n).eval(r));
                 yval = [yval, i.fn(...
-                    t0, tf, tt, xx, zz, uu, p, tp_tmp, int_tmp, dd)];
+                    t0, tf, tt, xx, Dx, zz, uu, p, tp_tmp, int_tmp, dd)];
             end
             lp = yop.lagrange_polynomial(taux, yval).integrate();
             Ival = Ival + lp.evaluate(1)*dt;
@@ -202,11 +209,12 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
             for r=taux
                 tt = t(n).eval(r);
                 xx = x(n).eval(r);
+                Dx = dx(n).eval(r);
                 zz = z(n).eval(r);
                 uu = u(n).eval(r);
                 dd = pad(D(n).eval(r));
                 yval = [yval, der.fn(...
-                    t0, tf, tt, xx, zz, uu, p, tp_tmp, int_tmp, dd)];
+                    t0, tf, tt, xx, Dx, zz, uu, p, tp_tmp, int_tmp, dd)];
             end
             lp = yop.lagrange_polynomial(taux, yval);
             yn = lp.differentiate().evaluate(taux)/dt;
@@ -220,16 +228,18 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
 
     function discretize_dynamics()
         for n=1:N % Dynamics
-            derx = x(n).differentiate();
+            % derx = x(n).differentiate();
             for r=taux(2:end)
                 tt = t(n).eval(r);
                 xx = x(n).eval(r);
+                Dx = dx(n).eval(r);
                 zz = z(n).eval(r);
                 uu = u(n).eval(r);
                 dd = D(n).eval(r);
-                f = ocp.ode.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd);
-                a = ocp.m_alg.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd);
-                g = [g; (derx.evaluate(r) - dt*f); a];
+                g = [g; ocp.m_alg.fn(t0, tf, tt, xx, Dx, zz, uu, p, tp, I, dd)];
+                % f = ocp.ode.fn(t0, tf, tt, xx, Dx, zz, uu, p, tp, I, dd);
+                % a = ocp.m_alg.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd);
+                % g = [g; (derx.evaluate(r) - dt*f); a];
             end
         end
         
@@ -244,10 +254,11 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
     function pointcons()
         tt = t(1).eval(0);
         xx = x(1).eval(0);
+        Dx = dx(1).eval(0);
         zz = z(1).eval(0);
         uu = u(1).eval(0);
         dd = D(1).eval(0);
-        g = [g; ocp.point.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd)];
+        g = [g; ocp.point.fn(t0, tf, tt, xx, Dx, zz, uu, p, tp, I, dd)];
         g_ub = [g_ub; ocp.point.ub];
         g_lb = [g_lb; ocp.point.lb];
     end
@@ -257,17 +268,19 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
             for n=1:N
                 tt = t(n).eval(0);
                 xx = x(n).eval(0);
+                Dx = dx(n).eval(0);
                 zz = z(n).eval(0);
                 uu = u(n).eval(0);
                 dd = D(n).eval(0);
-                g = [g; ocp.path.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd)];
+                g = [g; ocp.path.fn(t0, tf, tt, xx, Dx, zz, uu, p, tp, I, dd)];
             end
             tt = t(N+1).eval(0);
             xx = x(N+1).eval(0);
+            Dx = dx(N+1).eval(0);
             zz = z(N).eval(1);
             uu = u(N).eval(1);
             dd = D(N).eval(1);
-            g = [g; ocp.path.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd)];
+            g = [g; ocp.path.fn(t0, tf, tt, xx, Dx, zz, uu, p, tp, I, dd)];
             g_ub = [g_ub; repmat(ocp.path.ub, N+1, 1)];
             g_lb = [g_lb; repmat(ocp.path.lb, N+1, 1)];
 
@@ -280,21 +293,23 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
                 for r = taux
                     tt = t(n).eval(r);
                     xx = x(n).eval(r);
+                    Dx = dx(n).eval(r);
                     zz = z(n).eval(r);
                     uu = u(n).eval(r);
                     dd = D(n).eval(r);
                     g = [g; ocp.path_hard.fn(...
-                        t0, tf, tt, xx, zz, uu, p, tp, I, dd)];
+                        t0, tf, tt, xx, Dx, zz, uu, p, tp, I, dd)];
                 end
             end
             tt = t(N+1).eval(0);
             xx = x(N+1).eval(0);
+            Dx = dx(N+1).eval(0);
             zz = z(N).eval(1);
             uu = u(N).eval(1);
             dd = D(N).eval(1);
-            g = [g; ocp.path_hard.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd)];
-            g_ub = [g_ub; repmat(ocp.path_hard.ub, N*(dx+1)+1, 1)];
-            g_lb = [g_lb; repmat(ocp.path_hard.lb, N*(dx+1)+1, 1)];
+            g = [g; ocp.path_hard.fn(t0, tf, tt, xx, Dx, zz, uu, p, tp, I, dd)];
+            g_ub = [g_ub; repmat(ocp.path_hard.ub, N*(degx+1)+1, 1)];
+            g_lb = [g_lb; repmat(ocp.path_hard.lb, N*(degx+1)+1, 1)];
         end
     end
 
@@ -304,23 +319,25 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
         % Evaluate at the beginning of the interval
         tt = t.value(I0);
         xx = x.value(I0);
+        Dx = dx.value(I0);
         zz = z.value(I0);
         uu = u.value(I0);
         dd = D.value(I0);
-        g = [g; expr.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd)];
+        g = [g; expr.fn(t0, tf, tt, xx, Dx, zz, uu, p, tp, I, dd)];
         g_ub = [g_ub; expr.ub];
         g_lb = [g_lb; expr.lb];
         
         % Evaluate all points within the interval
         [n0, r0, nf, rf] = get_ival_idx(I0, If);
         for n = n0 : min(nf, N) % N+1 is handled by evaluating at If
-            for r = yop.IF(n==n0, r0, 1) : yop.IF(n==nf, rf, dx+1)
+            for r = yop.IF(n==n0, r0, 1) : yop.IF(n==nf, rf, degx+1)
                 tt = t(n).eval(taux(r));
                 xx = x(n).eval(taux(r));
+                Dx = dx(n).eval(taux(r));
                 zz = z(n).eval(taux(r));
                 uu = u(n).eval(taux(r));
                 dd = D(n).eval(taux(r));
-                g = [g; expr.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd)];
+                g = [g; expr.fn(t0, tf, tt, xx, Dx, zz, uu, p, tp, I, dd)];
                 g_ub = [g_ub; expr.ub];
                 g_lb = [g_lb; expr.lb];
             end
@@ -329,10 +346,11 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
         % Evaluate final point
         tt = t.value(If);
         xx = x.value(If);
+        Dx = dx.value(If);
         zz = z.value(If);
         uu = u.value(If);
         dd = D.value(If);
-        g = [g; expr.fn(t0, tf, tt, xx, zz, uu, p, tp, I, dd)];
+        g = [g; expr.fn(t0, tf, tt, xx, Dx, zz, uu, p, tp, I, dd)];
         g_ub = [g_ub; expr.ub];
         g_lb = [g_lb; expr.lb];
     end
@@ -411,7 +429,7 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
         
         
         % First interval
-        if du+1 == 1
+        if degu+1 == 1
             u_ub = ocp.u0_ub(T0);
             u_lb = ocp.u0_lb(T0);
         else
@@ -437,7 +455,7 @@ nlp.ocp_p  = pfn;  yop.progress.nlp_completed();
         end
         
         % Last interval
-        if du+1 == 1    
+        if degu+1 == 1    
             u_ub = [u_ub; ocp.uf_ub(Tf)];
             u_lb = [u_lb; ocp.uf_lb(Tf)];
         else

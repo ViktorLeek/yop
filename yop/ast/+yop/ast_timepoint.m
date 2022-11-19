@@ -2,6 +2,7 @@ classdef ast_timepoint < yop.ast_expression
     properties
         m_timepoint
         m_expr
+        m_dval
     end
     methods
         function obj = ast_timepoint(timepoint, expr)
@@ -18,6 +19,10 @@ classdef ast_timepoint < yop.ast_expression
                 );
             obj.m_timepoint = timepoint;
             obj.m_expr = expr;
+            
+            if all(obj.m_type == yop.var_type.state)
+                obj.m_dval = expr.m_dval;
+            end
         end
         
         function ast(obj)

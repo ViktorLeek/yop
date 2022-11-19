@@ -10,6 +10,7 @@ classdef ocp < handle
         algebraics
         controls
         parameters
+        state_ders
         
         % Objective
         objective
@@ -100,6 +101,7 @@ classdef ocp < handle
             obj.algebraics   = yop.ocp_var.empty(1,0);
             obj.controls     = yop.ocp_var.empty(1,0);
             obj.parameters   = yop.ocp_var.empty(1,0);
+            obj.state_ders   = yop.ocp_var.empty(1,0);
             
             obj.m_id = yop.ocp.get_id();
             obj.m_value = yop.cx(['ocp', num2str(obj.m_id)]);
@@ -339,7 +341,7 @@ classdef ocp < handle
             w_opt.u  = obj.descale_u (full(nlp.ocp_u (nlp_sol.x)));
             w_opt.p  = obj.descale_p (full(nlp.ocp_p (nlp_sol.x)));
             
-            sol = yop.ocp_sol(obj.mx_vars(), obj.ids, w_opt, ...
+            sol = yop.ocp_sol(obj.mx_sol_vars(), obj.ids, w_opt, ...
                 yopts.intervals, ...
                 yopts.state_degree, ...
                 yopts.state_points, ...
@@ -698,16 +700,20 @@ classdef ocp < handle
                 % interval inequality constraint
                 obj.iec_ival_eqs{end+1} = canonicalize(ssr).m_lhs;
                 
-            elseif der_lhs && state_lhs && isa_eq
-                % der(x) == expr
-                obj.ode_eqs{end+1} = ssr;
-                obj.remove_state_der(lhs.m_der);
+                %             elseif isa_eq && ~invariant
+                %                 % equality constraint
+                %                 obj.alg_eqs{end+1} = ssr;
                 
-            elseif der_rhs && state_rhs && isa_eq
-                % expr == der(x)
-                c = get_constructor(ssr);
-                obj.ode_eqs{end+1} = c(ssr.m_rhs, ssr.m_lhs);
-                obj.remove_state_der(rhs.m_der);
+            %elseif der_lhs && state_lhs && isa_eq
+                % % der(x) == expr
+                %obj.ode_eqs{end+1} = ssr;
+                %obj.remove_state_der(lhs.m_der);
+                
+            %elseif der_rhs && state_rhs && isa_eq
+                % % expr == der(x)
+                %c = get_constructor(ssr);
+                %obj.ode_eqs{end+1} = c(ssr.m_rhs, ssr.m_lhs);
+                %obj.remove_state_der(rhs.m_der);
                 
             elseif isa_alg(ssr) && isa_eq
                 % alg(expr1 == expr2)
@@ -868,8 +874,9 @@ classdef ocp < handle
                 obj.ec_hard_eqs{end+1} = canonicalize(ssr).m_lhs;
                 
             elseif isa_eq
-                % Equality constraint
-                obj.ec_eqs{end+1} = canonicalize(ssr).m_lhs;
+                % Equality constraint treated as dynamics
+                % obj.ec_eqs{end+1} = canonicalize(ssr).m_lhs;
+                obj.alg_eqs{end+1} = ssr;
             
             elseif (isa_le || isa_ge) && invariant
                 % Transcription invariant inequality constraint
@@ -977,7 +984,9 @@ classdef ocp < handle
                 uk = obj.controls(k);
                 if ~isempty(uk.ast.m_du)
                     obj.states(end+1) = uk;
-                    obj.ode_eqs{end+1} = ode(yop.ast_der(uk.ast)==uk.ast.m_du);
+                    obj.state_ders(end+1) = uk.ast.m_dval;
+                    % obj.ode_eqs{end+1} = ode(yop.ast_der(uk.ast)==uk.ast.m_du);
+                    obj.alg_eqs{end+1} = alg(uk.ast.m_dval==uk.ast.m_du);
                 else
                     keep(end+1) = k;
                 end
@@ -1116,6 +1125,28 @@ classdef ocp < handle
                     p.lb = yop.defaults.parameter_lb;
                 end
             end
+            
+            % State derivatives
+            for dx=obj.state_ders
+                if isempty(dx.ub)
+                    dx.ub = yop.defaults.state_der_ub;
+                end
+                if isempty(dx.lb)
+                    dx.lb = yop.defaults.state_der_lb;
+                end
+                if isempty(dx.ub0)
+                    dx.ub0 = dx.ub;
+                end
+                if isempty(dx.lb0)
+                    dx.lb0 = dx.lb; 
+                end
+                if isempty(dx.ubf)
+                    dx.ubf = dx.ub;
+                end
+                if isempty(dx.lbf)
+                    dx.lbf = dx.lb;
+                end
+            end
         end
         
         function obj = set_objective_fn(obj)
@@ -1157,21 +1188,21 @@ classdef ocp < handle
             ode_lhs = vertcat(tmp_lhs{:});
             
             % Test if all states are bound to an ode
-            [~, ode_ids] = Type(ode_lhs);
-            [ode_ids, idx] = sort(ode_ids);
-            x_ids = obj.get_state_ids();
-            if ~isequal(x_ids, ode_ids)
-                state_ast = {};
-                for id = setdiff(ode_ids, x_ids)
-                    state_ast{end+1} = obj.find_variable(id);
-                end
-                error(yop.error.missing_state_derivative(state_ast));
-            end
+            %[~, ode_ids] = Type(ode_lhs);
+            %[ode_ids, idx] = sort(ode_ids);
+            %x_ids = obj.get_state_ids();
+            %if ~isequal(x_ids, ode_ids)
+            %    state_ast = {};
+            %    for id = setdiff(ode_ids, x_ids)
+            %        state_ast{end+1} = obj.find_variable(id);
+            %    end
+            %    error(yop.error.missing_state_derivative(state_ast));
+            %end
             
             % Change order of equations so that state vector and ode
             % equation order match
-            obj.ode.m_lhs = ode_lhs(idx);
-            obj.ode.m_rhs = vertcat(tmp_rhs{idx});
+            %obj.ode.m_lhs = ode_lhs(idx);
+            %obj.ode.m_rhs = vertcat(tmp_rhs{idx});
             
             % Algebraic equation
             nz = length(obj.alg_eqs);
@@ -1188,14 +1219,14 @@ classdef ocp < handle
         end
         
         function obj = set_dynamics_fn(obj)
-            ode_expr = value(obj.ode.m_rhs);
+            %ode_expr = value(obj.ode.m_rhs);
             alg_expr = value(obj.m_alg.m_rhs);
-            f = casadi.Function('f', obj.mx_args(), {ode_expr});
+            %f = casadi.Function('f', obj.mx_args(), {ode_expr});
             
             % Descale input variables, evaluate ode rhs, scale derivative
-            dargs = obj.mx_dargs();
-            fs = f(dargs{:}).*(1./obj.W_x);
-            obj.ode.fn = casadi.Function('ode', obj.mx_args(), {fs});
+            %dargs = obj.mx_dargs();
+            %fs = f(dargs{:}).*(1./obj.W_x);
+            %obj.ode.fn = casadi.Function('ode', obj.mx_args(), {fs});
             obj.m_alg.fn = obj.dsfn(alg_expr, 'alg');
         end
         
@@ -1261,6 +1292,19 @@ classdef ocp < handle
                 mx_vec(obj.independentf), ...
                 mx_vec(obj.independent), ...
                 mx_vec(obj.states), ...
+                mx_vec(obj.state_ders), ...
+                mx_vec(obj.algebraics), ...
+                mx_vec(obj.controls), ...
+                mx_vec(obj.parameters) ...
+                };
+        end
+        
+        function args = mx_sol_vars(obj)
+            args = { ...
+                mx_vec(obj.independent0), ...
+                mx_vec(obj.independentf), ...
+                mx_vec(obj.independent), ...
+                mx_vec(obj.states), ...
                 mx_vec(obj.algebraics), ...
                 mx_vec(obj.controls), ...
                 mx_vec(obj.parameters) ...
@@ -1273,6 +1317,7 @@ classdef ocp < handle
                 mx_vec(obj.independentf), ...
                 mx_vec(obj.independent), ...
                 mx_vec(obj.states), ...
+                mx_vec(obj.state_ders), ...
                 mx_vec(obj.algebraics), ...
                 mx_vec(obj.controls), ...
                 mx_vec(obj.parameters), ...
@@ -1299,13 +1344,14 @@ classdef ocp < handle
             tf = obj.descale_tf(mx_vec(obj.independentf));
             tt = obj.descale_t (mx_vec(obj.independent));
             xx = obj.descale_x (mx_vec(obj.states));
+            dx = obj.descale_dx(mx_vec(obj.state_ders));
             zz = obj.descale_z (mx_vec(obj.algebraics));
             uu = obj.descale_u (mx_vec(obj.controls));
             pp = obj.descale_p (mx_vec(obj.parameters));
             tp = mx_vec(obj.tps);
             ii = mx_vec(obj.ints);
             dd = mx_vec(obj.ders);
-            args = {t0, tf, tt, xx, zz, uu, pp, tp, ii, dd};
+            args = {t0, tf, tt, xx, dx, zz, uu, pp, tp, ii, dd};
         end
         
         function vs = scale_t0(obj, v)
@@ -1326,6 +1372,11 @@ classdef ocp < handle
         function vs = scale_x(obj, v)
             % scale x
             vs = (v + obj.OS_x).*(1./obj.W_x);
+        end
+        
+        function vs = scale_dx(obj, v)
+            % scale dx
+            vs = v.*(1./obj.W_dx);
         end
         
         function vs = scale_z(obj, v)
@@ -1379,6 +1430,14 @@ classdef ocp < handle
             end
         end
         
+        function v = descale_dx(obj, vs)
+            if isempty(vs)
+                v = vs;
+            else
+                v = vs.*obj.W_x;
+            end
+        end
+        
         function v = descale_z(obj, vs)
             % descale z
             if isempty(vs)
@@ -1422,6 +1481,10 @@ classdef ocp < handle
             W = obj.states.weight;
         end
         
+        function W = W_dx(obj)
+            W = obj.state_ders.weight;
+        end
+        
         function W = W_z(obj)
             W = obj.algebraics.weight;
         end
@@ -1450,6 +1513,10 @@ classdef ocp < handle
             OS = obj.states.offset;
         end
         
+        function OS = OS_dx(obj)
+            OS = obj.state_ders.offset;
+        end
+        
         function OS = OS_z(obj)
             OS = obj.algebraics.offset;
         end
@@ -1465,7 +1532,7 @@ classdef ocp < handle
         function IDs = ids(obj)
             IDs = [obj.independent0.ids, obj.independentf.ids, ...
                 obj.independent.ids, obj.states.ids, obj.algebraics.ids, ...
-                obj.controls.ids, obj.parameters.ids];
+                obj.controls.ids, obj.parameters.ids, obj.state_ders.ids];
         end
         
         function ids = get_state_ids(obj)
@@ -1476,10 +1543,20 @@ classdef ocp < handle
             end
         end
         
+        function ids = get_state_der_ids(obj)
+            nx = length(obj.state_ders);
+            ids = zeros(nx,1);
+            for k=1:nx
+                ids(k) = obj.state_ders(k).ast.m_id;
+            end
+        end
+        
         function ids = sort_states(obj)
             % Change state order so that they come in id order
             [ids, idx] = sort(obj.get_state_ids());
             obj.states = obj.states(idx);
+            [ids, idx] = sort(obj.get_state_der_ids());
+            obj.state_ders = obj.state_ders(idx);
         end
         
         
@@ -1530,6 +1607,8 @@ classdef ocp < handle
                     obj.add_control(v);
                 case 'yop.ast_parameter'
                     obj.add_parameter(v);
+                case 'yop.ast_state_der'
+                    obj.add_state_der(v);
             end
         end
         
@@ -1561,6 +1640,10 @@ classdef ocp < handle
             obj.states(end+1) = yop.ocp_var(x);
         end
         
+        function obj = add_state_der(obj, dx)
+            obj.state_ders(end+1) = yop.ocp_var(dx);
+        end
+        
         function obj = add_algebraic(obj, z)
             obj.algebraics(end+1) = yop.ocp_var(z);
         end
@@ -1588,6 +1671,10 @@ classdef ocp < handle
         
         function n = n_x(obj)
             n = length(obj.states);
+        end
+        
+        function n = n_dx(obj)
+            n = length(obj.state_ders);
         end
         
         function n = n_z(obj)
@@ -1732,6 +1819,30 @@ classdef ocp < handle
                 end
             end
             bd = obj.scale_x(bd(:));
+        end
+        
+        function bd = dx_ub(obj, t)
+            bd = [];
+            for v = obj.state_ders
+                if isa(v.ub, 'function_handle')
+                    bd(end+1) = v.ub(t);
+                else
+                    bd(end+1) = v.ub;
+                end
+            end
+            bd = obj.scale_dx(bd(:));
+        end
+        
+        function bd = dx_lb(obj, t)
+            bd = [];
+            for v = obj.state_ders
+                if isa(v.lb, 'function_handle')
+                    bd(end+1) = v.lb(t);
+                else
+                    bd(end+1) = v.lb;
+                end
+            end
+            bd = obj.scale_dx(bd(:));
         end
         
         function bd = z_ub(obj, t)

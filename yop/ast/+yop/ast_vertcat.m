@@ -1,11 +1,13 @@
 classdef ast_vertcat < yop.ast_expression
     properties
         m_args
+        m_dval
     end
     methods
         function obj = ast_vertcat(varargin)
             c0 = cell(size(varargin));
             val=c0; num=c0; tt0=c0; ttf=c0; der=c0; red=c0; typ=c0; tid=c0;
+            types = [];
             for k=1:length(varargin)
                 vk = varargin{k};
                 val{k} = value(vk);
@@ -17,6 +19,7 @@ classdef ast_vertcat < yop.ast_expression
                 [typk, tidk] = Type(vk);
                 typ{k} = typk;
                 tid{k} = tidk;
+                types = [types; typk];
             end
             obj@yop.ast_expression( ...
                 vertcat(val{:}), ... value
@@ -29,6 +32,23 @@ classdef ast_vertcat < yop.ast_expression
                 vertcat(tid{:}) ... typeid
                 );
             obj.m_args = varargin;
+            if all(types == yop.var_type.state)
+                dval = c0;
+                for k=1:length(varargin)
+                    dval{k} = varargin{k}.m_dval;
+                end
+                obj.m_dval = vertcat(dval{:});
+            elseif all(obj.m_type == yop.var_type.state)
+                obj.m_dval = zeros(size(obj));
+            end
+        end
+        
+        function d = der(obj)
+            if isempty(obj.m_dval)
+                d = der@yop.ast_expression(obj);
+            else
+                d = obj.m_dval;
+            end
         end
         
         function ast(obj)

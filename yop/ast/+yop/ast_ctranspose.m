@@ -2,6 +2,9 @@ classdef ast_ctranspose < yop.ast_unary_expression
     properties (Constant)
         m_name = 'ctranspose'
     end
+    properties
+        m_dval
+    end
     methods
         function obj = ast_ctranspose(expr)
             obj@yop.ast_unary_expression( ...
@@ -15,6 +18,17 @@ classdef ast_ctranspose < yop.ast_unary_expression
                 ctranspose(expr.m_typeid)   , ... typeid
                 expr                         ...
                 );
+            if all(obj.m_type == yop.var_type.state)
+                obj.m_dval = ctranspose(expr.m_dval);
+            end
+        end
+        
+        function d = der(obj)
+            if isempty(obj.m_dval)
+                d = der@yop.ast_unary_expression(obj);
+            else
+                d = obj.m_dval;
+            end
         end
     end
 end

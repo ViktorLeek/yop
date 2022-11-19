@@ -25,6 +25,9 @@ classdef defaults
         parameter_ub = inf;
         parameter_lb = -inf;
         
+        state_der_ub = inf;
+        state_der_lb = -inf;
+        
         solver = 'ipopt'
         state_degree = 5;
         state_points = {'legendre'};

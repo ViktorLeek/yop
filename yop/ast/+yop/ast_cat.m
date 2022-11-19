@@ -2,6 +2,7 @@ classdef ast_cat < yop.ast_expression
     properties
         d
         args
+        m_dval
     end
     methods
         function obj = ast_cat(d, varargin)
@@ -31,6 +32,21 @@ classdef ast_cat < yop.ast_expression
                 );
             obj.m_d = d;
             obj.m_args = varargin;
+            if all(obj.m_type == yop.var_type.state)
+                dval = c0;
+                for k=1:length(varargin)
+                    dval{k} = varargin{k}.m_dval;
+                end
+                obj.m_dval = cat(d, dval{:});
+            end
+        end
+        
+        function d = der(obj)
+            if isempty(obj.m_dval)
+                d = der@yop.ast_expression(obj);
+            else
+                d = obj.m_dval;
+            end
         end
         
         function ast(obj)

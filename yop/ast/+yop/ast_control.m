@@ -3,6 +3,7 @@ classdef ast_control < yop.ast_variable
     properties
         m_deg
         m_du
+        m_dval
     end
     
     methods
@@ -12,6 +13,7 @@ classdef ast_control < yop.ast_variable
             obj.m_deg = deg;
             if deg > 0
                 obj.m_du = yop.ast_control(['D', name], 1, 0, deg-1);
+                obj.m_dval = yop.ast_state_der(['D', name], 1+0*w, 0*os);
             end
         end
         

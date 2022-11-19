@@ -7,12 +7,12 @@ yops Param: l       % maximum cart position
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( 1/2 * int(a^2) );
 ocp.st( t0==0, tf==1 );
-ocp.st( der(v) == a );
+ocp.st( 0 == der(v) - a );
 ocp.st( der(x) == v );
 ocp.st( v(t0) == -v(tf) == 1 );
 ocp.st( x(t0) ==  x(tf) == 0 );
 ocp.st( x <= l == 1/9 );
-sol = ocp.solve();
+sol = ocp.solve('ival', 25);
 
 figure(1);
 subplot(311); hold on
@@ -27,10 +27,11 @@ yops Times: t t0 tf
 yops States: x size: [2,1]
 yops Controls: u
 
+m = 1;
 ocp = yop.ocp('Bryson-Denham Problem');
 ocp.min( 1/2 * int(u^2) );
 ocp.st( 0 == t0 < tf == 1 );
-ocp.st( der(x) == [x(2); u] );
+ocp.st( 0 == m*der(x) - [x(2); u] );
 ocp.st(  x(t0) == [0; +1] );
 ocp.st(  x(tf) == [0; -1] );
 ocp.st(  x(1)  <= 1/9     );
